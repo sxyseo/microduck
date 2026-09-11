@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>解读 40 · 轴承与公差:从仿真 STL 到工程件 · 什么鸭 WhatDuck</title>
+<meta name="description" content="microduck-replica/docs/打印工艺调整表.md + microduck-replica/docs/紧固件反推.md(轴承表)+ microduck-replic">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="解读 40 · 轴承与公差:从仿真 STL 到工程件">
+<meta property="og:description" content="microduck-replica/docs/打印工艺调整表.md + microduck-replica/docs/紧固件反推.md(轴承表)+ microduck-replic">
+<meta property="og:url" content="https://duck.whatled.com/learn/deep-40">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/deep-40">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">DEEP 40 · 第四辑 · 结构 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="解读-40-轴承与公差从仿真-stl-到工程件">解读 40 · 轴承与公差:从仿真 STL 到工程件</h1>
+<blockquote>
+<p><strong>解读对象</strong>:<code>microduck-replica/docs/打印工艺调整表.md</code> + <code>microduck-replica/docs/紧固件反推.md</code>(轴承表)+ <code>microduck-replica/BOM.md</code>(机械件节)<br />
+<strong>需要的前置</strong>:<a href="/learn/deep-35">解读 35</a>;知道"公差"=允许的尺寸误差范围,"配合"=两件装在一起的松紧程度。</p>
+</blockquote>
+<h2 id="14-颗轴承两种规格">14 颗轴承,两种规格</h2>
+<p>整机 14 颗深沟球轴承(最常见的一类滚动轴承,能同时承受径向与轴向载荷),按 MJCF 网格引用计数(BOM):</p>
+<table>
+<thead>
+<tr>
+<th>规格(外径×内径×厚)</th>
+<th>数量</th>
+<th>用在哪</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Ø22 × 16 × 4</strong></td>
+<td><strong>11</strong></td>
+<td>躯干/腿部轴承座:髋、膝、踝的"舵机+对顶轴承"支承</td>
+</tr>
+<tr>
+<td><strong>Ø15 × 10 × 3</strong></td>
+<td><strong>3</strong></td>
+<td>头颈轴承座(颈俯仰、头 yaw/roll,见解读 38 的图)</td>
+</tr>
+</tbody>
+</table>
+<p>组件图上它们很显眼:02/03/09 号图里,银色内外圈之间一圈滚珠清晰可见。轴承是仿真模型里少数必须按真实件建模的东西——内径配轴、外径配座、厚度配间距,差一点都装不进去。</p>
+<h2 id="公差仿真不管实物全靠它">公差:仿真不管,实物全靠它</h2>
+<p>上游 STL 是仿真件,孔径都是名义尺寸,没有配合公差。FDM 打印(熔融沉积,一层层堆塑料的 3D 打印工艺)有条物理规律:<strong>水平方向的孔会缩小 0.1–0.3mm</strong>——每层圆弧两端要"桥接",材料收缩把孔拉小。Ø2.2 的孔打出来,常常 M2 螺丝塞不进。</p>
+<p>《打印工艺调整表》按孔型给三招:</p>
+<table>
+<thead>
+<tr>
+<th>孔型</th>
+<th>设计值</th>
+<th>处理</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>过孔</td>
+<td>Ø2.2</td>
+<td>切片器开"水平孔补偿 +0.15~0.25mm",或打印后 Ø2.5 钻头过一下</td>
+</tr>
+<tr>
+<td>沉头孔</td>
+<td>Ø4.4</td>
+<td>基本免处理;装不进用 Ø4.5 钻头扩口</td>
+</tr>
+<tr>
+<td>攻丝底孔</td>
+<td>Ø1.6</td>
+<td>PLA 实值取 Ø1.65–1.75,或打印后预钻再拧自攻</td>
+</tr>
+</tbody>
+</table>
+<p>轴承座是精度敏感位,单独对待:Ø22 座从 21.9–22.0 起试、砂纸修;Ø15 座从 14.9–15.0 起试。目标状态叫<strong>轻压入</strong>:用手能压进去,不晃、不裂。</p>
+<h2 id="先打一张测试片">先打一张测试片</h2>
+<p>批量打印前,先打一张 60×40×4mm 测试片(约 30 分钟):过孔阶梯 Ø2.2/2.3/2.4/2.5、攻丝阶梯 Ø1.6/1.65/1.7/1.75、轴承孔 Ø21.9/22.0/22.1 与 Ø14.9/15.0/15.1。轴承孔三档分别对应<strong>过盈</strong>(压进去就不出来)、<strong>过渡</strong>(轻压入)、<strong>间隙</strong>(放进去会晃)三种配合——找出你这台机器上"刚好轻压入"的值,记进构建日志。</p>
+<p>两条纪律:全机零件用<strong>同一台机器、同一材料、同一层高</strong>,否则补偿值跨机器失效;换材料(PLA→PETG/ABS)收缩不同,补偿必须重测。</p>
+<p>实物进度(构建日志):腿部件孔位反推正确、M2 已实装,但个别孔仍需钻孔修正——"几何能切 ≠ 装得起来"这句提醒已被验证一半;"尺寸与配合验证"表的实测行还空着,等回填。</p>
+<h2 id="你带走的收获">你带走的收获</h2>
+<ul>
+<li>配合三档:间隙(能转)、过渡(轻压入)、过盈(压死),轴承座通常取过渡偏紧。</li>
+<li>FDM 水平孔缩 0.1–0.3mm 是工艺规律,补偿值必须用自己的测试片标定。</li>
+<li>标准件(轴承/螺丝)是公差链的锚:先定标准件,再定打印件的孔。</li>
+<li>"打印就绪"有两关:切片能过是第一关,装得起来是第二关。</li>
+<li>同机同料同参数,是一张测试片管住全部零件的前提。</li>
+</ul>
+<h2 id="延伸">延伸</h2>
+<ul>
+<li><a href="/learn/deep-39">解读 39</a>:孔径另一头的螺丝体系(<code>docs/deep-dive/39-M2紧固件系统.md</code>)</li>
+<li><a href="/learn/deep-37">解读 37</a>:轴承在踝关节的角色(<code>docs/deep-dive/37-踝脚落地点.md</code>)</li>
+<li>校准细节:<code>microduck-replica/docs/打印就绪检查.md</code>;图纸:github.com/fanhao375/microduck-replica-cad(「机械行者Robo」)。</li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

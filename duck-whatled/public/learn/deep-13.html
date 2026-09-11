@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>解读 13 · kinematics/math.rs:变换与向量工具 · 什么鸭 WhatDuck</title>
+<meta name="description" content="kinematics/src/math.rs(180 行)">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="解读 13 · kinematics/math.rs:变换与向量工具">
+<meta property="og:description" content="kinematics/src/math.rs(180 行)">
+<meta property="og:url" content="https://duck.whatled.com/learn/deep-13">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/deep-13">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">DEEP 13 · 第二辑 · 感知与系统服务 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="解读-13-kinematicsmathrs变换与向量工具">解读 13 · kinematics/math.rs:变换与向量工具</h1>
+<blockquote>
+<p><strong>解读对象</strong>:<code>kinematics/src/math.rs</code>(180 行)<br />
+<strong>需要的前置</strong>:知道四元数是什么即可;第一辑《解读 07》有助于理解用途,非必须。</p>
+</blockquote>
+<h2 id="为什么不引-nalgebra">为什么不引 nalgebra</h2>
+<p>机器人代码几乎总要用线性代数库,这个 crate 偏偏手写了全部数学。文件开头的注释(math.rs:1-7)把理由说尽:前向运动学只需要"复合十几个刚体变换、旋转几个向量",约一百行;<code>tests/</code> 里的 MuJoCo fixture 把每个运算钉到 1e-6 精度——这比依赖的名字是更强的正确性论证,nalgebra 增加的是编译时间,不是信心。</p>
+<p>于是全部内容就是两个类型:</p>
+<ul>
+<li><code>Quat</code>(math.rs:19):一个旋转。约定 Hamilton、标量在前 <code>[w, x, y, z]</code>(math.rs:9-12),与 MJCF 及所有线上格式一致(<code>wxyz</code>,math.rs:76)。</li>
+<li><code>Pose</code>(math.rs:105):一个刚体变换 = 先按 <code>quat</code> 旋转、再平移 <code>pos</code>。<code>transform_point</code>(math.rs:121)变换点,<code>Mul</code>(math.rs:127)复合两个位姿。</li>
+</ul>
+<h2 id="两个必须钉死的约定">两个必须钉死的约定</h2>
+<p><strong>乘法顺序。</strong> <code>a * b</code> 表示"先 b 后 a"——父系乘子系,链式写法从根到尖自左向右读(math.rs:10-12)。顺序反了,整条运动链就镜像了。测试 <code>pose_composition_applies_the_right_operand_first</code>(math.rs:162)用一个"转 90° 的父系里走一步"的例子钉死语义:先走后转落在 +y,先转后走停在 +x。</p>
+<p><strong>退化输入。</strong> <code>normalized</code>(math.rs:42-48)遇到近零四元数返回 identity 而不是 NaN。注释很直白:这种输入只可能来自手写的 XML 属性,忽略坏四元数的模型可以诊断,充满 NaN 的模型不行。<code>mjcf.rs:219-227</code> 里零关节轴回退 +z 是同一哲学。</p>
+<p>其余是标准实现:<code>from_axis_angle</code>(math.rs:51)、叉积形式的 <code>rotate</code>(math.rs:58,省掉完整的 <code>q v q⁻¹</code> 三明治)、单位四元数下共轭即逆(math.rs:71)、从旋转矩阵元素展开的 <code>yaw</code>(math.rs:81)。<code>impl Mul for Quat</code>(math.rs:89)是 Rust 的运算符重载——给自定义类型实现 <code>Mul</code> trait 后,<code>*</code> 就能作用于它。</p>
+<h2 id="测试即规格">测试即规格</h2>
+<p>三个测试各自守住一条人脑可验的性质(math.rs:149-179):绕 +z 转 90° 把 +x 送到 +y;复合顺序如上;零四元数归一化得 identity 而非 NaN。加上 <code>tests/fk_against_mujoco.rs</code> 用 64 个随机位姿对照 MuJoCo 本尊(lib.rs:17-19),手写数学有两层证据:先验性质,后精度。</p>
+<h2 id="你带走的收获">你带走的收获</h2>
+<ul>
+<li>「最小集 + fixture 钉精度」是引入重型依赖前的合法选项:先写清需求规模,再决定要不要库。</li>
+<li>约定(乘法顺序、标量在前)必须用测试钉住,否则会在某次重构里静默翻转。</li>
+<li>对来自配置文件的坏数据,返回可诊断的默认值好过传播 NaN。</li>
+<li>叉积形式旋转、展开式 yaw,这些省一次三角函数或一次完整乘法的小技巧值得收藏。</li>
+</ul>
+<h2 id="延伸">延伸</h2>
+<ul>
+<li><a href="/learn/deep-14">解读 14</a>:这套代数最直接的客户,相机位姿与凝视 IK。</li>
+<li><a href="/learn/deep-15">解读 15</a>:<code>Pose</code> 折叠出整条运动链的地方。</li>
+<li>源码:<code>kinematics/src/math.rs</code>、<code>kinematics/src/lib.rs</code>。</li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

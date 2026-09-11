@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>新手学习文档 · 硬件零基础把鸭子做出来 · 什么鸭 WhatDuck</title>
+<meta name="description" content="写给电路、结构、硬件小白:项目地图、十个核心概念、电路图读图五步法、结构入门与 30 天学习计划。">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="新手学习文档 · 硬件零基础把鸭子做出来">
+<meta property="og:description" content="写给电路、结构、硬件小白:项目地图、十个核心概念、电路图读图五步法、结构入门与 30 天学习计划。">
+<meta property="og:url" content="https://duck.whatled.com/learn/newbie">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/newbie">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">MANUAL 01 · 新手篇 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="microduck-新手学习文档-硬件零基础怎么从零开始把这只鸭子做出来">Microduck 新手学习文档 —— 硬件零基础，怎么从零开始把这只鸭子做出来</h1>
+<blockquote>
+<p>写给：电路小白、结构小白、硬件小白（但会用电脑、会装软件）。<br />
+依据：你工作区里已经有的全部资料 + 你手头的器材（Radxa Zero 3W、打印外壳件、机器狗剩下的舵机、小智 ESP32、树莓派 Pi 2 Model B）。<br />
+本文是 <a href="../microduck-replica/docs/手头器材启动指南.md">手头器材启动指南</a> 的完整扩写版：那份回答"手头这些东西能不能开始"，这篇教你"整个项目怎么学、电路图怎么看、结构怎么懂"。</p>
+</blockquote>
+<hr />
+<h2 id="目录">目录</h2>
+<ol>
+<li><a href="#1-你在做什么一张项目地图">你在做什么：一张项目地图</a></li>
+<li><a href="#2-十个必须先懂的概念每个三分钟">十个必须先懂的概念</a></li>
+<li><a href="#3-盘点你的家底">盘点你的家底：每件器材能干什么、不能干什么</a></li>
+<li><a href="#4-学习总路线四站">学习总路线：四站</a></li>
+<li><a href="#5-怎么看懂电路图">怎么看懂电路图（用你仓库里的真图纸教）</a></li>
+<li><a href="#6-结构怎么看怎么设计">结构怎么看、怎么设计</a></li>
+<li><a href="#7-软件与强化学习纯电脑阶段">软件与强化学习：纯电脑阶段</a></li>
+<li><a href="#8-你的-30-天计划">你的 30 天计划（按手头器材定制）</a></li>
+<li><a href="#9-必踩的坑">必踩的坑（提前打疫苗）</a></li>
+<li><a href="#10-安全守则">安全守则</a></li>
+<li><a href="#11-文档地图">文档地图：什么时候读什么</a></li>
+</ol>
+<hr />
+<h2 id="1-你在做什么一张项目地图">1. 你在做什么：一张项目地图</h2>
+<p><strong>Microduck</strong> 是 Pollen Robotics 出品的一只双足机器鸭：25 厘米高、约 0.74–0.8 公斤重，身上 15 个舵机，用<strong>强化学习</strong>（不是人类逐帧编程）学会走路、起身、踢球。它的<strong>软件完全开源</strong>（Apache-2.0），机械和部分电路只公开了一部分 —— 所以社区在做的事情叫<strong>复刻</strong>：用官方公开的仿真模型、源码和逆向出来的资料，自己把一只造出来。你工作区里的所有目录，都是围绕这一件事。</p>
+<h3 id="工作区目录地图谁是谁">工作区目录地图（谁是谁）</h3>
+<table>
+<thead>
+<tr>
+<th>目录</th>
+<th>是什么</th>
+<th>对你的价值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/Volumes/dev/dev/microduck/</code>（根目录本身）</td>
+<td><strong>官方主仓</strong>（pollen-robotics/microduck），Rust 写的"鸭子大脑"：控制循环、舵机总线、更新系统</td>
+<td>最终要跑在你 Radxa 上的东西</td>
+</tr>
+<tr>
+<td><code>microduck-replica/</code></td>
+<td><strong>复刻研究主仓</strong>（中文）：装配图、BOM、电路逆向、采购清单、构建日志</td>
+<td><strong>你的主教材</strong>，90% 的中文资料在这</td>
+</tr>
+<tr>
+<td><code>microduck-replica-cad/</code></td>
+<td><strong>SolidWorks 三维图纸</strong>：56 个零件源文件 + 21 页装配安装说明书</td>
+<td>学结构的教材</td>
+</tr>
+<tr>
+<td><code>open-microduck/</code></td>
+<td><strong>OpenMicroDuck 中文研究文档</strong>：小白术语表、难度分级学习路线、仿真优先教程</td>
+<td><strong>入门第一课在这里</strong></td>
+</tr>
+<tr>
+<td><code>OpenMicroDuck/</code></td>
+<td>同上的英文/早期副本</td>
+<td>可忽略</td>
+</tr>
+<tr>
+<td><code>Microduck-build-tutorial/</code></td>
+<td><strong>平价复刻路线</strong>：用树莓派 Zero 2 W + OpenRB-150 跑 Python 版本，有现成镜像</td>
+<td>参考路线，设备和你不同</td>
+</tr>
+<tr>
+<td><code>xiaozhi-esp32/</code></td>
+<td><strong>小智 ESP32</strong>：AI 语音聊天固件（你的 ESP32 硬件用的就是它）</td>
+<td>第二阶段的语音大脑</td>
+</tr>
+<tr>
+<td><code>bam/</code></td>
+<td>舵机摩擦建模库（训练仿真用）</td>
+<td>深入训练时才需要</td>
+</tr>
+<tr>
+<td><code>KiCAD-MCP-Server/</code>、<code>kicad-mcp-test/</code></td>
+<td>画电路板的 AI 辅助工具</td>
+<td>画 imu_to_dxl 板时用</td>
+</tr>
+<tr>
+<td><code>docs/microduck-30day/</code>、<code>docs/plans/</code>、<code>microduck-replica/rl-series/</code></td>
+<td><strong>你自己的</strong> 30 天学习包和 RL 文章系列</td>
+<td>你的进度记录</td>
+</tr>
+</tbody>
+</table>
+<h3 id="先记住-6-个数字">先记住 6 个数字</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: right;">数字</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: right;"><strong>15</strong></td>
+<td>全机舵机数量（第 15 个驱动嘴巴，不参与走路）</td>
+</tr>
+<tr>
+<td style="text-align: right;"><strong>14</strong></td>
+<td>走路策略实际控制的关节数</td>
+</tr>
+<tr>
+<td style="text-align: right;"><strong>61 → 14</strong></td>
+<td>神经网络：每次吃进 61 个数（姿态+关节状态），吐出 14 个数（每个关节往哪转）</td>
+</tr>
+<tr>
+<td style="text-align: right;"><strong>50 Hz</strong></td>
+<td>每 20 毫秒重复一次"读全部关节 → 算 → 下发"的循环</td>
+</tr>
+<tr>
+<td style="text-align: right;"><strong>1 Mbps</strong></td>
+<td>舵机总线的通信速度</td>
+</tr>
+<tr>
+<td style="text-align: right;"><strong>737 g</strong></td>
+<td>整机重量（其中头就占 189 g，接近 1/4 —— 这是它走路难训的根源）</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="2-十个必须先懂的概念每个三分钟">2. 十个必须先懂的概念（每个三分钟）</h2>
+<p>这十个词贯穿所有文档。更系统的版本见 <a href="../open-microduck/docs/zh-CN/getting-started/glossary.md">open-microduck 小白术语表</a>。</p>
+<p><strong>① 舵机（servo）</strong>：自带减速齿轮和位置控制的电机总成。你告诉它"转到 90°"，它自己发力到位并保持。机器鸭的每个关节 = 一个舵机。</p>
+<p><strong>② PWM 舵机 vs 总线舵机 —— 全项目最重要的一道分水岭。</strong><br />
+- <strong>PWM 舵机</strong>（如 SG90，约 9 克，玩具级）：一根信号线控制一只，靠脉冲宽度告诉它角度。<strong>它不知道自己在哪</strong>——被外力压偏了也不会告诉你。便宜、笨、没有反馈。<br />
+- <strong>总线舵机</strong>（如 Dynamixel XL330，18 克，本项目用它）：所有舵机像 USB 设备一样<strong>串在一根线上</strong>，各有编号（ID），主控点名问"2 号，你现在什么角度？"它答得上来，精度 12 位。<br />
+- 走路神经网络每 20ms 要读全部关节的真实位置和速度——<strong>没有反馈的 PWM 舵机直接让 61 维输入里一大半变成假数据</strong>。这就是"SG90 装不进这只鸭"的根本原因，不是嫌弃它便宜。</p>
+<p><strong>③ 菊花链（daisy chain）</strong>：总线舵机的接法——主板出来一根线进 1 号，1 号再出一线进 2 号，像串糖葫芦。一根总线挂 15 个。</p>
+<p><strong>④ UART / I²C</strong>：两种芯片间"说话的方式"（通信协议）。本项目里 <strong>UART 管舵机总线</strong>（1 Mbps，又快又简单），<strong>I²C 管音频芯片和ToF 传感器</strong>（400 kHz，两根线 SDA/SCL 挂多个设备）。记住：<strong>UART 是"对讲机"，I²C 是"一条线上插多个电话分机"</strong>。</p>
+<p><strong>⑤ 半双工（half-duplex）</strong>：一根线上既发又收，但同一时刻只能一个方向说。像对讲机"over"。舵机总线就是这样，需要一个"方向切换"小电路（一个缓冲芯片，原理图里的 U3）。</p>
+<p><strong>⑥ IMU</strong>：惯性测量单元，里面是陀螺仪+加速度计，输出"我现在是不是歪了、往哪边倒"。走路的神经网络<strong>每一步都靠它感知身体姿态</strong>。本项目的骚操作：IMU 板伪装成"200 号舵机"挂在总线上，姿态数据和关节数据一次全读回。</p>
+<p><strong>⑦ 强化学习 / 策略 / ONNX</strong>：不让人类写"先迈左脚再迈右脚"，而是让 AI 在物理仿真里摔几百万次，自己悟出平衡方法。悟出来的东西叫<strong>策略（policy）</strong>——本质就是一个数学函数：61 个数进，14 个数出。导出成 <strong>ONNX</strong> 文件（一种通用模型格式），机器人上的推理引擎直接加载它。</p>
+<p><strong>⑧ Sim-to-real</strong>：仿真里学会 → 真机上也能走。中间会丢真度，所以训练时要"域随机化"（故意加各种随机干扰，让策略皮实）。<strong>仿真会走 ≠ 真机会走</strong>，这句话所有文档反复强调。</p>
+<p><strong>⑨ MJCF / MuJoCo</strong>：MuJoCo 是物理仿真引擎（官方用来训练的"虚拟练跤场"）；MJCF 是它描述机器人身体的文件格式——里面精确记录了每个零件挂在谁身上、离多远、绕哪根轴转、多重。<strong>复刻仓的装配图就是从这个文件反推出来的</strong>。</p>
+<p><strong>⑩ 公差与配合</strong>：3D 打印的孔打出来会比图纸上小 0.1–0.3mm（材料收缩+挤料膨胀），所以画图时要<strong>提前把孔放大</strong>（补偿），或者打完用钻头修。装配能否顺利，80% 取决于这个细节。</p>
+<hr />
+<h2 id="3-盘点你的家底">3. 盘点你的家底</h2>
+<h3 id="总览表">总览表</h3>
+<table>
+<thead>
+<tr>
+<th>器材</th>
+<th>身份</th>
+<th>能干什么</th>
+<th>不能干什么</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Radxa Zero 3W</strong></td>
+<td>⭐ <strong>官方同款主控</strong>（官方就用这块板！）</td>
+<td>整个项目的"大脑"：刷 Armbian → 跑官方 Rust 运行时 → 加载 ONNX</td>
+<td>不能直接驱动 PWM 舵机</td>
+</tr>
+<tr>
+<td><strong>打印外壳件</strong></td>
+<td>机械结构件</td>
+<td>收货实测（孔位验证）→ 试装</td>
+<td>若打印时没做孔径补偿，孔可能偏紧</td>
+</tr>
+<tr>
+<td><strong>机器狗的舵机</strong></td>
+<td>待辨认（大概率 SG90 类 PWM 舵机）</td>
+<td><strong>完美的入门台架</strong>：学供电、接线、开环的宿命</td>
+<td>❌ <strong>不能装上鸭子</strong>（无反馈、力矩 1/3、孔位不同）</td>
+</tr>
+<tr>
+<td><strong>树莓派 Pi 2 Model B</strong></td>
+<td>地面调试台</td>
+<td>跑 SG90 台架脚本；以后接 USB 适配器测总线舵机；无 WiFi，插网线</td>
+<td>性能跑不动官方运行时的完整视觉栈（当台架够用）</td>
+</tr>
+<tr>
+<td><strong>小智 ESP32 硬件</strong></td>
+<td>AI 语音前端</td>
+<td>第二阶段：语音"坐下/握手"→ 控制鸭子；或当 PWM 协处理器</td>
+<td>❌ 现阶段与鸭子控制栈无关，<strong>别让它分心</strong></td>
+</tr>
+</tbody>
+</table>
+<h3 id="31-radxa-zero-3w-你手里最好的一张牌">3.1 Radxa Zero 3W —— 你手里最好的一张牌</h3>
+<p>官方的"鸭子大脑"就是跑在这块板上的（RK3566 四核）。这意味着<strong>软件零移植</strong>：官方 Rust 运行时、9 个官方 ONNX 技能，硬件相同就能直接用，不用重训模型。</p>
+<p>起步动作（第 2 周做，第 8 节有详细日程）：</p>
+<ol>
+<li>用 <strong>Armbian imager</strong> 刷 <code>Radxa Zero 3 / Armbian Minimal</code>，刷之前在界面里填好 WiFi 和账号密码（省掉串口线）；</li>
+<li><code>ssh</code> 进去，跑官方的 <code>./scripts/provision-board.sh</code> 一键装机（见 <a href="../docs/robot/install-dev.md">官方安装文档</a>）;</li>
+<li>三个必踩的坑提前背下来（第 9 节）：串口被登录控制台占用、I²C 与 USB-C 供电协商抢引脚、NPU 默认关闭。</li>
+</ol>
+<h3 id="32-打印外壳件-到手先当验收员">3.2 打印外壳件 —— 到手先当"验收员"</h3>
+<p>不要急着装。<strong>先用 30 分钟当一次质检员</strong>，这本身就是复刻项目的第一个正式实验（构建日志里叫 G1 验证）：</p>
+<ol>
+<li><strong>M2 螺丝试穿</strong>：拿 M2×6 螺丝逐件试穿腿部件的孔。能顺畅穿过 = 公差合格；穿不过的记下是哪件哪个孔（后面用 Ø2.5 钻头修，属正常操作）；</li>
+<li><strong>轴承座</strong>：Ø22mm 和 Ø15mm 轴承到手后试压入，"轻压不裂"= 合格；</li>
+<li><strong>目检</strong>：层纹方向、孔有没有变椭圆、明显缺料；</li>
+<li>全部记录进 <a href="../microduck-replica/构建日志.md">构建日志</a>。</li>
+</ol>
+<h3 id="33-机器狗的舵机-第一步辨认它是谁">3.3 机器狗的舵机 —— 第一步：辨认它是谁</h3>
+<p>之前的指南记录你手头是 <strong>SG90×6</strong>。如果"机器狗的舵机"是另一批货，先花 5 分钟辨认（这决定它们能干什么）：</p>
+<table>
+<thead>
+<tr>
+<th>看什么</th>
+<th>PWM 舵机（玩具级）</th>
+<th>总线舵机（机器人级）</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>型号印字</td>
+<td>SG90 / MG90S / MG996R / ES9051…</td>
+<td>STS3215 / SCS / XL330 / HL-1910 / DS3218(部分)…</td>
+</tr>
+<tr>
+<td>重量手感</td>
+<td>SG90 约 9g，塑料齿轮</td>
+<td>通常 40–60g，多有金属齿轮</td>
+</tr>
+<tr>
+<td>引脚定义丝印</td>
+<td><code>SIG + -</code> 或 <code>信号/红/棕</code></td>
+<td><code>DATA/DATA+</code>、<code>TX RX</code> 或 DYNAMIXEL/FEETECH 字样</td>
+</tr>
+<tr>
+<td>终极验证</td>
+<td>接 PWM 信号才动</td>
+<td>接串口后发"ping"命令有应答</td>
+</tr>
+</tbody>
+</table>
+<p><strong>辨认结果的处理：</strong></p>
+<ul>
+<li><strong>是 SG90/MG90S 类（最可能）</strong>：按第 4 节第 0 站，用 Pi 2 + <a href="../microduck-replica/rl-series/scripts/pi_sg90_bench.py">pi_sg90_bench.py</a> 搭 PWM 台架，一晚上学四件大事（脉宽控制、供电预算、开环的宿命、动作序列）。这四课是后面所有接线调试的手感基础。</li>
+<li><strong>竟然是 STS3215 类总线舵机</strong>：恭喜——它可以直接当第 1 站的"总线学习门票"（省下买第一只总线舵机的钱），但<strong>仍然装不进这只鸭子</strong>（尺寸大一圈、重 3 倍，强行换 = 换了一台机器人，详见 <a href="../microduck-replica/docs/执行器选型.md">执行器选型</a>）。复刻构建日志里作者最终选了飞特 HL-1910 走"换舵机+重训"路线，代价是官方 9 个 ONNX 全部作废、要自己重训——那是后话，见 <a href="../microduck-replica/docs/换舵机重训全流程.md">换舵机重训全流程</a>。</li>
+</ul>
+<h3 id="34-还缺什么不用现在买齐按第-4-节的门控节奏来">3.4 还缺什么（不用现在买齐，按第 4 节的门控节奏来）</h3>
+<ul>
+<li><strong>15 只鸭子级舵机</strong>（最大头，货期最长，第 3–4 周决策买什么）</li>
+<li>NP-F550 电池（注意是 <strong>F550 不是 F970</strong>，F970 装不进还超重 300g）</li>
+<li>IMX219 摄像头（就是树莓派 Camera v2）、VL53L5/8CX ToF、LSM6DSV16X IMU</li>
+<li>两块电路板：RPI Robot HAT（<strong>官方开源了全套制板文件，直接打样，不用画</strong>）和 imu_to_dxl（复刻仓已画好，等你打样）</li>
+<li>USB 转舵机总线调试板（如 FE-URT-1，约 ¥45）——你的<strong>第一张总线门票</strong></li>
+</ul>
+<hr />
+<h2 id="4-学习总路线四站">4. 学习总路线：四站</h2>
+<p>设计原则来自 <a href="../microduck-replica/docs/阶梯式采购与验证路线.md">阶梯式采购与验证路线</a>：<strong>每一笔大钱，都必须由上一站的验证结果来解锁</strong>。新手期只花小钱、甚至不花钱。</p>
+<pre><code>第 0 站 手上和电脑上（¥0，本周）
+   打印件实测(G1) + SG90 台架四课 + 仿真跑官方策略
+        │  验证了：结构可用、你懂了开环的痛、策略长什么样
+        ▼
+第 1 站 电的最小闭环（≈¥250）
+   USB调试板 + 1 只总线舵机 → ping、读写角度、50Hz 连读
+        │  验证了：总线协议你玩得转（G2 门票）
+        ▼
+第 2 站 机械与自制板（≈¥150）
+   腿部试装 + imu_to_dxl 打样贴片 → 总线 16 设备一次读回
+        │  验证了：装得上、自制板有活数据（G3）
+        ▼
+第 3 站 大单与整机（≈¥2500–3500，货期长，提前下单）
+   舵机×15 + 电池 + 传感器 → Radxa 起飞 → 整机 → 首走（G4）
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>站</th>
+<th>花钱</th>
+<th>你要学会的</th>
+<th>验收标准</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>¥0</td>
+<td>PWM 台架四课；跑通官方仿真策略</td>
+<td>6 只 SG90 做出序列动作；电脑上鸭子在仿真里走起来</td>
+</tr>
+<tr>
+<td>1</td>
+<td>≈¥250</td>
+<td>总线协议：ID、波特率、读写寄存器</td>
+<td>50Hz 连读 10 分钟零误包</td>
+</tr>
+<tr>
+<td>2</td>
+<td>≈¥150</td>
+<td>装配手感；贴片焊接；IMU 数据</td>
+<td>16 台设备一次 sync_read 全应答</td>
+</tr>
+<tr>
+<td>3</td>
+<td>大头</td>
+<td>系统集成：供电、走线、标定、sim2real</td>
+<td>鸭子站立 + 遥控走两步（摔了也算数，记录它）</td>
+</tr>
+</tbody>
+</table>
+<p><strong>现在处于第 0 站。</strong> 具体到天，看第 8 节。</p>
+<hr />
+<h2 id="5-怎么看懂电路图">5. 怎么看懂电路图</h2>
+<blockquote>
+<p>教材就是你仓库里这份：<a href="../microduck-replica/hardware/imu_to_dxl/imu_to_dxl-原理图.pdf">imu_to_dxl-原理图.pdf</a>（全项目唯一要自己画的板，只有 5 个芯片，是完美的教学板）。配套 <a href="../microduck-replica/hardware/imu_to_dxl/imu_to_dxl-接线表.md">接线表</a> 和 <a href="../microduck-replica/docs/imu_to_dxl-设计包/">设计包</a>。</p>
+</blockquote>
+<h3 id="51-电路图到底在画什么">5.1 电路图到底在画什么</h3>
+<p>电路图（原理图，schematic）<strong>不是电路板的照片</strong>，而是"连接关系清单"的图形化。它只回答一个问题：<strong>哪个引脚和哪个引脚电气上连在一起</strong>。器件摆的位置、板子的形状，都不重要——那是 PCB 布局图的事。看图时把每根线理解为"导线"，而不是"画出的一条线"。</p>
+<h3 id="52-符号小字典imu-to-dxl-图上全有对照着认">5.2 符号小字典（imu_to_dxl 图上全有，对照着认）</h3>
+<table>
+<thead>
+<tr>
+<th>符号长什么样</th>
+<th>名字</th>
+<th>干什么</th>
+<th>图上的位号</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>一堆平行短横线（像蜈蚣）</td>
+<td>电阻</td>
+<td>限流、分压、"默认拉高/拉低"</td>
+<td>R1–R7</td>
+</tr>
+<tr>
+<td>两条平行线</td>
+<td>电容</td>
+<td>储电荷、滤掉电源毛刺（每个芯片电源脚旁必有一个 100nF，这是行规）</td>
+<td>C1–C9</td>
+</tr>
+<tr>
+<td>三角形+一竖线</td>
+<td>二极管</td>
+<td>电流单向阀</td>
+<td>D2 稳压管</td>
+</tr>
+<tr>
+<td>三角形+闪电折线</td>
+<td>TVS 二极管</td>
+<td>"电压过高瞬间导通泄放"，保命用</td>
+<td>D1</td>
+</tr>
+<tr>
+<td>三脚、像三明治</td>
+<td>稳压芯片（LDO）</td>
+<td>把总线上的 6–8.4V 降成稳定的 3.3V 喂给芯片</td>
+<td>U4 HT7533</td>
+</tr>
+<tr>
+<td>中间大方块、 many 引脚</td>
+<td>MCU（单片机）</td>
+<td>这块板的大脑，跑固件</td>
+<td>U1 STM32G031</td>
+</tr>
+<tr>
+<td>方块+GND/Vdd+SDA/SCL</td>
+<td>传感器芯片</td>
+<td>IMU，走 I²C</td>
+<td>U2 LSM6DSV16X</td>
+</tr>
+<tr>
+<td>方块+OE 脚</td>
+<td>缓冲器/收发器</td>
+<td>半双工方向切换的开关</td>
+<td>U3</td>
+</tr>
+<tr>
+<td>一排小方块</td>
+<td>排针/连接器</td>
+<td>接线、烧录、总线进出</td>
+<td>J1–J5</td>
+</tr>
+<tr>
+<td>中间画" Fuse "或波浪矩形</td>
+<td>自恢复保险丝</td>
+<td>电流过大自动断，冷却后恢复</td>
+<td>F1</td>
+</tr>
+</tbody>
+</table>
+<h3 id="53-读图五步法任何原理图通用">5.3 读图五步法（任何原理图通用）</h3>
+<ol>
+<li><strong>找电源入口</strong>：电从哪进？（这里是 J1/J2/J4/J5 四个座的 pin2，标着 <code>VDD_BUS</code>，6.0–8.4V）</li>
+<li><strong>找地（GND）</strong>：所有器件的 GND 汇成一张网。<strong>没有共同的地，一切信号都没有参照</strong>——接线事故 80% 出在地线上。</li>
+<li><strong>找主芯片</strong>：最大那块（U1 STM32）。看它的电源脚（VDD→+3V3、VSS→GND）先接对没有。</li>
+<li><strong>顺着网络标号走</strong>：图上不会把每根线都画出来，相同名字（如 <code>+3V3</code>、<code>SWDIO</code>）就是连在一起的。这是原理图的"超链接"。</li>
+<li><strong>看连接器</strong>：J1–J5 是板子与外界的全部接口，弄清每个 pin 是什么，接线表就能自己读了。</li>
+</ol>
+<h3 id="54-实战把-imu-to-dxl-图读成一句人话">5.4 实战：把 imu_to_dxl 图读成一句人话</h3>
+<p>打开 PDF，按信号流走一遍：</p>
+<pre><code>舵机总线 6–8.4V ──► F1 保险丝 ──► D1 TVS 钳压 ──┬──► 直接喂给总线座（原压直通，舵机要这个电压）
+                                               └──► U4 稳压成 3.3V ──► 喂 U1(MCU) 和 U2(IMU)
+U1 STM32 (大脑) ──UART──► U3 半双工缓冲 ──► 总线DATA线（会说话也能听）
+U2 IMU ──I²C(SDA/SCL)──► U1（IMU 汇报姿态）
+J3 排针 ──► SWD 烧录口（给 U1 灌固件用）
+</code></pre>
+<p>一句话总结这块板：<strong>"把 IMU 的姿态，翻译成舵机总线上 200 号设备的答复"</strong>。再对照接线表看 <code>+3V3</code> 网络：U4 输出 → U1.4 → U2.5/U2.8 → U3.8 → 每个芯片旁边挂一个 100nF（C1–C4）——你看，"每个芯片电源脚旁必有小电容"这条行规，在你自己的图里应验了。</p>
+<h3 id="55-新手电工四件套比看图更先学会">5.5 新手电工四件套（比看图更先学会）</h3>
+<ol>
+<li><strong>万用表两件事</strong>：通断档（蜂鸣响 = 两点直通，用来验证接线）和直流电压档（量电池、量 3.3V/5V）。</li>
+<li><strong>共地</strong>：两个电源给两个设备供电时，地线必须连在一起，否则信号没有参照。鸭子也一样：舵机侧 6V 和主控侧 5V <strong>必须共地</strong>。</li>
+<li><strong>先量后上电</strong>：任何接线完成，先不通电量一次"电源对地有没有短路"（通断档响 = 有短路，停）。</li>
+<li><strong>绝缘</strong>：焊点套热缩管或点热熔胶。舵机总线上 15 个设备共线，一处短路全线瘫痪。</li>
+</ol>
+<h3 id="56-工具">5.6 工具</h3>
+<ul>
+<li><strong>嘉立创 EDA</strong>（免费，国产）：能直接打开仓库里的 <code>imu_to_dxl.eprj2</code> 工程看图改图；打样也是它一键下单；</li>
+<li><strong>Dynamixel Wizard 2.0</strong>（ROBOTIS 官方，免费）：配 USB 调试板后，图形界面扫总线上的舵机、改 ID、读角度——<strong>你第一个"电路活了"的成就感来自这个软件</strong>。</li>
+</ul>
+<hr />
+<h2 id="6-结构怎么看怎么设计">6. 结构怎么看、怎么设计</h2>
+<blockquote>
+<p>教材：<a href="../microduck-replica-cad/README.md">microduck-replica-cad/</a>（56 个 SolidWorks 零件 + <a href="../microduck-replica-cad/安装说明书/microduck装配安装说明书.pdf">21 页装配安装说明书 PDF</a> + 23 张组件图/爆炸图）、<a href="../microduck-replica/docs/打印工艺调整表.md">打印工艺调整表</a>、<a href="../microduck-replica/docs/紧固件反推.md">紧固件反推</a>。</p>
+</blockquote>
+<h3 id="61-好消息你不需要从零设计">6.1 好消息：你不需要"从零设计"</h3>
+<p>复刻项目的结构已经被反推/重建过一遍：47 个官方仿真 STL → 装配关系精确到 0.1mm → 爆炸图、BOM、SolidWorks 装配体全套现成。你的路径是：<strong>先学会"装配"（读懂它为什么这么设计），再学"改"（加个走线槽、换个卡扣），最后才是"设计"</strong>。对新手，前两步已经覆盖 90% 的需求。</p>
+<h3 id="62-先读懂这只鸭子的骨架10-分钟">6.2 先读懂这只鸭子的骨架（10 分钟）</h3>
+<p>看 <a href="../microduck-replica/assembly-drawings/">装配爆炸图</a> 或组件图目录，对着下面这棵树：</p>
+<pre><code>躯干主体 199g（装配基准件，一切从它开始）
+├─ 左腿: 髋yaw(23g) → 髋roll(6g) → 大腿(48g) → 小腿(22g) → 踝+脚(30g)
+├─ 右腿: 同上（左右镜像）
+└─ 颈根(37g) → 颈俯仰(6g) → 头yaw/roll机构(49g) → 头部总成+喙(189g)
+</code></pre>
+<p>三个观察，理解"设计意图"：</p>
+<ul>
+<li><strong>每条腿 5 个关节</strong>（yaw 转向 / roll 侧摆 / pitch 前后摆 / 膝 / 踝）——双腿 10 个 + 头颈 4 个 = 14 个受控，第 15 个管嘴；</li>
+<li><strong>头几乎和躯干一样重</strong>（189g vs 199g）。头是甩来甩去的大摆锤，重心极高——这就是走路策略难训的原因，也是"别自己乱加重物在头上"的原因；</li>
+<li><strong>全部 M2 螺丝系统</strong>：过孔 Ø2.2（螺丝穿过）×111、沉头孔 Ø4.4（螺丝头埋进去）×48、攻丝底孔 Ø1.6（拧自攻螺丝）×27。三种孔三种用途，装配时认清楚。</li>
+</ul>
+<h3 id="63-结构设计入门十词">6.3 结构设计入门十词</h3>
+<table>
+<thead>
+<tr>
+<th>词</th>
+<th>一句话解释</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>自由度（DOF）</td>
+<td>一个关节能独立动的方向数。髋 pitch 只能前后摆 = 1 自由度</td>
+</tr>
+<tr>
+<td>运动链</td>
+<td>关节连成的一条链：躯干→髋→膝→踝。链末端（脚）的位置由链上每个关节决定</td>
+</tr>
+<tr>
+<td>基准件</td>
+<td>装配从哪个零件开始。躯干是基准，先把它固定好</td>
+</tr>
+<tr>
+<td>过孔</td>
+<td>让螺丝穿过去的通孔，Ø2.2（M2 螺丝杆 2.0 + 余量）</td>
+</tr>
+<tr>
+<td>沉头孔</td>
+<td>让平头螺丝头<strong>埋进表面</strong>的台阶孔，Ø4.4</td>
+</tr>
+<tr>
+<td>攻丝底孔</td>
+<td>拧自攻螺丝的孔，Ø1.6——塑料里拧 M2 自攻，靠材料自身被挤出螺纹</td>
+</tr>
+<tr>
+<td>轴承座轻压入</td>
+<td>轴承装进孔里，公差刚好到"用手轻压进去、不晃不裂"</td>
+</tr>
+<tr>
+<td>热熔螺母</td>
+<td>用烙铁把铜螺母烫进塑料孔，得到可反复拆装金属螺纹</td>
+</tr>
+<tr>
+<td>公差补偿</td>
+<td>打印孔会缩 0.1–0.3mm，画图时提前放大 +0.15~0.25</td>
+</tr>
+<tr>
+<td>走线空间</td>
+<td>结构腔体里要给舵机线和电路板留通道——<strong>复刻件最大的坑就是没走线空间</strong></td>
+</tr>
+</tbody>
+</table>
+<h3 id="64-3d-打印工程第一课测试片先行">6.4 3D 打印工程第一课：测试片先行</h3>
+<p>别直接打印整套。先打一张 <a href="../microduck-replica/docs/打印工艺调整表.md">打印工艺调整表</a> 第二节的 <strong>60×40×4mm 测试片</strong>（上面有孔径三档阶梯：M2 过孔/攻丝/沉头 + 轴承孔 Ø21.9–22.1），实测你的打印机+耗材的收缩量，把补偿值记下来，再批量打印。耗材预算：全机约 300g PLA，一公斤卷足够。</p>
+<h3 id="65-想动手改结构软件路线">6.5 想动手改结构：软件路线</h3>
+<ol>
+<li><strong>看</strong>：先用 PDF 阅读器翻完 21 页装配说明书（不用装任何软件）；</li>
+<li><strong>转</strong>：装 <strong>FreeCAD</strong>（完全免费）打开 <code>cad/</code> 下的 STL 装配体，学会旋转/剖切/测量三个操作；</li>
+<li><strong>改</strong>：给自己定一个 30 分钟小任务，比如"给躯干内腔壁加一条 3mm 走线槽"——用草图+拉伸两个功能就能完成；</li>
+<li>（可选）<strong>学</strong>：Fusion 360 个人版免费，B 站搜"Fusion 360 入门"，跟完一个杯子/盒子教程就够用。</li>
+</ol>
+<h3 id="66-装配顺序经验">6.6 装配顺序经验</h3>
+<p>照 21 页说明书走，大原则：<strong>躯干 → 双腿 → 头颈</strong>；每装完一个组件手动转一下关节（应顺滑无卡滞再装下一个）；M2 自攻螺丝不要拧到底硬怼（塑料滑丝不可逆）；舵机装上前先在调试板上设好 ID（装完再改 = 全部拆开重来）。</p>
+<hr />
+<h2 id="7-软件与强化学习纯电脑阶段">7. 软件与强化学习：纯电脑阶段</h2>
+<p>好消息：第 0 站的一切都不需要买任何硬件。</p>
+<ol>
+<li><strong>今天就能玩（30 秒）</strong>：浏览器打开<a href="https://huggingface.co/spaces/pollen-robotics/microduck-simulator">官方在线仿真器</a>，方向键开走。先建立直觉。</li>
+<li><strong>术语课（30 分钟）</strong>：<a href="../open-microduck/docs/zh-CN/getting-started/glossary.md">open-microduck 小白术语表</a>。</li>
+<li><strong>本地跑官方策略（一个下午，无需 GPU）</strong>：照 <a href="../open-microduck/docs/zh-CN/getting-started/simulation-first.md">仿真优先教程</a>——clone 两个官方仓 → <code>uv sync</code> → 用 <code>infer_policy.py</code> 加载官方 walk.onnx 在 MuJoCo 里跑。验收不是"动画动了"，而是确认输入 61 维、输出 14 维的接口理解正确。</li>
+<li><strong>玩具强化学习（半小时）</strong>：跑 <a href="../microduck-replica/learning/duck_food_qlearning.py">duck_food_qlearning.py</a>——零依赖的 Q-learning 小游戏（鸭子找玉米），看完 Q 表你就懂了"奖励驱动学习"的最小内核。</li>
+<li><strong>想深入训练</strong>：你的 <a href="../microduck-replica/rl-series/30天计划.md">rl-series/30天计划.md</a> 已成体系（环境→obs/action→PPO→ONNX→Rust 运行时），配合官方 <a href="https://github.com/pollen-robotics/microduck_rl">microduck_rl</a> 仓。</li>
+<li><strong>Radxa 侧</strong>：<a href="../docs/robot/install-dev.md">官方开发板装机文档</a> + <a href="../docs/design/architecture.md">架构总览</a>（7 个守护进程各管什么，robotd 为什么是唯一能碰舵机的进程）。</li>
+</ol>
+<hr />
+<h2 id="8-你的-30-天计划">8. 你的 30 天计划</h2>
+<blockquote>
+<p>结合你的库存定制（Radxa✅ 打印件✅ Pi2✅ SG90✅ ESP32✅），大钱全部押后。每周照着做，每周末把结果写进构建日志——<strong>写下来才算数</strong>。</p>
+</blockquote>
+<h3 id="第-1-周手上和电脑上0">第 1 周：手上和电脑上（¥0）</h3>
+<table>
+<thead>
+<tr>
+<th>天</th>
+<th>任务</th>
+<th>产出</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>D1</td>
+<td>打印件收货实测：M2 试穿 + 目检（第 3.2 节）</td>
+<td>G1 数据记入构建日志</td>
+</tr>
+<tr>
+<td>D2</td>
+<td>辨认机器狗舵机型号（第 3.3 节）；清点引脚数、拍标签</td>
+<td>舵机档案</td>
+</tr>
+<tr>
+<td>D3–4</td>
+<td>Pi 2 装 Raspberry Pi OS（网线连电脑/路由器），跑 <code>pi_sg90_bench.py</code> 前两课：单舵机脉宽 + 负载保持</td>
+<td>一只听话的舵机</td>
+</tr>
+<tr>
+<td>D5</td>
+<td>SG90 第 3–4 课：6 舵机序列 + 开环漂移实验（命令 90° 实测停几度）</td>
+<td>"开环的宿命"实测数据</td>
+</tr>
+<tr>
+<td>D6–7</td>
+<td>电脑上跑通官方仿真策略（第 7 节第 3 步）；浏览器玩 Sandbox</td>
+<td>仿真里的鸭子会走</td>
+</tr>
+</tbody>
+</table>
+<h3 id="第-2-周radxa-点亮-下第一单">第 2 周：Radxa 点亮 + 下第一单</h3>
+<table>
+<thead>
+<tr>
+<th>天</th>
+<th>任务</th>
+<th>产出</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>D8–9</td>
+<td>Armbian 刷机 → SSH 进去 → 过三个坑（mask serial-getty、i2c3 引脚取舍、NPU overlay）</td>
+<td>Radxa 可用</td>
+</tr>
+<tr>
+<td>D10</td>
+<td>编译官方 Rust 运行时（<code>cargo build</code>，先不接舵机，看 robotd 起得来）</td>
+<td>大脑装好</td>
+</tr>
+<tr>
+<td>D11</td>
+<td>🛒 下单：USB 总线调试板（FE-URT-1 ≈¥45）+ <strong>1 只</strong>鸭子级舵机（见下）</td>
+<td>G2 门票</td>
+</tr>
+<tr>
+<td>D12–13</td>
+<td>Pi 2 + SG90 复习接线；小智 ESP32 按官方文档烧录玩一次（纯娱乐，验收语音链路）</td>
+<td>玩具时间</td>
+</tr>
+<tr>
+<td>D14</td>
+<td>周复盘写日志</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>D11 买哪只舵机？</strong> 预算充足 → XL330-M288 单只（≈¥172，官方 ONNX 保真）；想省钱走重训 → 飞特一只样品（先试后买 15 只）。<strong>只买一只</strong>，这是台架，不是大单。</p>
+</blockquote>
+<h3 id="第-3-周总线课-电路课">第 3 周：总线课 + 电路课</h3>
+<table>
+<thead>
+<tr>
+<th>天</th>
+<th>任务</th>
+<th>产出</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>D15–16</td>
+<td>调试板+单舵机到货：Dynamixel Wizard 扫到它 → 改 ID → 读角度 → 50Hz 连读 10 分钟</td>
+<td>G2 通过</td>
+</tr>
+<tr>
+<td>D17–18</td>
+<td><strong>电路图课</strong>：按第 5 节把 imu_to_dxl 原理图逐块读懂，对照接线表把 23 个网络讲给自己听</td>
+<td>看图能力</td>
+</tr>
+<tr>
+<td>D19</td>
+<td>玩 <code>duck_food_qlearning.py</code>；读 <a href="../microduck-replica/docs/硬件入门.md">硬件入门</a></td>
+<td>概念闭环</td>
+</tr>
+<tr>
+<td>D20–21</td>
+<td>🛒 决策舵机大单路线（XL330 保官方模型 vs 飞特走重训），下单或存钱；同时下单 NP-F550 电池</td>
+<td>关键决策</td>
+</tr>
+</tbody>
+</table>
+<h3 id="第-4-周机械课-自制板">第 4 周：机械课 + 自制板</h3>
+<table>
+<thead>
+<tr>
+<th>天</th>
+<th>任务</th>
+<th>产出</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>D22–23</td>
+<td>打孔径测试片 → 实测补偿值 → 记录</td>
+<td>打印定标</td>
+</tr>
+<tr>
+<td>D24–26</td>
+<td>按 21 页说明书试装<strong>一条腿</strong>（5 舵机骨架，舵机没到可先空装结构件）</td>
+<td>装配手感</td>
+</tr>
+<tr>
+<td>D27</td>
+<td>🛒 imu_to_dxl 打样下单（嘉立创，≈¥100）</td>
+<td>G3 门票</td>
+</tr>
+<tr>
+<td>D28–30</td>
+<td>月度复盘：构建日志补全 + 写一篇总结（喂给你的公众号系列）</td>
+<td>阶段闭环</td>
+</tr>
+</tbody>
+</table>
+<p><strong>30 天结束时你应该有</strong>：能看懂原理图的眼睛、能试装结构件的手、一台点亮的 Radxa、一个跑过官方策略的仿真环境、以及一张校准过的"钱该花在哪"的决策表。舵机大单和整机装配是第二个月的事。</p>
+<hr />
+<h2 id="9-必踩的坑">9. 必踩的坑</h2>
+<ol>
+<li><strong>Armbian 的登录控制台占着 ttyS2</strong>（舵机总线用的串口）。<code>sudo systemctl mask serial-getty@ttyS2</code> 屏蔽掉，否则总线发疯。</li>
+<li><strong>i2c3 与 USB-C 供电协商抢引脚</strong>。用排针 3/5 脚的硬件 I²C 的代价是失去 PD 快充协商（普通 5V 充电不受影响）。</li>
+<li><strong>NPU 出厂默认关闭</strong>。要跑视觉模型需刷 overlay 并重启。</li>
+<li><strong>舵机出厂 return_delay=500µs</strong>，16 台设备一 tick 就吃掉 8ms——必须全部写 0，否则 50Hz 循环装不下。</li>
+<li><strong>XL330 是超压运行的</strong>（舵机直接吃电池 6.6–8.2V，标称只有 5–7.4V）。这是官方设计特性，不是接错；但意味着你的供电方案要能扛。</li>
+<li><strong>SG90/机器狗舵机装不进鸭子</strong>。不是歧视，是物理：没有位置反馈 + 力矩 1/3 + 孔位不同。它们的岗位是台架教具。</li>
+<li><strong>打印孔缩 0.1–0.3mm</strong>。测试片先行，补偿值回填后再批量。</li>
+<li><strong>电池是 NP-F550，不是 F970</strong>。买错装不进，还重 300g。</li>
+<li><strong>两套舵机 ID 表不要混用</strong>：平价教程路线（Microduck-build-tutorial）用 ID 1–15；官方/复刻路线用 10–14（右腿）、20–24（左腿）、30–34（头颈嘴）、200（IMU）。照哪条路线就用哪张表，混了全乱。</li>
+<li><strong>永远不要直接拔电</strong>。先 <code>sudo shutdown -h now</code>，等 15 秒再关电源开关，SD 卡和文件系统会感谢你。</li>
+<li><strong>总线上偶发丢包（约 0.27%）是正常的</strong>，官方运行时自带容错（连丢 3 tick 才算故障）。别看到一个 CRC 错误就拆机。</li>
+<li><strong>第一次真机运行必须手扶</strong>，且不要在桌边——摔倒不是失败，是数据。</li>
+</ol>
+<hr />
+<h2 id="10-安全守则">10. 安全守则</h2>
+<ul>
+<li>上电前：万用表确认电源正负极、确认无短路（通断档）；</li>
+<li>电池：不过放（NP-F550 单芯 &lt;3.0V 就停）、不短路存放、充电时人不离开；</li>
+<li>焊接：焊点套热缩管；烙铁离开就放支架；通风；</li>
+<li>舵机：堵转（被卡住还猛发力）几秒内就能烧齿轮/芯片，听到"嗡嗡"异响立刻断电；</li>
+<li>真机测试：低重心、软垫、手扶、远离桌沿；</li>
+<li>关机流程：软件关机 → 等 15 秒 → 断电源开关。</li>
+</ul>
+<hr />
+<h2 id="11-文档地图">11. 文档地图</h2>
+<table>
+<thead>
+<tr>
+<th>你想…</th>
+<th>去读</th>
+<th>路径</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>5 分钟建立全局</td>
+<td>本文第 1 节</td>
+<td>—</td>
+</tr>
+<tr>
+<td>系统学概念</td>
+<td>小白术语表</td>
+<td><code>open-microduck/docs/zh-CN/getting-started/glossary.md</code></td>
+</tr>
+<tr>
+<td>选学习路线</td>
+<td>路线与电脑要求</td>
+<td><code>open-microduck/docs/zh-CN/getting-started/choose-your-path.md</code></td>
+</tr>
+<tr>
+<td>本地跑仿真</td>
+<td>仿真优先教程</td>
+<td><code>open-microduck/docs/zh-CN/getting-started/simulation-first.md</code></td>
+</tr>
+<tr>
+<td>懂电气五模块</td>
+<td>硬件入门</td>
+<td><code>microduck-replica/docs/硬件入门.md</code></td>
+</tr>
+<tr>
+<td>一页纸规格速查</td>
+<td>硬件规格速查</td>
+<td><code>microduck-replica/docs/硬件规格速查.md</code></td>
+</tr>
+<tr>
+<td>看懂原理图</td>
+<td>本文第 5 节 + 原理图 PDF</td>
+<td><code>microduck-replica/hardware/imu_to_dxl/</code></td>
+</tr>
+<tr>
+<td>装配机械</td>
+<td>21 页安装说明书</td>
+<td><code>microduck-replica-cad/安装说明书/microduck装配安装说明书.pdf</code></td>
+</tr>
+<tr>
+<td>打印不出错</td>
+<td>打印工艺调整表 + 打印就绪检查</td>
+<td><code>microduck-replica/docs/打印*.md</code></td>
+</tr>
+<tr>
+<td>买东西不踩坑</td>
+<td>电控/机械采购清单</td>
+<td><code>microduck-replica/docs/*采购清单.md</code></td>
+</tr>
+<tr>
+<td>算总账</td>
+<td>BOM</td>
+<td><code>microduck-replica/BOM.md</code></td>
+</tr>
+<tr>
+<td>换舵机/重训</td>
+<td>换舵机重训全流程</td>
+<td><code>microduck-replica/docs/换舵机重训全流程.md</code></td>
+</tr>
+<tr>
+<td>刷 Radxa</td>
+<td>官方装机文档</td>
+<td><code>docs/robot/install-dev.md</code></td>
+</tr>
+<tr>
+<td>懂官方软件架构</td>
+<td>架构总览</td>
+<td><code>docs/design/architecture.md</code></td>
+</tr>
+<tr>
+<td>日常操作鸭子</td>
+<td>Cheat sheet</td>
+<td><code>docs/robot/cheatsheet.md</code></td>
+</tr>
+<tr>
+<td>记录进度</td>
+<td>构建日志</td>
+<td><code>microduck-replica/构建日志.md</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<p><em>最后一句：这个项目里没有一步是"天才操作"，全部是"照文档做 + 出错查日志 + 记下来"。摔 100 次的鸭子和写满 100 行的构建日志，就是从新手到作者的全部距离。</em></p>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>第 23 课 · 语音大脑:小智 ESP32 与 MCP · 什么鸭 WhatDuck</title>
+<meta name="description" content="阶段 E 你用手柄发目标,这一课把"目标入口"再往上一层——用一句自然语言让鸭子听懂并执行;同时弄清语音指令为什么不能绕过安全检查。">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="第 23 课 · 语音大脑:小智 ESP32 与 MCP">
+<meta property="og:description" content="阶段 E 你用手柄发目标,这一课把"目标入口"再往上一层——用一句自然语言让鸭子听懂并执行;同时弄清语音指令为什么不能绕过安全检查。">
+<meta property="og:url" content="https://duck.whatled.com/learn/course-23">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/course-23">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">LESSON 23 · 阶段 F · 迁移与扩展 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="第-23-课-语音大脑小智-esp32-与-mcp">第 23 课 · 语音大脑:小智 ESP32 与 MCP</h1>
+<blockquote>
+<p><strong>这一课解决什么问题</strong>:阶段 E 你用手柄发目标,这一课把"目标入口"再往上一层——用一句自然语言让鸭子听懂并执行;同时弄清语音指令为什么不能绕过安全检查。</p>
+<p><strong>前置</strong>:<a href="/learn/course-21">第 21 课</a>;记得第 01 课的"你发目标,策略管过程"。</p>
+</blockquote>
+<hr />
+<h2 id="1-回到第-01-课那张图语音是更上层的目标入口">1. 回到第 01 课那张图:语音是更上层的目标入口</h2>
+<p>第 01 课画过这个分层:上层发<strong>目标</strong> → 策略算出 14 个关节角度 → 关节转动 → 传感器回传。手柄已经是一层"目标入口":你推摇杆,只改速度指令。语音做的是同一件事,入口更高:</p>
+<pre><code class="language-text">你说话 ──▶ 语音大脑(听懂 + 决策) ──▶ 动作指令 ──▶ 策略 ──▶ 关节
+</code></pre>
+<p>变的不是鸭子,是<strong>目标的表达方式</strong>。入口越往上越聪明,但听错的风险也越大,越需要下层保护(第 5 节)。</p>
+<p><strong>所以呢</strong>:看到任何"智能产品",先问:它的目标入口在哪一层?</p>
+<h2 id="2-小智-esp32-是什么">2. 小智 ESP32 是什么</h2>
+<p><code>xiaozhi-esp32/</code> 是工作区里的开源项目:一套跑在 ESP32 开发板上的 <strong>AI 语音聊天固件</strong>——接上麦克风和扬声器、联网后就能跟 AI 对话。小智负责"听懂",听到之后做什么,由设备注册的能力决定。<code>docs/microduck-30day/README.md</code> 把它定位为"第 30 天的语音/MCP 扩展,不属于 PPO 训练核心"——训练与交互解耦。</p>
+<h2 id="3-mcp给-ai-的标准插线板">3. MCP:给 AI 的标准插线板</h2>
+<p><strong>MCP</strong>(Model Context Protocol)一句话:<strong>让 AI 能发现并调用外部工具的标准接口</strong>——像一块标准插线板:设备把能做的事做成标准插头,模型来了即插即用。</p>
+<p><code>xiaozhi-esp32/docs/mcp-usage.md</code> 给出的完整流程只有四步:</p>
+<ol>
+<li>设备启动,经 WebSocket 或 MQTT 连上后端;</li>
+<li>后端发 <code>initialize</code>,开始 MCP 会话(底层是 JSON-RPC 2.0);</li>
+<li>后端发 <code>tools/list</code>,<strong>发现</strong>设备注册了哪些工具;</li>
+<li>后端用 <code>tools/call</code> <strong>调用</strong>某个工具。</li>
+</ol>
+<p>设备端用 <code>McpServer::AddTool</code> 注册工具:名字、自然语言描述、参数、实现。文档例子 <code>self.dog.forward</code>("Move the robot forward"),无参数,回调直接发前进指令;命名建议 <code>模块.动作</code> 风格。</p>
+<p>"让鸭子走过来"在系统里就变成一次 <code>tools/call</code>:调用 <code>self.duck.come_here</code>(示意工具名,真实示例见 mcp-usage 文档),参数为空。</p>
+<p>模型不需要被逐条教过这句话——读工具的<strong>描述</strong>就知道什么时候该调。"插线板"的含义:能力是插上去的,不是焊死的。</p>
+<p>另一类 <code>AddUserOnlyTool</code>(仅用户可调):默认不在 <code>tools/list</code> 里,后端要带 <code>withUserTools=true</code> 才能看到。文档用它放 <code>self.reboot</code>(重启)、<code>self.upgrade_firmware</code>(固件升级)这类<strong>不该让 AI 自主触发</strong>的操作——这本身就是安全原则。</p>
+<h2 id="4-给鸭子加语音的三层结构">4. 给鸭子加语音的三层结构</h2>
+<p>调研报告 <code>docs/research/physical-ai-robot-startup-research-2026-09-04.md</code> 第 6 节建议的分层,正好和鸭子对上:</p>
+<pre><code class="language-text">耳朵  麦克风         采集声音
+大脑  ESP32 语音前端 + 后端大模型  听懂并决策(高阶 AI 可放电脑/手机/树莓派)
+身体  策略 + 安全层   50 Hz 控制环、动作限幅、急停
+</code></pre>
+<p>报告的关键原则:<strong>即使高阶 AI 断网,机器人也应能完成基础动作、停止、静音和隐私关闭</strong>——云端可以增强体验,但不能成为硬件安全的单点故障。</p>
+<h2 id="5-安全边界语音不绕过安全检查">5. 安全边界:语音不绕过安全检查</h2>
+<p>语音指令到达身体前,必须穿过和手柄相同的安全层(第 20 课的清单、限幅、急停)——语音只是换了入口,不享受特权。三条:</p>
+<ol>
+<li>运动类工具的回调先过限幅和检查,再下发;</li>
+<li>重启、升级等特权操作一律用 <code>AddUserOnlyTool</code>,模型碰不到;</li>
+<li>断网降级:听不懂、连不上时,鸭子保持站立,而不是乱动。</li>
+</ol>
+<p><strong>所以呢</strong>:给任何系统加更聪明的入口,先问:它绕过了哪些老检查?</p>
+<h2 id="动手练习15-分钟">动手练习(15 分钟)</h2>
+<p>仿照 <code>self.dog.forward</code>(见 <code>xiaozhi-esp32/docs/mcp-usage.md</code>),在纸上设计 5 个给鸭子的语音工具:工具名 + 一句英文描述 + 参数 + 对应行为;至少 1 个用 <code>AddUserOnlyTool</code>(哪个动作不该让 AI 自主触发?)。这就是选题日历第 29 天的素材(见 <code>docs/microduck-30day/articles/editorial-calendar.md</code>)。</p>
+<h2 id="自查清单">自查清单</h2>
+<ul>
+<li>[ ] 我能画出"语音 → 大脑 → 策略 → 关节"的分层,并说清语音在哪一层</li>
+<li>[ ] 我能说出 MCP 四步流程,以及 tools/list 和 tools/call 各做什么</li>
+<li>[ ] 我能解释 AddTool 和 AddUserOnlyTool 的区别,以及为什么重启不能让 AI 自己调</li>
+<li>[ ] 我知道断网时鸭子应该还能做什么(基础动作、停止、静音)</li>
+</ul>
+<h2 id="下一课预告">下一课预告</h2>
+<p>第 24 课是全课程的方法论总结:这只鸭子教会你的五件事,如何迁移到游戏 AI、IoT、原型、运营实验和数字孪生。</p>
+<h2 id="延伸资源">延伸资源</h2>
+<ul>
+<li>MCP 工具注册与调用(本课主素材):<code>xiaozhi-esp32/docs/mcp-usage.md</code></li>
+<li>MCP 线协议细节:<code>xiaozhi-esp32/docs/mcp-protocol.md</code></li>
+<li>源码地图第 9 行:<code>docs/microduck-30day/source-map.md</code></li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

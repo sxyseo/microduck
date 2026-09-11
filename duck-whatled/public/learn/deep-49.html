@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>解读 49 · 立创 EDA 打样流程实战 · 什么鸭 WhatDuck</title>
+<meta name="description" content="microduck-replica/docs/电控采购清单.md §六 + microduck-replica/构建日志.md(2026-09-06 条目)+ microduck-">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="解读 49 · 立创 EDA 打样流程实战">
+<meta property="og:description" content="microduck-replica/docs/电控采购清单.md §六 + microduck-replica/构建日志.md(2026-09-06 条目)+ microduck-">
+<meta property="og:url" content="https://duck.whatled.com/learn/deep-49">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/deep-49">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">DEEP 49 · 第五辑 · 电路 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="解读-49-立创-eda-打样流程实战">解读 49 · 立创 EDA 打样流程实战</h1>
+<blockquote>
+<p><strong>解读对象</strong>:<code>microduck-replica/docs/电控采购清单.md</code> §六 + <code>microduck-replica/构建日志.md</code>(2026-09-06 条目)+ <code>microduck-replica/hardware/imu_to_dxl/README.md</code>(PCB 复查节)<br />
+<strong>需要的前置</strong>:<a href="/learn/deep-47">解读 47</a>(连接表是本流程的输入);[第 11 课../course/11-画自己的电路板.md。</p>
+</blockquote>
+<h2 id="从连接表到下单六步">从连接表到下单:六步</h2>
+<p>自绘板的全部输入,就是<a href="/learn/deep-47">解读 47</a>那张网络表。流程:</p>
+<ol>
+<li><strong>放元件</strong>:按 BOM 从立创商城放置元件,记的是商城编号(<code>U2</code> LSM6DSV16XTR = <code>C5267406</code>、<code>U3</code> = <code>C10430</code>、<code>U4</code> HT7533-1 = <code>C14289</code>、<code>J1/J2</code> = <code>C160259</code>;<code>U1</code> STM32G031F8P6 两个文档一作 <code>C529334</code> 一作 <code>C529333</code>,待验证,下单前以商城实搜为准)。构建日志 2026-09-06 总结的正确姿势:<strong>引脚编号由商城符号自动对应,画线只认网络名</strong>——"引脚编号不敢凭记忆写"这个卡点就此消灭。</li>
+<li><strong>连网络</strong>:全部用同名网络标签(Net Label),不直接拉线;布线时靠标签飞线。</li>
+<li><strong>布局布线</strong>:自绘板实测 2 层 45×22 mm,29 器件、227 段走线(顶层 197/底层 30)、31 个过孔、172 个泪滴;信号线宽 0.25 mm,<code>VDD_BUS</code> 直通 0.76 mm;底层整片 GND 铺铜当回流路径。</li>
+<li><strong>板框</strong>:这版立创 EDA 的图元接口只接受铜层,往板框层建线报错——所以板框走 <strong>DXF 导入</strong>(文件→导入→DXF,单位 mm,原点对齐)。</li>
+<li><strong>DRC + 器件标准化</strong>:立创自带 DRC 跑到 0 违规;下单前还要跑一次"器件标准化"(原理图 DRC 报过"元件属性与供应商编号不匹配")。</li>
+<li><strong>导生产文件下单</strong>:Gerber + BOM + 贴片坐标三件套;改动器件后要<strong>重导</strong>(器件从 27 变 29 后,立创侧的三个文件全部重传)。</li>
+</ol>
+<h2 id="drc-是下限不是上限">DRC 是下限,不是上限</h2>
+<p>DRC 归零 ≠ 板子没错。复查记录里有两个 DRC 之外的例子:</p>
+<ul>
+<li><strong>脚序反读复核</strong>:从 PCB 导出网表反读,核对四个连接器脚序——抓过 J1/J2 与 J4/J5 脚序相反的设计(见<a href="/learn/deep-46">解读 46</a>),全部落对才放心。</li>
+<li><strong>独立几何复核</strong>:用脚本按真实焊盘形状重新栅格化,量出异网最小间距 0.152 mm(嘉立创双面板下限 0.127 mm,余量 20%)、铜到板边 0.37 mm;立创 DRC 也确实抓到过一个落在插件孔正上方的过孔(孔心距 0.001 mm)——钻孔是机械工序,同网络也不允许重叠。</li>
+</ul>
+<h2 id="花多少钱等多久">花多少钱、等多久</h2>
+<table>
+<thead>
+<tr>
+<th>路线</th>
+<th>规格</th>
+<th>成本</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>自绘板打样(2 层)</td>
+<td>45×22 mm,嘉立创</td>
+<td>约 <strong>¥25–40</strong>(不含贴片;构建日志记自制板总共约 ¥100)</td>
+</tr>
+<tr>
+<td>自绘板贴片</td>
+<td>板上有 LGA-14,需热风或回流</td>
+<td>团贴片或自备热风枪</td>
+</tr>
+<tr>
+<td>HAT 板(4 层)</td>
+<td>官方 <code>production/</code> Gerber 直接下单</td>
+<td>4 层 + 118 个贴片位,<strong>必须选 SMT 服务</strong>,几百元起且有起订量</td>
+</tr>
+</tbody>
+</table>
+<p>还有一个封装口径的实战决策:阻容一律 <strong>0603</strong> 不用 0402——不是手焊问题,是<strong>调试期返修</strong>问题:串阻要从 150Ω 试到 33Ω、上拉要摘、去耦要补,0603 拿烙铁几秒就能改;且这些值全在立创基础库,比 0402 扩展库还省上料费。</p>
+<h2 id="你带走的收获">你带走的收获</h2>
+<ol>
+<li><strong>引脚映射外包给库</strong>:用商城符号+网络标签,消灭"凭记忆写引脚号"这一整类错误。</li>
+<li><strong>DRC 查规则,不查意图</strong>:连通了不等于连对了,脚序、极性这类"符合规则但连错"的错要靠人工反读网表。</li>
+<li><strong>生产三件套要同步</strong>:Gerber、BOM、贴片坐标是一套,改一颗料就全部重导,不然贴片厂拿到错版本。</li>
+<li><strong>封装选型为返修服务</strong>:第一版板子必然要改,封装的可改性比面积更重要。</li>
+</ol>
+<h2 id="延伸">延伸</h2>
+<ul>
+<li><a href="/learn/deep-47">解读 47</a>:本流程第一步的输入长什么样</li>
+<li><a href="/learn/deep-42">解读 42</a>:不用画的板直接用官方 Gerber</li>
+<li><a href="/learn/deep-44">解读 44</a>:LGA-14 封装为什么绕不开热风</li>
+<li>本地:<code>microduck-replica/hardware/imu_to_dxl/imu_to_dxl.eprj2</code>(立创工程)、<code>docs/macOS舵机调试与图纸查看指南.md</code>(用什么软件打开图纸)</li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

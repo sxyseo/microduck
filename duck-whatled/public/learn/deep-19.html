@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>解读 19 · updater(下):reconcile 与回滚 · 什么鸭 WhatDuck</title>
+<meta name="description" content="updater/src/reconcile.rs(373 行)+ updater/src/orphan.rs(352 行)+ updater/src/faults.rs(120 行">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="解读 19 · updater(下):reconcile 与回滚">
+<meta property="og:description" content="updater/src/reconcile.rs(373 行)+ updater/src/orphan.rs(352 行)+ updater/src/faults.rs(120 行">
+<meta property="og:url" content="https://duck.whatled.com/learn/deep-19">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/deep-19">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">DEEP 19 · 第二辑 · 感知与系统服务 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="解读-19-updater下reconcile-与回滚">解读 19 · updater(下):reconcile 与回滚</h1>
+<blockquote>
+<p><strong>解读对象</strong>:<code>updater/src/reconcile.rs</code>(373 行)+ <code>updater/src/orphan.rs</code>(352 行)+ <code>updater/src/faults.rs</code>(120 行)<br />
+<strong>需要的前置</strong>:<a href="/learn/deep-18">解读 18</a>。</p>
+</blockquote>
+<h2 id="回滚是最容易悄悄坏掉的功能">回滚是最容易悄悄坏掉的功能</h2>
+<p>faults.rs 开头一句话足以立论(faults.rs:1-6):回滚只在"别的东西已经坏了"时运行,所以最容易悄悄坏——"回滚大概能用"必须变成 CI 断言。手段是<strong>故障注入</strong>:<code>Faults</code>(faults.rs:14)八个开关,从 <code>corrupt_artifact</code>(必须哈希不匹配、不安装)到 <code>fail_rollback</code>(更新失败且恢复失败,必须大声报告)。三条纪律值得抄走:</p>
+<ul>
+<li>编译进正式二进制而非 <code>#[cfg(test)]</code>(Rust 的条件编译,只对测试构建生效),同一支二进制可在台架演练(faults.rs:8-10);</li>
+<li>启用需配置 <code>allow_fault_injection</code>,量产配置永不设(faults.rs:59-65);</li>
+<li>打错的故障名<strong>报错而非忽略</strong>(faults.rs:78-84)——静默忽略的注入会让测试在什么都没注入时"通过"。</li>
+</ul>
+<p>回滚的机械动作很小:发布布局是 <code>releases/&lt;版本&gt;/</code> 加一个 <code>current</code> 符号链接(store.rs:6-8),换代 = <code>rename(2)</code> 原子改链接(store.rs:146),回滚 = 把链接指回去。难的是知道何时该回,以及回完之后世界是否一致。</p>
+<h2 id="orphanrs把-203exec-拦在换链接之前">orphan.rs:把 203/EXEC 拦在换链接之前</h2>
+<p>一个真实事故(orphan.rs:10-14):板子从 dev 构建解析到 stable 0.2.0,而 0.2.0 早于 configd 诞生;<code>configd.service</code> 还在,<code>ExecStart</code> 指向旧版没有的二进制,systemd 报 <code>203/EXEC</code>,失败的重启又让更新失败、触发回滚。结局正确,诊断却只能靠读 systemd 错误码。</p>
+<p><code>would_orphan</code>(orphan.rs:66)把规则变成检查:扫 <code>/etc/systemd/system/*.service</code>,凡 <code>Exec*=</code> 指进 <code>current</code> 符号链接、而候选版本里没有对应文件的,就是孤儿。细节:</p>
+<ul>
+<li>每个 <code>Exec*=</code> 都算,不只 <code>ExecStart</code>(orphan.rs:108-123)——<code>ExecStartPre</code> 缺文件一样失败;<code>logical_lines</code>(orphan.rs:130)合并 systemd 的反斜杠续行,<code>updaterd.service</code> 自己的 ExecStart 就跨三行。</li>
+<li><strong>故意 fail-open</strong>(orphan.rs:26-31):读不懂的 unit 不产出结论。假阴性的代价是回到今天那个 203/EXEC 回滚;假阳性的代价是因解析器看不懂而拒绝更新——拒绝更新是更新系统唯一不可以做错的事。</li>
+<li>位置讲究:不在 preflight(preflight 看不到候选文件列表),在"解压后、换链前"跑;也不在回滚路径上——能拒绝人的检查不得坐在恢复路上(orphan.rs:33-43)。</li>
+<li><code>refusal</code>(orphan.rs:189)给的是可执行出路:<code>systemctl disable --now &lt;unit&gt; &amp;&amp; rm &lt;path&gt;</code>;<strong>故意不做 <code>--force</code> 旗标</strong>——删除 unit 才是操作者真正的意思,让局面变真,而不是推翻一个说真话的检查。</li>
+</ul>
+<h2 id="reconcilers重启真的发生了吗">reconcile.rs:重启真的发生了吗</h2>
+<p>更新的延迟重启经 <code>systemd-run</code> 排程,而<strong>排程成功 ≠ 重启发生</strong>(reconcile.rs:3-8),这留下一个静默态:机器人跑着它没装过的版本。reconcile 在每次 <code>updaterd</code> 启动时对账:读每个守护进程启动时发布的 identity 文件(<code>running_release</code>,reconcile.rs:173),与组件 <code>current</code> 指向的版本比对,过期者 <code>systemctl restart</code>。</p>
+<p>裁决函数 <code>verdict_for</code>(reconcile.rs:81)是纯函数、与一切 syscall 分离——"会判错的部分"必须可测,而真实板凑不出那个状态,它恰恰要靠坏更新才能制造。四条裁决里最重的一条:<strong><code>updaterd</code> 永不在这里重启自己</strong>(<code>Verdict::ReportedOnly</code>,reconcile.rs:62-74)。若继任者对"哪个版本是活动"意见相左,它会重启、再相左、再重启——在独占恢复的进程里死循环,那是唯一没有出路的故障。检查放在启动时的理由也直白:updaterd 无法目睹自己的重启落地,只有继任者能查(reconcile.rs:21-27)。另外,停着的 unit 不是过期的 unit(reconcile.rs:87-89):每次启动都替人重启它停掉的服务,是没人要的决定。</p>
+<h2 id="你带走的收获">你带走的收获</h2>
+<ul>
+<li>只在故障时运行的代码最容易烂:把故障做成可注入开关,恢复路径才进得了 CI。</li>
+<li>检查宁可 fail-open,不可错误地拒绝——错误地拒绝更新本身就是最大事故。</li>
+<li>错误信息给 remedy(具体命令),不开 escape-hatch 旗标。</li>
+<li>对账交给继任者进程;拥有恢复能力的进程永不重启自己。</li>
+</ul>
+<h2 id="延伸">延伸</h2>
+<ul>
+<li><a href="/learn/deep-18">解读 18</a>:换链之前的防线。</li>
+<li><a href="/learn/deep-20">解读 20</a>:<code>update.progress</code>/<code>update.show</code> 如何把这一切讲给客户端。</li>
+<li>源码:<code>updater/src/reconcile.rs</code>、<code>updater/src/orphan.rs</code>、<code>updater/src/faults.rs</code>、<code>updater/src/store.rs</code>。</li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>第 03 课 · 装好工具箱:git、uv 和第一个里程碑 · 什么鸭 WhatDuck</title>
+<meta name="description" content="在自己的电脑上跑通官方现成策略——不需要 GPU,一个下午够。这是阶段 B 的第一个里程碑:从此鸭子不只活在浏览器里,活在你机器上。">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="第 03 课 · 装好工具箱:git、uv 和第一个里程碑">
+<meta property="og:description" content="在自己的电脑上跑通官方现成策略——不需要 GPU,一个下午够。这是阶段 B 的第一个里程碑:从此鸭子不只活在浏览器里,活在你机器上。">
+<meta property="og:url" content="https://duck.whatled.com/learn/course-03">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/course-03">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">LESSON 03 · 阶段 B · 软件与仿真 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="第-03-课-装好工具箱gituv-和第一个里程碑">第 03 课 · 装好工具箱:git、uv 和第一个里程碑</h1>
+<blockquote>
+<p><strong>这一课解决什么问题</strong>:在自己的电脑上跑通官方现成策略——不需要 GPU,一个下午够。这是阶段 B 的第一个里程碑:从此鸭子不只活在浏览器里,活在你机器上。</p>
+<p><strong>前置</strong>:<a href="/learn/course-02">第 02 课</a>。需要一台 Mac/PC、稳定网络和命令行。</p>
+</blockquote>
+<hr />
+<h2 id="1-为什么是-uv不是-pip">1. 为什么是 uv,不是 pip</h2>
+<p>uv 是一个 Python 包管理器——管的事和 pip 一样(装依赖),但用法更省心。最直接的理由只有一条:<strong>官方项目用它管理一切依赖</strong>,照官方的来,少发明环节。两个高频命令:</p>
+<ul>
+<li><code>uv sync</code>:按项目里的依赖清单,自动建好虚拟环境并装齐所有包,版本精确对齐;</li>
+<li><code>uv run xxx</code>:在这个项目自己的环境里运行某个命令——你不用手动"激活环境",它替你进。</li>
+</ul>
+<p><strong>类比</strong>:pip 像自己拿着购物清单满超市找货;uv 像"菜谱 + 配好的一整箱食材"——照着官方菜谱做,出错概率最小。</p>
+<p>git 这里只干两件事:把仓库下载到本地(<code>git clone</code>),以及<strong>固定版本</strong>(<code>git checkout</code> 某个 commit)。第二件事很多新手忽略,但它决定你的实验能不能复现。</p>
+<h2 id="2-clone-哪两个仓库">2. Clone 哪两个仓库</h2>
+<pre><code class="language-bash">git clone https://github.com/pollen-robotics/microduck_rl
+git clone https://github.com/pollen-robotics/microduck
+</code></pre>
+<p>分工:<code>microduck_rl</code> 是<strong>训练与仿真仓</strong>(阶段 B 的主角,训练、回放、导出都在这里敲);<code>microduck</code> 是官方运行时仓,<strong>自带训练好的策略文件</strong>(如 <code>policies/alpha_walking.onnx</code>)——你第一步要跑的"现成大脑"就在里面。</p>
+<p>要做正式实验就固定到 OpenMicroDuck 校对过的基线 commit:</p>
+<pre><code class="language-bash">cd microduck_rl &amp;&amp; git checkout 29e887ecfbf5d37144759e5a9f8a176dfb83d547
+cd ../microduck  &amp;&amp; git checkout 2c61dcc1f03440541cdc0729f7a375b2a9ea3005
+</code></pre>
+<p>平时探索可以跟最新分支,但<strong>发表或对比结果时必须记录 commit</strong>——这是这门课"结论必须有出处"铁律的技术版。</p>
+<h2 id="3-装依赖第一次会比较久">3. 装依赖(第一次会比较久)</h2>
+<pre><code class="language-bash">cd microduck_rl
+export UV_HTTP_TIMEOUT=600   # 依赖多,防下载超时
+uv sync
+</code></pre>
+<p>第一次会下载很多东西,属正常,喝口水。关键认知:<strong>这一步只是 CPU 推理的依赖,不需要训练 GPU</strong>——没有 N 卡的 Mac 用户全程无障碍。</p>
+<h2 id="4-第一个里程碑跑通现成策略">4. 第一个里程碑:跑通现成策略</h2>
+<pre><code class="language-bash">uv run scripts/infer_policy.py \
+  --walking   ../microduck/policies/alpha_walking.onnx \
+  --standing  ../microduck/policies/alpha_stand.onnx \
+  --sitstand  ../microduck/policies/alpha_sitstand.onnx \
+  --roulade   ../microduck/policies/roulade.onnx \
+  --new-cmd-obs
+</code></pre>
+<p>会弹出 MuJoCo 视窗,鸭子按你的指令走、站、翻滚。默认走 <strong>BAM 执行器模型</strong>(比理想电机更接近真机舵机的仿真方式,第 15 课会回扣)。</p>
+<h2 id="5-验收标准不是会动就算">5. 验收标准:不是"会动"就算</h2>
+<p>教程原话的要求,逐条核对:</p>
+<ul>
+<li>MJCF(机器人身体文件)加载成功;</li>
+<li>ONNX(策略文件)加载成功;</li>
+<li>61 维观测被正确接受,14 维动作顺序没错;</li>
+<li>机器人不是因接口错误而崩——是自己在动,不是报错前的抽搐;</li>
+<li>你记录了 commit 和实际命令。</li>
+</ul>
+<p>"看起来挺可爱、会走了"不是技术验收标准——"跑起来了"和"跑对了"是两回事。</p>
+<h2 id="6-训练环境自检还不是真训练">6. 训练环境自检(还不是真训练)</h2>
+<p>再跑一次 5 迭代冒烟,确认训练链路也是通的:</p>
+<pre><code class="language-bash">uv run train Mjlab-Velocity-Flat-MicroDuck --env.scene.num-envs 64 --agent.max-iterations 5
+</code></pre>
+<p>它只验证:环境能构建、能 step、没有 NaN、观测和奖励正常。<strong>过了它,你的仿真 + 训练环境才算搭好。</strong>具体每个参数什么意思、Mac 上的两个坑,第 05 课展开。</p>
+<h2 id="动手练习3045-分钟">动手练习(30–45 分钟)</h2>
+<p>完整跑一遍第 2–4 步,然后写四行记录:两个 commit 号、你敲的命令、屏幕上发生了什么、一句话结论。这四行就是你实验日志的第一页——以后每课都这么记。</p>
+<h2 id="自查清单">自查清单</h2>
+<ul>
+<li>[ ] 我能说清 <code>uv sync</code> 和 <code>uv run</code> 各干什么</li>
+<li>[ ] 我知道 clone 了哪两个仓库、各自的分工</li>
+<li>[ ] 我的鸭子在本地 MuJoCo 视窗里按指令走起来了</li>
+<li>[ ] 我能背出 5 条验收标准,而不是只看"会动"</li>
+</ul>
+<p>全部打勾,进入<a href="/learn/course-04">第 04 课:61 → 14</a>。</p>
+<h2 id="下一课预告">下一课预告</h2>
+<p>第 04 课拆解你刚跑起来的这个"大脑":61 维观测由什么组成、14 维动作怎么排、50 Hz 控制环怎么转——以及为什么这套数字契约一个都不能乱动。</p>
+<h2 id="延伸资源">延伸资源</h2>
+<ul>
+<li>进阶学习文档第 1 节(本课命令的出处):<code>docs/进阶学习文档-训练仿真与部署.md</code></li>
+<li>OpenMicroDuck《先做仿真》完整教程:<code>open-microduck/docs/zh-CN/getting-started/simulation-first.md</code></li>
+<li>卡住了先别慌:第 07 课整课讲排错;也可先查 <code>open-microduck/docs/zh-CN/getting-started/troubleshooting.md</code></li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

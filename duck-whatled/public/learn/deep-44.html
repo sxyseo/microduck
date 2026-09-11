@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>解读 44 · LSM6DSV16X:IMU 芯片的读取路径 · 什么鸭 WhatDuck</title>
+<meta name="description" content="microduck-replica/docs/imu_to_dxl-设计包/原理图连接表.md(I2C 初版)+ microduck-replica/hardware/imu_to">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="解读 44 · LSM6DSV16X:IMU 芯片的读取路径">
+<meta property="og:description" content="microduck-replica/docs/imu_to_dxl-设计包/原理图连接表.md(I2C 初版)+ microduck-replica/hardware/imu_to">
+<meta property="og:url" content="https://duck.whatled.com/learn/deep-44">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/deep-44">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">DEEP 44 · 第五辑 · 电路 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="解读-44-lsm6dsv16ximu-芯片的读取路径">解读 44 · LSM6DSV16X:IMU 芯片的读取路径</h1>
+<blockquote>
+<p><strong>解读对象</strong>:<code>microduck-replica/docs/imu_to_dxl-设计包/原理图连接表.md</code>(I2C 初版)+ <code>microduck-replica/hardware/imu_to_dxl/imu_to_dxl-接线表.md</code>(SPI 终版)<br />
+<strong>需要的前置</strong>:<a href="/learn/deep-43">解读 43</a>(这颗芯片的数据要送去哪)。</p>
+</blockquote>
+<h2 id="芯片一句话">芯片一句话</h2>
+<p>LSM6DSV16X 是 ST 的六轴惯性芯片:三轴陀螺仪(测角速度)+ 三轴加速度计(测重力方向),LGA-14 封装,片上 SFLP 块直接输出姿态四元数。它只讲两种"方言":I2C 或 SPI——由 <strong>CS 引脚的电平</strong>在上电时决定。</p>
+<h2 id="数据要走的整条路">数据要走的整条路</h2>
+<pre><code>LSM6DSV16X ──I2C/SPI──► STM32G031(MCU)──打包──► 半双工缓冲 ──► 总线 ID 200 ──► 主机 imu.rs 解码
+   ▲                                                                 rotate(mount) 转回躯干系
+   └ 量程寄存器定 ±500 dps,主机按 17.5 mdps/LSB 换算
+</code></pre>
+<p>芯片到 MCU 这一段,仓库里有<strong>两个版本</strong>:</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>设计包连接表(初版)</th>
+<th>hardware 接线表(终版)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>接口</td>
+<td>I2C @400 kHz(PB6/PB7,4.7kΩ 上拉)</td>
+<td>SPI 四线(PA4 CS / PA5 SCK / PA6 MISO / PA7 MOSI)</td>
+</tr>
+<tr>
+<td>从机地址/片选</td>
+<td>地址 <strong>0x6A</strong>(SA0 接 GND)</td>
+<td>CS 片选,R1 10kΩ 上拉到 3V3</td>
+</tr>
+<tr>
+<td>中断</td>
+<td>INT1 → PA0(预留,骨架先轮询)</td>
+<td>INT1/INT2 两路</td>
+</tr>
+</tbody>
+</table>
+<p>设计包那版明确标注【设计】决策,hardware 版是后来画原理图时的改型——<strong>不是文档打架,是演进</strong>,以接线表为准;两版共同的铁律见下节。</p>
+<h2 id="cs-的坑这根脚不能悬空">CS 的坑:这根脚不能悬空</h2>
+<p>构建日志 2026-09-06 原文把两个翻车点写进连接表,第一个就是它:<strong>LSM6DSV16X 的 CS 必须拉 3V3——悬空会进 SPI 模式,I2C 永远读不到</strong>。CS(片选)这类"模式选择脚"在上电瞬间采样电平:悬空=电平不确定=每次上电抽奖。</p>
+<p>改 SPI 之后这条没作废,只是换了理由:上电与复位期间 MCU 的 PA4 是高阻,CS 浮着可能被 IMU 误判模式、或把总线噪声当命令——所以接线表里 <strong>R1 10kΩ 上拉标注"必须"</strong>。另一个硬性要求:U2.2(SDx)、U2.3(SCx)必须接地不可悬空(ST DS13510 Rev 1, Table 1)。</p>
+<h2 id="量程是一对约定不是单方面的事">量程是一对约定,不是单方面的事</h2>
+<p>固件若把陀螺配成 ±125 dps,芯片输出的还是"原始计数",但主机按 <strong>17.5 mdps/LSB</strong>(±500 dps 档的换算系数)去乘——读到的角速度整体错 4 倍,还不报任何错。设计规格.md 把"量程锁定 ±500 dps"标为【已验证】,就是因为这是固件与主机之间<strong>必须对齐的隐式合同</strong>。</p>
+<h2 id="你带走的收获">你带走的收获</h2>
+<ol>
+<li><strong>带模式选择脚的芯片,选择脚永远要有确定电平</strong>——上拉或下拉,悬空是最常见的新手翻车点。</li>
+<li><strong>I2C 省引脚、SPI 快</strong>:两根线带多设备靠地址,四根线独占靠片选;小板引脚紧张时 I2C 合理,要带宽时 SPI。</li>
+<li><strong>"原始计数"不是物理量</strong>:传感器读数 = 计数 × 换算系数,系数跟着量程寄存器走,两端必须同版本。</li>
+<li><strong>数据手册的"必须接地/必须接电源"脚是硬约束</strong>:ST 明确写了 SDx/SCx 不可悬空,这类句子值得在画图前逐条抄进自查清单。</li>
+</ol>
+<h2 id="延伸">延伸</h2>
+<ul>
+<li><a href="/learn/deep-43">解读 43</a>:读出来的数据怎么变成 12 字节</li>
+<li><a href="/learn/deep-47">解读 47</a>:这些连接在网络表里的写法</li>
+<li><a href="/learn/deep-48">解读 48</a>:芯片能稳定工作的供电前提</li>
+<li>本地:<code>microduck-replica/docs/imu_to_dxl-设计包/原理图连接表.md</code>、<code>microduck-replica/hardware/imu_to_dxl/imu_to_dxl-接线表.md</code></li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>第 19 课 · ONNX 合同:部署件的形状与校验 · 什么鸭 WhatDuck</title>
+<meta name="description" content="策略文件从训练机到真机要过好几道手,任何一手出错,你装上鸭子的都可能是一个"没练成"或"没导对"的文件。这一课给你一套校验清单,保证上板的文件真的没问题。">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="第 19 课 · ONNX 合同:部署件的形状与校验">
+<meta property="og:description" content="策略文件从训练机到真机要过好几道手,任何一手出错,你装上鸭子的都可能是一个"没练成"或"没导对"的文件。这一课给你一套校验清单,保证上板的文件真的没问题。">
+<meta property="og:url" content="https://duck.whatled.com/learn/course-19">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/course-19">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">LESSON 19 · 阶段 E · 集成部署 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="第-19-课-onnx-合同部署件的形状与校验">第 19 课 · ONNX 合同:部署件的形状与校验</h1>
+<blockquote>
+<p><strong>这一课解决什么问题</strong>:策略文件从训练机到真机要过好几道手,任何一手出错,你装上鸭子的都可能是一个"没练成"或"没导对"的文件。这一课给你一套校验清单,保证上板的文件真的没问题。</p>
+<p><strong>前置</strong>:<a href="/learn/course-04">第 04 课</a>、<a href="/learn/course-05">第 05 课</a>。</p>
+</blockquote>
+<hr />
+<h2 id="1-onnx-是什么模型的通用交付格式">1. ONNX 是什么:模型的通用交付格式</h2>
+<p>ONNX 是一种<strong>模型的通用交付格式</strong>:不管用什么框架训练,最后都导出成一个 <code>.onnx</code> 文件,任何支持它的运行时都能加载执行。</p>
+<p>类比:训练框架各有各的存法;交付时统一转成 <strong>PDF</strong>——格式锁死,谁打开都一样。鸭子这边,官方 Rust 运行时就是那个 PDF 阅读器。</p>
+<p>回扣<a href="/learn/course-01">第 01 课</a>:浏览器 Sandbox 和真机跑的是<strong>同一种文件</strong>。</p>
+<h2 id="2-合同条款61-14一个数都不能动">2. 合同条款:61 → 14,一个数都不能动</h2>
+<p>这份文件签了死合同:<code>obs[1,61] → actions[1,14] @ 50Hz</code>。61 维观测的布局在 <code>microduck-replica/docs/训练参数调整与新动作开发指南.md</code> 第 4 节写得清清楚楚:</p>
+<table>
+<thead>
+<tr>
+<th>索引</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0–2 / 3–5</td>
+<td>躯干角速度 / 投影重力(身体歪了多少)</td>
+</tr>
+<tr>
+<td>6–19 / 20–33</td>
+<td>关节角 / 关节速度(各 14,嘴巴除外)</td>
+</tr>
+<tr>
+<td>34–47</td>
+<td>上一次策略原始动作</td>
+</tr>
+<tr>
+<td>48–50</td>
+<td>速度指令 vx, vy, yaw_rate</td>
+</tr>
+<tr>
+<td>51–54 / 55–60</td>
+<td>头颈 4 关节 / 身体姿态命令槽</td>
+</tr>
+</tbody>
+</table>
+<p>输出的 14 个动作顺序也是死的:0–4 左腿、5–8 颈头、9–13 右腿。真机 15 只舵机,第 15 个(嘴)不归策略管。</p>
+<p>为什么叫合同:改观测顺序、归一化或关节顺序,文件照样能加载——但权重读到的数全对不上号,鸭子当场表演"大脑健全、四肢错乱"。所以新技能用不到的命令槽要<strong>保留并填零</strong>,不能删——否则无法与现有运行时热切换。</p>
+<h2 id="3-为什么不能手写-torchonnxexport">3. 为什么不能手写 torch.onnx.export</h2>
+<p><code>torch.onnx.export</code> 是 PyTorch 自带的导出函数。但进阶文档 2.2 节反复强调:<strong>必须用官方脚本</strong> <code>scripts/export.py</code>。</p>
+<p>原因在"归一化":61 个观测不是直接喂网络的,先过一层<strong>归一化</strong>(把差几十倍量纲的数拉到统一尺度,网络才学得动)。官方脚本会把这层归一化<strong>烘进 ONNX 图里</strong>;手工只转网络,仿真回放可能一切正常,真机收到的却是未归一化输入——权重再对也白搭。</p>
+<p>一句话:<strong>手工转 checkpoint ≠ 官方部署件</strong>。</p>
+<h2 id="4-先分清训练没成还是导出没成">4. 先分清:「训练没成」还是「导出没成」</h2>
+<p>鸭子动得不对,先定位问题在哪一环。用 <code>uv run play &lt;TASK_ID&gt; --wandb-run-path &lt;...&gt;</code> 回放 checkpoint:</p>
+<ul>
+<li>回放也走不好 → <strong>训练没成</strong>,回<a href="/learn/course-06">第 06 课</a>看曲线;</li>
+<li>回放走得好、导出后不行 → <strong>导出没成</strong>,九成是归一化层或观测顺序被动过。</li>
+</ul>
+<p>进阶文档 2.4 节共列五条常见错误,其中三条:手工转忘了归一化层、悄悄改观测顺序、部署加了训练没验证的滤波。</p>
+<h2 id="5-部署前校验清单">5. 部署前校验清单</h2>
+<p>装上真机前,按顺序过四道门:</p>
+<ol>
+<li><strong>文件可追溯</strong>:文件名写清出自哪个 run,别用 <code>output.onnx</code> 这种转眼不认识的名字;</li>
+<li><strong>形状核对</strong>:61 进 14 出。<code>robotd</code>(板子上的控制守护进程)会拒绝一切形状不对的 ONNX——这是安全网,不是障碍;</li>
+<li><strong>先跑要部署的那个文件</strong>:<code>uv run scripts/infer_policy.py --walking &lt;你的文件.onnx&gt;</code>——必须是"真正要上板的那一个"。它用 50Hz 控制 + BAM 执行器复演部署路径;</li>
+<li><strong>真机加载有仪式</strong>:scp 上板后 <code>sudo robotctl policy load walk /home/radxa/walk.onnx</code>——先回 HOME 姿态、再加载、继续驱动;<code>policy list</code> 看 7 个槽位,<code>policy reset walk</code> 恢复官方策略。</li>
+</ol>
+<p>上了真机也别撒手:按指南 13.6 节测试金字塔一级一级来,从单舵机台架、悬空低增益,到软垫站立、低速直行(第 20 课细讲)。</p>
+<h2 id="6-动手练习10-分钟">6. 动手练习(10 分钟)</h2>
+<ol>
+<li>对官方 <code>alpha_walking.onnx</code> 跑一遍 <code>infer_policy.py</code>,记录"加载成功、会走"的输出;</li>
+<li>给文件改个名再跑,确认好坏看的是内容不是文件名;</li>
+<li>合上资料,默写 61 维观测前三段各是什么。</li>
+</ol>
+<h2 id="自查清单">自查清单</h2>
+<ul>
+<li>[ ] 我能用 PDF 类比讲清 ONNX 是什么</li>
+<li>[ ] 我能背出合同 61 → 14 @ 50Hz,并说出至少四段观测的内容</li>
+<li>[ ] 我能解释手工 torch.onnx.export 为什么会造出"看着能用"的坏文件</li>
+<li>[ ] 我能说出部署前的四道校验门</li>
+</ul>
+<h2 id="下一课预告">下一课预告</h2>
+<p>文件验好了,该让它进身体了。第 20 课进车间:装配顺序、热熔螺母、第一次上电的安全清单。</p>
+<h2 id="延伸资源">延伸资源</h2>
+<ul>
+<li>契约与质量门出处:<code>microduck-replica/docs/训练参数调整与新动作开发指南.md</code> 第 4、13 节</li>
+<li>可复现训练与 ONNX 导出:<code>open-microduck/docs/zh-CN/simulation/reproducible-training-and-export.md</code></li>
+<li>进阶文档第 0、2 节(两条铁律):<code>docs/进阶学习文档-训练仿真与部署.md</code></li>
+<li>ONNX 官网:<a href="https://onnx.ai">onnx.ai</a></li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

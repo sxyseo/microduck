@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>第 02 课 · 十个必懂概念,每个三分钟 · 什么鸭 WhatDuck</title>
+<meta name="description" content="把前两课攒下的零散直觉,收敛成十个能精确说出口的概念。学完这一课,你要能把舵机、策略、仿真、sim2real 讲给完全不懂的朋友听。">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="第 02 课 · 十个必懂概念,每个三分钟">
+<meta property="og:description" content="把前两课攒下的零散直觉,收敛成十个能精确说出口的概念。学完这一课,你要能把舵机、策略、仿真、sim2real 讲给完全不懂的朋友听。">
+<meta property="og:url" content="https://duck.whatled.com/learn/course-02">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/course-02">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">LESSON 02 · 阶段 A · 认识它 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="第-02-课-十个必懂概念每个三分钟">第 02 课 · 十个必懂概念,每个三分钟</h1>
+<blockquote>
+<p><strong>这一课解决什么问题</strong>:把前两课攒下的零散直觉,收敛成十个能精确说出口的概念。学完这一课,你要能把舵机、策略、仿真、sim2real 讲给完全不懂的朋友听。</p>
+<p><strong>前置</strong>:<a href="/learn/course-00">第 00 课</a> 和 <a href="/learn/course-01">第 01 课</a>。本课仍然不装任何软件。</p>
+</blockquote>
+<hr />
+<h2 id="1-舵机鸭子的肌肉">1. 舵机:鸭子的肌肉</h2>
+<p><strong>定义</strong>:自带减速齿轮和位置控制的电机,你说"转到 90°",它自己到位并保持。<strong>类比</strong>:给目标就不用盯过程的员工。<strong>分水岭</strong>:PWM 舵机(如 SG90,约 9 克)一根信号线控一只,但<strong>不知道自己在哪</strong>,被压偏也不说;总线舵机(如 XL330,18 克,本项目用)像 USB 设备串在一根线上、各有编号,问它位置能答上来。<strong>所以呢</strong>:策略每 20 毫秒要读全部关节真实位置,没有反馈的 PWM 会让输入一大半变成假数据——SG90 装不进鸭,不是嫌它便宜。</p>
+<h2 id="2-自由度能动的方式有几样">2. 自由度:能动的方式有几样</h2>
+<p><strong>定义</strong>:自由度(DOF)= 能独立运动的方向数,一个可转动关节约算一个。<strong>类比</strong>:手臂的肩转、肘弯、腕摆,各算一个。<strong>对应</strong>:15 个舵机 = 15 个自由度,策略只控制其中 14 个——第 15 个驱动嘴巴,不参与走路。所以"15 个舵机"和"14 维动作"都成立,不矛盾。</p>
+<h2 id="3-imu鸭子的内耳">3. IMU:鸭子的内耳</h2>
+<p><strong>定义</strong>:惯性测量单元(陀螺仪+加速度计),输出"我是不是歪了、往哪边倒"。<strong>类比</strong>:闭着眼也知道身体前倾要摔——内耳前庭在工作。<strong>对应</strong>:策略每步靠它感知姿态;本项目把 IMU 板伪装成"200 号舵机"挂上总线,读姿态和读关节一次完成。</p>
+<h2 id="4-策略policy鸭子的条件反射">4. 策略(policy):鸭子的条件反射</h2>
+<p><strong>定义</strong>:根据当前状态决定下一步动作的函数,不是"公司政策"。<strong>类比</strong>:老司机看到路况,手脚自动动,不假思索。<strong>对应</strong>:鸭子的大脑 = 一个神经网络,每 20 毫秒吃 61 个数、吐 14 个数,存成 ONNX 文件。</p>
+<h2 id="5-观测与动作输入和输出">5. 观测与动作:输入和输出</h2>
+<p><strong>定义</strong>:观测(observation)= 策略每步看到的数字;动作(action)= 它发出的下一步控制目标。<strong>类比</strong>:开车时观测 = 后视镜+仪表盘+导航,动作 = 打方向、踩油门。<strong>对应</strong>:观测 61 维(姿态、关节、上次动作、指令等),动作 14 个关节目标。</p>
+<h2 id="6-奖励reward训练时的评分表">6. 奖励(reward):训练时的评分表</h2>
+<p><strong>定义</strong>:训练时告诉算法"什么行为更好"的评分规则。<strong>类比</strong>:体操教练打分——落地稳加分、晃动扣分;退役后没人打分,动作已长在身上。<strong>对应</strong>:走对方向、保持直立、抬脚到位加分;滑脚、碰撞、突变扣分。关键:部署后的 ONNX <strong>不读取奖励</strong>。</p>
+<h2 id="7-仿真mujoco虚拟练跤场">7. 仿真(MuJoCo):虚拟练跤场</h2>
+<p><strong>定义</strong>:用软件计算机器人和地面的运动。MuJoCo 是官方训练用的物理引擎;MJCF 是描述机器人身体的文件——零件挂在哪、多重、绕哪根轴转。<strong>类比</strong>:飞行模拟舱,摔一百次不花钱。<strong>对应</strong>:官方 9 个 ONNX 全是 MuJoCo 练出来的;复刻仓的装配图就是从 MJCF 反推的。仿真好看 ≠ 真机成功。</p>
+<h2 id="8-训练与推理上学和上岗">8. 训练与推理:上学和上岗</h2>
+<p><strong>定义</strong>:训练 = GPU 上千万次试错得到 checkpoint(进度快照);推理 = 加载练好的模型直接用,计算量小得多。<strong>类比</strong>:十年寒窗 vs 上考场——学得慢,用得快。<strong>对应</strong>:Sandbox 和你电脑上跑的都是推理,普通电脑就够;训练通常要 NVIDIA GPU(阶段 D 才碰)。</p>
+<h2 id="9-sim2real从模拟舱到真车">9. sim2real:从模拟舱到真车</h2>
+<p><strong>定义</strong>:把仿真里学会的技能迁移到真机上。<strong>类比</strong>:模拟舱开得再熟,第一次摸真车还是不一样——路面颠簸模拟器给不了。<strong>对应</strong>:MuJoCo 练成的 ONNX 装进真机 Rust 运行时并实测才算数。记住:<strong>仿真会走 ≠ 真机会走</strong>。</p>
+<h2 id="10-域随机化故意把训练场搞乱">10. 域随机化:故意把训练场搞乱</h2>
+<p><strong>定义</strong>:训练时故意让每个虚拟世界的参数稍有不同——摩擦、电压、质量、延迟等。<strong>类比</strong>:练投篮故意换不同重量的球,比赛才不被陌生球馆打懵。<strong>对应</strong>:逼策略练出"皮实",不是死记一个世界。但不是乱改——范围必须有记录,否则无法复现。</p>
+<h2 id="动手练习15-分钟">动手练习(15 分钟)</h2>
+<p>做十张卡片:正面概念名,背面你自己的"一句话 + 类比"。合上文档讲一遍,讲不出的重读。</p>
+<h2 id="自查清单">自查清单</h2>
+<ul>
+<li>[ ] 我能说清 PWM 舵机和总线舵机的区别,以及为什么必须用总线舵机</li>
+<li>[ ] 我能解释 15 个舵机为什么只对应 14 维动作</li>
+<li>[ ] 我能各用一句话讲清策略、奖励、训练、推理</li>
+<li>[ ] 我能解释"仿真会走 ≠ 真机会走"和域随机化的关系</li>
+</ul>
+<p>全部打勾,进入<a href="/learn/course-03">第 03 课:装好工具箱</a>。</p>
+<h2 id="下一课预告">下一课预告</h2>
+<p>第 03 课开始动手:装 git 和 uv,本地跑通官方现成策略——不需要 GPU。</p>
+<h2 id="延伸资源">延伸资源</h2>
+<ul>
+<li>新手学习文档第 2 节:<code>docs/新手学习文档.md</code></li>
+<li>OpenMicroDuck 小白术语表:<code>open-microduck/docs/zh-CN/getting-started/glossary.md</code></li>
+<li><a href="https://github.com/sun1638650145/deep-rl-class-zh">Hugging Face 深度强化学习课(中文版)</a></li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

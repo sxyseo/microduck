@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>第 08 课 · 看懂电路图:读图五步法 · 什么鸭 WhatDuck</title>
+<meta name="description" content="电路图不是天书,而是一张"谁和谁连在一起"的地图。学完这课,你能把全项目唯一要自己画的 imu_to_dxl 原理图,读成一句人话。本课 ¥0,只用 PDF 阅读器。">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="第 08 课 · 看懂电路图:读图五步法">
+<meta property="og:description" content="电路图不是天书,而是一张"谁和谁连在一起"的地图。学完这课,你能把全项目唯一要自己画的 imu_to_dxl 原理图,读成一句人话。本课 ¥0,只用 PDF 阅读器。">
+<meta property="og:url" content="https://duck.whatled.com/learn/course-08">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/course-08">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">LESSON 08 · 阶段 C · 硬件入门 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="第-08-课-看懂电路图读图五步法">第 08 课 · 看懂电路图:读图五步法</h1>
+<blockquote>
+<p><strong>这一课解决什么问题</strong>:电路图不是天书,而是一张"谁和谁连在一起"的地图。学完这课,你能把全项目唯一要自己画的 imu_to_dxl 原理图,读成一句人话。本课 ¥0,只用 PDF 阅读器。</p>
+<p><strong>前置</strong>:<a href="/learn/course-07">第 07 课</a>。会开 PDF 就行。</p>
+</blockquote>
+<hr />
+<h2 id="1-电路图在画什么地图不是照片">1. 电路图在画什么:地图,不是照片</h2>
+<p>原理图(schematic,电路图)<strong>不是电路板的照片</strong>,而是"连接关系清单"的图形化。它只回答一个问题:<strong>哪个引脚和哪个引脚电气上连在一起</strong>。器件摆哪、板子长什么样,都不重要——那是 PCB 布局图的事。看图时,把每根线理解成"导线",而不是"画出的一条线"。</p>
+<p>教材就用你仓库里这份:<code>microduck-replica/hardware/imu_to_dxl/imu_to_dxl-原理图.pdf</code>——只有 5 个芯片,是完美的教学板。</p>
+<h2 id="2-符号小字典imu-to-dxl-图上全有">2. 符号小字典(imu_to_dxl 图上全有)</h2>
+<table>
+<thead>
+<tr>
+<th>符号长什么样</th>
+<th>名字</th>
+<th>一句话解释</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>一堆平行短横线(像蜈蚣)</td>
+<td>电阻 R1–R7</td>
+<td>限流、分压、"默认拉高/拉低"</td>
+</tr>
+<tr>
+<td>两条平行线</td>
+<td>电容 C1–C9</td>
+<td>滤掉电源毛刺。<strong>每个芯片电源脚旁必有一个 100nF,这是行规</strong></td>
+</tr>
+<tr>
+<td>三角形+一竖线</td>
+<td>二极管 D</td>
+<td>电流单向阀</td>
+</tr>
+<tr>
+<td>三角形+闪电折线</td>
+<td>TVS 二极管 D1</td>
+<td>电压过高瞬间导通泄放,保命用</td>
+</tr>
+<tr>
+<td>三脚、像三明治</td>
+<td>稳压芯片(LDO)U4</td>
+<td>把总线 6–8.4V 降成稳定的 3.3V 喂给芯片</td>
+</tr>
+<tr>
+<td>中间大方块、许多引脚</td>
+<td>MCU(单片机)U1</td>
+<td>这块板的大脑,STM32G031</td>
+</tr>
+<tr>
+<td>方块+SDA/SCL</td>
+<td>传感器 U2</td>
+<td>IMU,走 I²C(一种两线的芯片间通话协议)</td>
+</tr>
+<tr>
+<td>一排小方块</td>
+<td>排针/连接器 J1–J5</td>
+<td>板子与外界的全部接口</td>
+</tr>
+</tbody>
+</table>
+<h2 id="3-读图五步法任何原理图通用">3. 读图五步法(任何原理图通用)</h2>
+<ol>
+<li><strong>找电源入口</strong>:电从哪进?这张图是 J1/J2/J4/J5 四个座的 pin 2,标着 <code>VDD_BUS</code>,6.0–8.4V。</li>
+<li><strong>找地(GND)</strong>:所有器件的 GND 汇成一张网。没有共同的地,一切信号都没有参照——接线事故 80% 出在地线上。</li>
+<li><strong>找主芯片</strong>:最大那块(U1)。先确认它的电源脚接对了:VDD→+3V3,VSS→GND。</li>
+<li><strong>顺着网络标号走</strong>:图上不会把每根线都画满,相同名字(如 <code>+3V3</code>、<code>SWDIO</code>)就是连在一起的。这是原理图的"超链接"。</li>
+<li><strong>看连接器</strong>:J1–J5 是板子通向外界的全部窗口,弄清每个 pin 是什么,接线表就能自己读了。</li>
+</ol>
+<p><strong>所以呢</strong>:以后拿到任何原理图,不管多吓人,先按这五步走一遍,它就从"天书"变成"填空题"。</p>
+<h2 id="4-实战把-imu-to-dxl-读成一句人话">4. 实战:把 imu_to_dxl 读成一句人话</h2>
+<p>按信号流走一遍:</p>
+<pre><code class="language-text">舵机总线 6–8.4V → F1 保险丝 → D1 TVS 钳压 ─┬→ 直通总线座(舵机要原压)
+                                            └→ U4 稳压成 3.3V → 喂 U1(MCU)和 U2(IMU)
+U1(大脑) ──UART──→ U3 半双工缓冲 ──→ 总线 DATA 线
+U2(IMU) ──I²C──→ U1(汇报姿态);J3 = SWD 烧录口
+</code></pre>
+<p>一句话总结这块板:<strong>"把 IMU 的姿态,翻译成舵机总线上 200 号设备的答复"</strong>。再对照接线表看 <code>+3V3</code> 网络:U4 输出 → U1 → U2 → U3,每个芯片旁边挂一个 100nF——第 2 节那条行规,在你自己的图里应验了。</p>
+<h2 id="5-新手电工四件套比看图更先学会">5. 新手电工四件套(比看图更先学会)</h2>
+<ol>
+<li><strong>万用表两件事</strong>:通断档(蜂鸣响=两点直通,验证接线)和直流电压档(量电池、量 3.3V/5V)。</li>
+<li><strong>共地</strong>:两个电源分别供电时,地线必须连在一起,否则信号没有参照。</li>
+<li><strong>先量后上电</strong>:接线完成后,先不通电量一次"电源对地有没有短路"——响就是短路,停。</li>
+<li><strong>绝缘</strong>:焊点套热缩管。总线上 15 个设备共线,一处短路全线瘫痪。</li>
+</ol>
+<p>工具两样,都免费:<strong>嘉立创 EDA</strong>(打开仓库里的 <code>imu_to_dxl.eprj2</code> 看图改图,打样一键下单)和 <strong>Dynamixel Wizard 2.0</strong>(图形界面扫总线,你第一个"电路活了"的成就感来自它)。安全一句:别看只是几伏低压,锂电池脾气不小——<strong>不短路存放、充电人不离开、不过放</strong>。</p>
+<h2 id="6-动手练习15-分钟0">6. 动手练习(15 分钟,¥0)</h2>
+<ol>
+<li>用「预览」打开 <code>imu_to_dxl-原理图.pdf</code>,按五步法走一遍;</li>
+<li>在笔记里写出那句"人话"(先写,写完再对第 4 节);</li>
+<li>顺着 <code>+3V3</code> 网络数一数:连到几个器件?每个旁边有没有 100nF?</li>
+</ol>
+<h2 id="自查清单">自查清单</h2>
+<ul>
+<li>[ ] 我能说出原理图和 PCB 布局图的区别(连接关系 vs 摆放形状)</li>
+<li>[ ] 我能按顺序背出读图五步法,并说出为什么"找地"排第二</li>
+<li>[ ] 我能把 imu_to_dxl 的信号流讲成一句人话</li>
+<li>[ ] 我知道上电前必做的两件事:量短路、查共地</li>
+</ul>
+<h2 id="下一课预告">下一课预告</h2>
+<p>第 09 课从电换到机械:为什么仿真 STL 不能直接打印?答案是 30 分钟一张测试片——它决定全机 41 件能不能开打。</p>
+<h2 id="延伸资源">延伸资源</h2>
+<ul>
+<li>新手学习文档第 5 节(本课母本):<code>docs/新手学习文档.md</code></li>
+<li>接线表(把图上的网络写成表格):<code>microduck-replica/hardware/imu_to_dxl/imu_to_dxl-接线表.md</code></li>
+<li><a href="https://www.robotis.com">ROBOTIS 官网</a>(下载 Dynamixel Wizard 2.0,免费)</li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>进阶篇 · 训练模型、仿真与 Rust 部署 · 什么鸭 WhatDuck</title>
+<meta name="description" content="全链路实操:一个下午搭起 MuJoCo 仿真、训练自己的策略、用官方脚本导出 ONNX,再把 Rust 运行时部署到 Radxa Zero 3W。">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="进阶篇 · 训练模型、仿真与 Rust 部署">
+<meta property="og:description" content="全链路实操:一个下午搭起 MuJoCo 仿真、训练自己的策略、用官方脚本导出 ONNX,再把 Rust 运行时部署到 Radxa Zero 3W。">
+<meta property="og:url" content="https://duck.whatled.com/learn/advanced">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/advanced">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">MANUAL 02 · 进阶篇 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="microduck-进阶篇-训练模型搭建仿真rust-部署到-radxa-zero-3理解原理与移植">Microduck 进阶篇 —— 训练模型、搭建仿真、Rust 部署到 Radxa Zero 3、理解原理与移植</h1>
+<blockquote>
+<p>前置：先读 <a href="新手学习文档.md">新手学习文档</a>（概念与硬件路线）。本篇回答七个问题：<br />
+① 怎么自己训练模型并装上 Radxa Zero 3？② Rust 环境怎么搭？③ 仿真环境怎么搭？<br />
+④ 原理怎么理解？⑤ 怎么移植到别的项目？⑥ 从哪起步？⑦ 电路/结构/硬件怎么深化学习？</p>
+<p>所有命令都来自你工作区里的官方文档，出处随文标注。</p>
+</blockquote>
+<hr />
+<h2 id="0-全链路地图先看这一张图">0. 全链路地图（先看这一张图）</h2>
+<p>整个"自己训练、自己部署"是一条流水线，每一步都有独立的验收标准：</p>
+<pre><code>【你的电脑】                                【Radxa Zero 3W】
+
+microduck_rl 仓库                            官方 Rust 运行时
+ ├─ MuJoCo 仿真环境                           ├─ robotd   50Hz 控制循环
+ ├─ PPO 训练 (GPU / HF Jobs)                  ├─ duck-control 库（加载 ONNX）
+ ▼                                           ├─ 安全层（跌倒/限位/deadman）
+ checkpoint (.pt)                             ▼
+ ▼ 官方 export.py（把归一化层写进图里）        /opt/robot/policies/current/
+walk.onnx  obs[1,61]→actions[1,14]    ──拷贝──▶ sudo robotctl policy load walk xxx.onnx
+ ▼ CPU MuJoCo 验证（infer_policy.py）         ▼
+ 在仿真里会走？                    ──────────▶  真机上会走？（先吊装！）
+</code></pre>
+<p><strong>两条铁律现在就记住：</strong><br />
+1. <strong>部署契约不可动</strong>：<code>obs[1,61] → actions[1,14] @ 50Hz</code>。改了观测顺序、归一化或关节顺序，权重再对也白搭（<a href="../open-microduck/docs/zh-CN/simulation/reproducible-training-and-export.md">可复现训练与导出</a>）；<br />
+2. <strong><code>robotd</code> 会拒绝一切输入输出形状不对的 ONNX</strong>——这是安全网，不是障碍（<code>scripts/seed-policies.sh</code> 头注释）。</p>
+<hr />
+<h2 id="1-搭建仿真环境你的电脑上无需-gpu一个下午">1. 搭建仿真环境（你的电脑上，无需 GPU，一个下午）</h2>
+<blockquote>
+<p>完整版教程：<a href="../open-microduck/docs/zh-CN/getting-started/simulation-first.md">open-microduck/simulation-first.md</a>，以下是其精髓 + 补充解释。</p>
+</blockquote>
+<h3 id="11-装两个工具">1.1 装两个工具</h3>
+<pre><code class="language-bash"># ① uv：Python 的包管理器（官方项目用它管理一切依赖）
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# ② 确认 git 可用（你已经有了）
+git --version
+</code></pre>
+<h3 id="12-clone-两个官方仓库并记下版本">1.2 Clone 两个官方仓库并记下版本</h3>
+<pre><code class="language-bash">git clone https://github.com/pollen-robotics/microduck_rl
+git clone https://github.com/pollen-robotics/microduck
+</code></pre>
+<p>要做正式实验就固定 commit（OpenMicroDuck 校对过的基线）：</p>
+<pre><code class="language-bash">cd microduck_rl &amp;&amp; git checkout 29e887ecfbf5d37144759e5a9f8a176dfb83d547
+cd ../microduck  &amp;&amp; git checkout 2c61dcc1f03440541cdc0729f7a375b2a9ea3005
+</code></pre>
+<p>平时探索可以跟最新分支，但<strong>发表/对比结果时必须记录 commit</strong>。</p>
+<h3 id="13-装依赖">1.3 装依赖</h3>
+<pre><code class="language-bash">cd microduck_rl
+export UV_HTTP_TIMEOUT=600   # 依赖多，防超时
+uv sync
+</code></pre>
+<p>第一次会下载较多东西，属正常。<strong>这一步只是 CPU 推理，不需要训练 GPU。</strong></p>
+<h3 id="14-跑官方现成策略第一个里程碑">1.4 跑官方现成策略（第一个里程碑）</h3>
+<pre><code class="language-bash">uv run scripts/infer_policy.py \
+  --walking   ../microduck/policies/alpha_walking.onnx \
+  --standing  ../microduck/policies/alpha_stand.onnx \
+  --sitstand  ../microduck/policies/alpha_sitstand.onnx \
+  --roulade   ../microduck/policies/roulade.onnx \
+  --new-cmd-obs
+</code></pre>
+<p>会弹出 MuJoCo 视窗，鸭子按你的指令走/站/翻滚。默认走 <strong>BAM 执行器模型</strong>（比理想电机更接近真机，见第 4 节原理）。</p>
+<p><strong>验收不只看"会动"</strong>，按教程原话核对：MJCF 加载成功、ONNX 加载成功、61 维观测被正确接受、14 维动作顺序没错、机器人不是因接口错误而崩。</p>
+<h3 id="15-训练环境自检还不是真训练">1.5 训练环境自检（还不是真训练）</h3>
+<pre><code class="language-bash">uv run train Mjlab-Velocity-Flat-MicroDuck --env.scene.num-envs 64 --agent.max-iterations 5
+</code></pre>
+<p>这个 5 迭代 Smoke Test 只验证：环境能构建、能 step、没 NaN、观测/奖励正常。<strong>过了它，你的仿真+训练环境才算搭好。</strong></p>
+<p>你仓库里还有现成的实验记录可对照：<code>microduck-replica/rl-series/experiments/</code>（exp000 首次 5 迭代、expC CPU 续训 2199 迭代的完整记录——结论是"不是模型不能走，是训练量不到"）。</p>
+<hr />
+<h2 id="2-训练自己的模型">2. 训练自己的模型</h2>
+<blockquote>
+<p>完整版：<a href="../open-microduck/docs/zh-CN/simulation/reproducible-training-and-export.md">可复现训练与 ONNX 导出</a> + <a href="../microduck-replica/docs/训练参数调整与新动作开发指南.md">训练参数调整与新动作开发指南</a>（882 行，按"你想改什么"查表）。</p>
+</blockquote>
+<h3 id="21-先想清楚你要哪条路">2.1 先想清楚：你要哪条路</h3>
+<table>
+<thead>
+<tr>
+<th>你的情况</th>
+<th>路线</th>
+<th>成本</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>硬件与官方完全相同（含 XL330）</td>
+<td><strong>不需要训练</strong>——官方 9 个 ONNX 直接用</td>
+<td>¥0</td>
+</tr>
+<tr>
+<td>只想微调行为（速度、步态风格）</td>
+<td>本地 GPU 训练 1–2 小时量级</td>
+<td>一块 CUDA GPU</td>
+</tr>
+<tr>
+<td>没有 GPU</td>
+<td>Hugging Face Jobs 云端训练</td>
+<td>按小时计费，先查价</td>
+</tr>
+<tr>
+<td>换了舵机/改了结构</td>
+<td><strong>必须重训</strong>（官方模型作废）</td>
+<td>GPU + 见换舵机重训全流程</td>
+</tr>
+</tbody>
+</table>
+<p><strong>唯一不需要训练的情形就是"什么都不改"。</strong> 反过来，任何机械/执行器改动都会让官方 ONNX 失效——这就是为什么第 0 站要先决定舵机路线。</p>
+<h3 id="22-训练命令完整四步">2.2 训练命令（完整四步）</h3>
+<pre><code class="language-bash"># ① 训练（GPU；官方参考：4096 并行环境的 walking 任务约 1–2 小时出可用步态）
+uv run train Mjlab-Velocity-Flat-MicroDuck --env.scene.num-envs 4096
+
+# ② 回放训练结果（先分清&quot;训练没成&quot;还是&quot;导出没成&quot;）
+uv run play Mjlab-Velocity-Flat-MicroDuck --wandb-run-path &lt;entity/project/run_id&gt;
+
+# ③ 导出 ONNX —— 必须用官方脚本！
+#    它会把 observation 归一化层写进 ONNX 图；手工转 checkpoint ≠ 官方部署件
+uv run scripts/export.py Mjlab-Velocity-Flat-MicroDuck --wandb-run-path &lt;...&gt;
+
+# ④ 用第 1 节的方法验证&quot;真正要部署的那个文件&quot;
+uv run scripts/infer_policy.py --walking output.onnx
+</code></pre>
+<p>没有 GPU 时走 HF Jobs：<code>hf auth login</code> + <code>wandb login</code> 后，<strong>第一次必须加 <code>--dry-run</code></strong> 看清规格和费用再真提交，<code>hf jobs cancel &lt;id&gt;</code> 可取消（费用提醒见教程原文）。</p>
+<h3 id="23-改参数去哪改不用读完-882-行按目标查">2.3 改参数去哪改（不用读完 882 行，按目标查）</h3>
+<p><a href="../microduck-replica/docs/训练参数调整与新动作开发指南.md">训练参数调整指南</a> 第 6 节是一张"症状→文件"对照表，例如：</p>
+<ul>
+<li>想改站立姿态/零位 → §6.1；想改关节行程/质量/摩擦 → §6.2–6.3</li>
+<li>想走得更快 → §6.4；想让脚抬更高 → §6.5；想更稳 → §6.6</li>
+<li>想加抗扰（sim-to-real 鲁棒性）→ §6.7；想调 PPO 超参 → §6.10</li>
+</ul>
+<p><strong>一次只改一类参数</strong>，用指南第 7 节的单变量 A/B 法记录假设和指标（你仓库的 <code>rl-series/experiments/</code> 已有模板）。想开发跑步/舞蹈等新动作，看指南第 8–10 节（先"走快"再"跑"、舞蹈第一支只做四拍）。</p>
+<h3 id="24-常见错误教程原文浓缩">2.4 常见错误（教程原文浓缩）</h3>
+<ol>
+<li>手工转 checkpoint 忘了归一化层；2. 悄悄改了观测顺序；3. 部署时加了训练时没验证的滤波；4. 把不同模型变体（walk/groundcontact/backlash）当同一个环境比；5. <strong>仿真成功 = sim-to-real 完成</strong>——这是错觉。</li>
+</ol>
+<hr />
+<h2 id="3-搭建-rust-环境并部署到-radxa-zero-3w">3. 搭建 Rust 环境并部署到 Radxa Zero 3W</h2>
+<blockquote>
+<p>出处：<a href="../CONTRIBUTING.md">CONTRIBUTING.md</a>、<a href="../docs/robot/install-dev.md">install-dev.md</a>、<a href="../docs/robot/dev-push.md">dev-push.md</a>。</p>
+</blockquote>
+<h3 id="31-先分清两台机器">3.1 先分清两台机器</h3>
+<ul>
+<li><strong>开发机</strong>（你的 Mac/Linux）：写代码、编译、跑 942 个测试；</li>
+<li><strong>板子</strong>（Radxa Zero 3W，aarch64 Linux）：运行编译产物。<strong>不在板子上装 Rust。</strong></li>
+</ul>
+<h3 id="32-开发机五分钟装好">3.2 开发机：五分钟装好</h3>
+<pre><code class="language-bash"># ① 装 Rust（需要 1.89+ stable）
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+rustup target add aarch64-unknown-linux-gnu    # 交叉编译目标
+
+# ② 验证：整个工作区测试（macOS 上 942 个测试全过，无需硬件/网络/Docker）
+cd /Volumes/dev/dev/microduck          # 官方主仓根目录
+cargo test --workspace
+</code></pre>
+<p>Linux 开发机额外装 C 依赖（macOS 不需要）：</p>
+<pre><code class="language-bash">sudo apt-get install -y libudev-dev libgstreamer1.0-dev \
+  libgstreamer-plugins-base1.0-dev libgstreamer-plugins-bad1.0-dev
+</code></pre>
+<p>改了板子专属代码（configd/btd 是 Linux-only）要按板子目标 lint：</p>
+<pre><code class="language-bash">RUSTFLAGS=&quot;-D warnings&quot; cargo clippy -p configd --all-targets --target aarch64-unknown-linux-gnu
+</code></pre>
+<h3 id="33-板子从空白到开发板一次性">3.3 板子：从空白到"开发板"（一次性）</h3>
+<pre><code class="language-bash"># ① Armbian imager 选 Radxa Zero 3 + Armbian 26.2.1 Minimal
+#    刷之前在界面里填好 WiFi + 用户名密码（省掉串口线）
+
+# ② 加入你的 ssh key（后续全自动流程靠它）
+ssh-copy-id radxa@192.168.1.42        # 换成板子实际 IP
+
+# ③ 一键装机：发 dev key、装系统依赖、编译部署 daemon、重启、健康检查
+export DUCK_TOKEN=ghp_xxx             # 仓库若已公开可省
+./scripts/provision-board.sh --pause-btd-on-pair --name my-duck radxa@192.168.1.42
+
+# ④ 验证
+robotctl health
+grep -c 'DEV BOARD' /var/lib/robot/provision.log   # 输出 1 = dev key 装好了
+</code></pre>
+<p><code>--pause-btd-on-pair</code> 不是可省的仪式感：aic8800 无线芯片在手柄<strong>首次配对</strong>时需要它，漏了会得到一个"怎么都查不出原因的配不上的手柄"（<a href="../docs/robot/install-dev.md">install-dev.md</a> 用一整节解释了三种配置怎么选）。</p>
+<h3 id="34-把代码推上板日常循环约一分钟">3.4 把代码推上板（日常循环，约一分钟）</h3>
+<pre><code class="language-bash"># 一次性准备：交叉编译工具（二选一）
+cargo install cargo-zigbuild --locked &amp;&amp; brew install zig    # 方案 A
+# 方案 B：什么都不装，每次加 --docker（需要 Docker 在跑）
+
+# 开发板需要团队 dev 私钥在 ~/.duck-keys/team.dev.key
+
+# 日常：改代码 → 一条命令
+scripts/dev-push.sh radxa@192.168.1.42
+# 它做：交叉编译 → 打包 → 用 dev key 签名 → scp 到板子 → 走健康门安装 → 等守护进程报新版本
+</code></pre>
+<p>注意：dev-push 装的是 <strong>daemon</strong>（控制程序）。它和"装模型"是两条通道——这正是官方刻意设计的：改步态不需要重发 daemon，修 daemon 也不用重新下载 6MB 权重。</p>
+<h3 id="35-安装你自己训练的-onnx终点站">3.5 安装你自己训练的 ONNX（终点站）</h3>
+<pre><code class="language-bash"># 把导出的 onnx 拷上板（scp 就行）
+scp walk.onnx radxa@192.168.1.42:/home/radxa/
+
+# 加载到 walk 槽位 —— 就是这一条：
+sudo robotctl policy load walk /home/radxa/walk.onnx
+# 机器人会先回 HOME 姿态、加载、继续驱动；形状不对会被 robotd 拒绝
+
+# 查看/恢复
+robotctl policy list                  # 7 个槽位 + 技能表
+sudo robotctl policy reset walk       # 恢复官方该槽位策略
+</code></pre>
+<p>策略安装在 <code>/opt/robot/policies/current</code>（在 release 之外，见 <code>scripts/seed-policies.sh</code> 头注释——"步态重训不应该需要 daemon 发版"）。官方策略缺失时机器人保持姿态并报告 degraded，不会乱动。</p>
+<p><strong>首个真机验收顺序</strong>（30 天计划 D25–26）：不装腿先空跑 HOME 姿态 → 吊装测试 → 软垫 → 平地。<strong>第一次必须手扶。</strong></p>
+<hr />
+<h2 id="4-原理怎么理解六层地图按序通读">4. 原理怎么理解：六层地图，按序通读</h2>
+<p>"原理"不是一本书，是六层。每层给你：一句话本质 + 你仓库里的对应教材。建议按序，每层花一晚上。</p>
+<p><strong>L1 强化学习是什么（1 晚，零代码到玩具代码）</strong><br />
+本质：不写规则，给奖励让 AI 自己试错。先跑 <a href="../microduck-replica/learning/duck_food_qlearning.py"><code>learning/duck_food_qlearning.py</code></a>（7 格世界 Q-learning，半小时），再看 <a href="../open-microduck/docs/zh-CN/getting-started/glossary.md">小白术语表</a> 的 Observation→Policy→Action→Reward 图。之后记住 PPO 只是一句："好动作多来点，坏动作少来点"的概率化版本。</p>
+<p><strong>L2 61→14 契约（1 晚）</strong><br />
+61 维 = 姿态(IMU) + 各关节位置/速度/力矩 + 上一步动作 + 指令(速度/转向) 等，拼成一个向量；14 维 = 14 个关节的目标。看 <a href="../microduck-replica/docs/训练参数调整与新动作开发指南.md">指南 §4</a> 和 <code>rl-series/scripts/diagram_obs_layout.py</code>（画出每个维度的含义）。<strong>这是模型与机器人的全部接口，改哪一层都不能碰它。</strong></p>
+<p><strong>L3 控制循环 50Hz（1 晚）</strong><br />
+每 20ms：一次 <code>sync_read</code> 从总线读回 16 台设备（15 舵机 + 200 号 IMU）→ 拼 61 维观测 → ONNX 推理 → 电压自适应 → <code>sync_write</code> 下发。看 <a href="../docs/design/architecture.md">docs/design/architecture.md</a>（为什么 7 个守护进程分开、为什么只有 robotd 能碰机器人）+ <a href="../open-microduck/docs/zh-CN/software/control-loop-and-sensor-dataflow.md">控制循环与数据流</a>。</p>
+<p><strong>L4 总线与电子（1 晚）</strong><br />
+1Mbps 单线半双工 TTL，Dynamixel 协议 V2，菊花链，ID 寻址；IMU 伪装成 200 号舵机挂同一条线。看 <a href="../microduck-replica/docs/硬件入门.md">硬件入门</a> 和 <a href="../microduck-replica/docs/硬件规格速查.md">硬件规格速查</a>，配合新手篇第 5 节的原理图课。</p>
+<p><strong>L5 Sim-to-real（1–2 晚，最精彩的一层）</strong><br />
+为什么仿真里学的能搬到真机？三个手段：<strong>域随机化</strong>（训练时故意随机化摩擦/质量/延迟，逼策略皮实）、<strong>BAM 执行器模型</strong>（XL330 的真实摩擦/回差建模，你仓库 <code>bam/</code> 就是它）、<strong>backlash 变体</strong>（仿真里加齿轮间隙）。看 <a href="../open-microduck/docs/zh-CN/simulation/sim-to-real-parameter-reference.md">Sim-to-real 参数总表</a> + <a href="../open-microduck/docs/zh-CN/simulation/model-and-rl.md">model-and-rl</a>。</p>
+<p><strong>L6 安全与更新（1 晚）</strong><br />
+为什么敢让它自己动？robotd 内置跌倒检测、关节/温度限位、意图心跳（deadman）；updaterd 每次更新验签→健康门→不健康自动回滚。看 <a href="../docs/design/architecture.md">architecture.md</a> 和 <code>updater/tests/apply.rs</code>（CONTRIBUTING 说这是"它到底保证了什么"的诚实答案）。</p>
+<hr />
+<h2 id="5-如何移植到其他项目">5. 如何移植到其他项目</h2>
+<p>"移植"在这个项目里有四种含义，难度递增：</p>
+<p><strong>5a. 复用代码库（容易，几天）</strong><br />
+<code>duck-control/</code>（总线驱动、观测、安全）、<code>kinematics/</code>（MJCF 运动学）是独立库，任何用 Dynamixel 总线舵机的项目都能拆走用。<code>bam/</code> 的执行器模型也是通用 Python 库。</p>
+<p><strong>5b. 大脑架构模式移植（中等）</strong><br />
+"一个 50Hz 循环 + 策略网络 + 安全层，其余守护进程走 JSON-RPC"这套架构不绑定鸭子。你自己的机器人只要能提供同结构的观测（姿态+关节）并接受同结构的动作，就能套用。</p>
+<p><strong>5c. 给别的机器人训练策略（真正意义上的移植，数周）</strong><br />
+步骤固定：① 给新机器人建 MJCF 模型（几何/质量/惯量/关节轴）→ ② 定义新的 obs/action 空间 → ③ 用 BAM 辨识你舵机的动力学参数（<a href="../microduck-replica/docs/换舵机重训全流程.md">换舵机重训全流程</a> 的四层判定法原样适用）→ ④ 重训 → ⑤ L1–L7 测试金字塔上真机。<strong>官方 ONNX 不可移植</strong>——它是"这只 737g 鸭子"的肌肉记忆。</p>
+<p><strong>5d. 接入小智语音（独立支线，可并行）</strong><br />
+官方架构预留了"服务端 LLM 经 WebSocket 发意图"的路径（architecture §5.3）；小智 ESP32 支持 MCP 设备端控制。组合拳：小智做语音前端 → 意图 → 鸭子执行。这是你 ESP32 硬件的正经用途，等鸭子能站了再接。</p>
+<hr />
+<h2 id="6-如何起步今天就能敲的命令">6. 如何起步（今天就能敲的命令）</h2>
+<pre><code class="language-bash"># ① 装 uv（1 分钟）
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# ② clone 两个官方仓（5 分钟）
+cd ~/dev &amp;&amp; git clone https://github.com/pollen-robotics/microduck_rl
+git clone https://github.com/pollen-robotics/microduck
+
+# ③ 装依赖 + 跑官方策略（第一次约 20–40 分钟，主要是下载）
+cd microduck_rl &amp;&amp; export UV_HTTP_TIMEOUT=600 &amp;&amp; uv sync
+uv run scripts/infer_policy.py --walking ../microduck/policies/alpha_walking.onnx --new-cmd-obs
+</code></pre>
+<p>看到鸭子在仿真里走起来，你就完成了整个项目里<strong>性价比最高的一个里程碑</strong>：零硬件成本，验证了模型、策略、接口三层。之后再按第 2 节跑 5 迭代 Smoke Test，按第 3 节准备 Radxa。</p>
+<p>三条起步铁律：<strong>先推理后训练</strong>（官方模型能跑通之前不碰训练）；<strong>先仿真后真机</strong>；<strong>每次只改一类变量并记录</strong>（<code>rl-series/experiments/</code> 有模板）。</p>
+<hr />
+<h2 id="7-电路图结构硬件知识怎么深化">7. 电路图、结构、硬件知识怎么深化</h2>
+<p>新手篇第 5、6 节教了"怎么读"，这里给"怎么练"：</p>
+<p><strong>电路（每周一个小实验，全部用现有器材）</strong><br />
+1. 万用表周：量电池电压、量 USB 线 5V、测通断——建立"电是可测量的"手感；<br />
+2. SG90 周：Pi 2 点亮第一只舵机（信号/电源/共地三件事）；<br />
+3. 总线周：USB 调试板 + 1 只总线舵机 + Dynamixel Wizard，改 ID、读角度；<br />
+4. 读图周：把 <a href="../microduck-replica/hardware/imu_to_dxl/imu_to_dxl-原理图.pdf">imu_to_dxl 原理图</a> 讲给别人听（讲不出来 = 没懂）；<br />
+5. 嘉立创 EDA 周：打开 <code>imu_to_dxl.eprj2</code>，把每个元件的 datasheet 下载来对照引脚。<br />
+系统教材推荐：B 站搜"上电"系列/《电子电路入门》类视频即可起步，不必啃大学教材——<strong>这个项目的电路量（一块 5 芯片小板 + 一块官方开源 HAT）用项目驱动学刚刚好</strong>。</p>
+<p><strong>结构（从装配到设计的三级跳）</strong><br />
+1. 读：21 页<a href="../microduck-replica-cad/安装说明书/microduck装配安装说明书.pdf">装配安装说明书</a> 翻三遍，对照 23 张组件图；<br />
+2. 装：打印测试片定补偿 → 装一条腿（第 4 周）→ 装整机（第二个月）；<br />
+3. 改：FreeCAD 打开 <code>cad/</code> 装配体 → 30 分钟小任务（加走线槽/卡扣）→ 再学 Fusion 360 系统课。设计感只能从"装过 50 颗 M2 螺丝"里长出来。</p>
+<p><strong>硬件系统知识（读仓库自带的设计文档，这是最被低估的资源）</strong><br />
+官方 <code>docs/design/</code> 是一整套"为什么这么设计"的写作：<a href="../docs/design/architecture.md">architecture.md</a>（架构）、<code>updater-design.md</code>（更新/回滚）、<code>policy-channel-design.md</code>（策略通道）。复刻仓 <code>docs/</code> 是一整套"为什么这么复刻"：<a href="../microduck-replica/docs/硬件方案逆向.md">硬件方案逆向</a>、<a href="../microduck-replica/docs/执行器选型.md">执行器选型</a>。<strong>看完这两套，你对机器人系统的理解就超过大多数只玩过成品的人。</strong></p>
+<hr />
+<p><em>和新手篇同一句话收尾：这条流水线上没有魔法——仿真跑通、训练出步态、导出验证、一条命令上板，每一步都有现成的命令和文档，你要补的只是按顺序把它们各跑一遍。</em></p>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

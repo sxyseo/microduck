@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>解读 22 · velocity 配置(上):前 87 行的开关与范围 · 什么鸭 WhatDuck</title>
+<meta name="description" content="microduck-replica/upstream/microduck_rl/src/mjlab_microduck/tasks/microduck_velocity_env_c">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="解读 22 · velocity 配置(上):前 87 行的开关与范围">
+<meta property="og:description" content="microduck-replica/upstream/microduck_rl/src/mjlab_microduck/tasks/microduck_velocity_env_c">
+<meta property="og:url" content="https://duck.whatled.com/learn/deep-22">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/deep-22">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">DEEP 22 · 第三辑 · 训练代码 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="解读-22-velocity-配置上前-87-行的开关与范围">解读 22 · velocity 配置(上):前 87 行的开关与范围</h1>
+<blockquote>
+<p><strong>解读对象</strong>:<code>microduck-replica/upstream/microduck_rl/src/mjlab_microduck/tasks/microduck_velocity_env_cfg.py</code> 第 1–87 行(全文件 952 行)<br />
+<strong>需要的前置</strong>:<a href="/learn/deep-21">解读 21</a>(谁调用这个文件);域随机化(DR)= 训练时故意扰动物理参数让策略更皮实</p>
+</blockquote>
+<p>读一个大配置文件,别从 <code>make_microduck_velocity_env_cfg()</code> 函数体开始——作者把所有<br />
+"总开关"和"随机化范围"提成模块级常量放在最前面,前 87 行就是整份训练的<strong>声明式摘要</strong>。</p>
+<h2 id="模块-docstring一份变更日志">模块 docstring:一份变更日志</h2>
+<p>第 1–17 行的 docstring 不是客套话,它直接给出了几条关键设计决定及其理由:<br />
+<code>foot_slip</code> 保持 -0.1(更强会限制这只机器人"以原地转为核心"的转向方式)、指令范围<br />
+固定不放宽(ang ±1.0 让转向可学)、15% 环境强制原地转(2026-07 审计:独立均匀采样下<br />
+原地转只占约 2% 数据,等于没训)、<code>body_pose</code> 追踪保留观测槽位但权重为 0。</p>
+<h2 id="开关区第-2253-行truefalse-就是实验记录">开关区(第 22–53 行):True/False 就是实验记录</h2>
+<p><code>NUM_STEPS_PER_ENV = 24</code>(22 行)、<code>TURN_IN_PLACE_FRACTION = 0.15</code>(25 行)、<br />
+<code>ENABLE_SYMMETRY = False</code>(28 行)之后,31–42 行是 12 个 DR 开关,每个都带一行注释说明<br />
+历史或理由。最值得学的是"注释即实验日志"的写法:</p>
+<ul>
+<li><code>ENABLE_KP_RANDOMIZATION = False # Was True</code>(33 行)——增益随机化被关掉,但保留痕迹;</li>
+<li><code>ENABLE_JOINT_FRICTION_RANDOMIZATION = True</code>(36 行)注明它是通过<br />
+<code>FrictionDRBamActuator.friction_scale</code> 缩放 BAM 摩擦预算(BAM = 执行器摩擦模型);</li>
+<li><code>ENABLE_VELOCITY_PUSHES = True</code>(39 行)、<code>ENABLE_ENCODER_BIAS = True</code>(41 行,<br />
+  编码器偏置只进 actor 观测)。</li>
+</ul>
+<h2 id="范围区第-5587-行数字后面全有出处">范围区(第 55–87 行):数字后面全有出处</h2>
+<ul>
+<li><code>COM_RANDOMIZATION_RANGE = 0.003</code>(57 行,±3 mm):注意 57 行注释说"课程升到 ±8 mm",<br />
+  但下方真正的课程表(855–872 行)末段是 0.015(±15 mm,2026-07 审计封顶)——<strong>注释滞后于<br />
+  代码</strong>,读配置要以课程表为准;</li>
+<li><code>HEAD_BODY_NAMES</code>(66–72 行)列出头部 5 个 body,注释坦白 <code>bearing_roll</code> 是"一直<br />
+  列错了、为保持 DR 行为不变而保留"的右髋 link;</li>
+<li><code>MASS_INERTIA_RANDOMIZATION_RANGE = (0.95, 1.05)</code>(73 行):质量与惯量<strong>一起</strong>缩放 ±5%;</li>
+<li><code>VELOCITY_PUSH_RANGE = (-0.3, 0.3)</code>(80 行)注释很长:曾是 ±0.5,比最大步速 0.4 还大的<br />
+  加性踢腿让策略学成"永久紧张的摔倒恢复步态",2026-07 审计降到 ±0.3;</li>
+<li><code>IMU_ORIENTATION_RANDOMIZATION_ANGLE = 6.0</code>(84 行):零中心随机轴,训练对<strong>错装幅度</strong><br />
+  的容忍;真机 ~5° 的系统性俯仰偏差在运行时修正,不在这里;</li>
+<li><code>ENCODER_BIAS_RANGE = (-0.015, 0.015)</code>(85 行,±0.86°)、<br />
+<code>BASE_ORIENTATION_MAX_PITCH_DEG = 10.0</code> / <code>ROLL = 5.0</code>(86–87 行,开关却是 False)。</li>
+</ul>
+<h2 id="你带走的收获">你带走的收获</h2>
+<ul>
+<li><strong>先读常量区再读函数体</strong>:开关+范围是配置文件的 API,函数体只是把它们接线。</li>
+<li><strong>每个魔法数字配一行"为什么"</strong>,包括被否决的旧值(<code>Was True</code>、<code>Was ±0.5</code>),半年后还能复盘。</li>
+<li><strong>注释也会撒谎</strong>(±8 mm vs 课程表 ±15 mm):关键数值要向下追溯到真正生效的那一段。</li>
+<li>随机化范围是"保守起步、课程放大"的:<code>0.003</code> 起步,由 curriculum 逐段抬升。</li>
+</ul>
+<h2 id="延伸">延伸</h2>
+<ul>
+<li>这些常量如何被消费:<a href="/learn/deep-23">解读 23</a>(动作/观测接线)、<a href="/learn/deep-24">解读 24</a>(课程表本体);</li>
+<li>事件(event)与经理(manager)机制的函数实现:<a href="/learn/deep-26">解读 26</a>;</li>
+<li>本地路径:<code>microduck-replica/upstream/microduck_rl/src/mjlab_microduck/tasks/microduck_velocity_env_cfg.py</code></li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

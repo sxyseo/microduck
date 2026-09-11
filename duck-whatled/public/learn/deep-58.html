@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>解读 58 · 换舵机为什么必须重训策略 · 什么鸭 WhatDuck</title>
+<meta name="description" content="microduck-replica/docs/换舵机重训全流程.md(全文逻辑),交叉引用 microduck-replica/docs/执行器选型.md 的失效/保留表与构建日志">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="解读 58 · 换舵机为什么必须重训策略">
+<meta property="og:description" content="microduck-replica/docs/换舵机重训全流程.md(全文逻辑),交叉引用 microduck-replica/docs/执行器选型.md 的失效/保留表与构建日志">
+<meta property="og:url" content="https://duck.whatled.com/learn/deep-58">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/deep-58">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">DEEP 58 · 第六辑 · 舵机与执行器 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="解读-58-换舵机为什么必须重训策略">解读 58 · 换舵机为什么必须重训策略</h1>
+<blockquote>
+<p><strong>解读对象</strong>:<code>microduck-replica/docs/换舵机重训全流程.md</code>(全文逻辑),交叉引用 <code>microduck-replica/docs/执行器选型.md</code> 的失效/保留表与构建日志 2026-09-07<br />
+<strong>需要的前置</strong>:<a href="/learn/deep-57">解读 57</a>(新模型怎么进仿真) · <a href="/learn/deep-54">解读 54</a></p>
+</blockquote>
+<p>最省事的希望是:舵机拧上去,官方 ONNX 继续跑。为什么这条路被堵死?训练参数调整指南 §11.6 一句话:"策略学到的是'给出一个关节偏移后,<strong>这台具体机器</strong>会怎样动'。速度、摩擦、延迟、回差和电压响应一变,同一动作会产生不同的落脚时间和姿态。"</p>
+<h2 id="策略和执行器是共生的">策略和执行器是共生的</h2>
+<p>训练时,策略输出的每个动作都经过 BAM M6 执行器模型变成运动——那份 <code>xl330/m6.json</code> 来自实物 XL330-M288-T 的台架辨识,<code>kp_fw=200</code>、<code>vin_range=(6.5, 8.2)</code> 是官方超压工况。策略在千万步里学会的摆腿节奏、落脚力度、抗扰动作,全都默认了这套动力学。换成 HL-1910:堵转力矩 1.47 N·m @7.4V(约 2.5 倍)、摩擦曲线不同、指令延迟不同、回差 ≤0.5°(规格书值)vs ±1.0°(XL330 建模值)——<strong>旧策略面对的是一个没见过的新身体</strong>。</p>
+<p>换舵机重训全流程 §7 把它列为坑清单第一条:"换执行器后官方 ONNX 一定作废——训练内嵌了执行器模型,'看起来差不多'不够"。</p>
+<h2 id="什么失效什么保留">什么失效、什么保留</h2>
+<p><code>执行器选型.md</code> 的失效/保留表是全套判断:</p>
+<table>
+<thead>
+<tr>
+<th>失效 ❌</th>
+<th>保留 ✅</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>官方 9 个 ONNX 策略</td>
+<td>61 维观测契约 + 14 维动作</td>
+</tr>
+<tr>
+<td>BAM M6 标定(XL330 辨识)</td>
+<td>训练框架(microduck_rl)</td>
+</tr>
+<tr>
+<td>5 组 <code>chosen_actuator</code> PD 参数</td>
+<td>sim2real 方法论(BAM 辨识、域随机化、回差建模)</td>
+</tr>
+<tr>
+<td>回差模型(要重测)</td>
+<td></td>
+</tr>
+<tr>
+<td>MJCF 质量惯量(外形变才重算)</td>
+<td></td>
+</tr>
+<tr>
+<td>通信协议(飞特非 Dynamixel V2)</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>一句话:<strong>要改的是"机器人模型"和"执行器模型",不是算法本身。</strong></p>
+<h2 id="重训怎么排期">重训怎么排期</h2>
+<p>9 个 ONNX = 9 个技能,各自独立训练一次(全流程 §4.1)。优先级:先 <code>alpha_walking</code>(核心技能,任务 ID <code>Mjlab-Velocity-Flat-MicroDuck</code>),再 <code>alpha_stand</code> / <code>alpha_sitstand</code>(站立是安全兜底),其余(ground_pick、ball_kick、roller、roulade)按需——"没有必要第一天重训全部策略"(§11.6)。旧策略也没浪费:expC 2199 迭代 checkpoint 转任 L2 退化基线,量化"换执行器掉了多少"(物料快照、构建日志 09-07)。</p>
+<p>算力账:调试档本机 CPU 4 分钟/百迭代;正式档 4096 环境数小时~天/技能;官方配方上限 4096 环境 × 5 万迭代,走路通常数千迭代、10⁷–10⁸ 步量级出现(§4.2)。</p>
+<h2 id="你带走的收获">你带走的收获</h2>
+<ul>
+<li><strong>为什么执行器动力学变了策略就失效</strong>:策略不是"角度查表",它内嵌了对摩擦、延迟、回差、电压响应的全部经验——身体换了,经验作废。</li>
+<li>"作废"是分层的:策略/标定/回差/质量惯量失效,观测契约、训练框架、方法论全保留——重训是流水线重跑,不是从零再来。</li>
+<li>重训有排期表:走路 → 站立兜底 → 按需技能;旧策略降级当退化基线,仍然有用。</li>
+<li>判断"训够了"看指标(<code>fell_over</code> 稳定低位、<code>error_vel</code> 平台化、<code>mean_std</code> 收敛),不看迭代数本身。</li>
+<li>省钱省出来的工作量要记账:¥1500 舵机省下 ¥1100,代价是 9 次 GPU 训练——这笔账在采购前就该算(物料快照原文就是这么算的)。</li>
+</ul>
+<h2 id="延伸">延伸</h2>
+<ul>
+<li><a href="/learn/deep-57">解读 57</a>:重训前的模型改造 · <a href="/learn/deep-60">解读 60</a>:新策略上线前先过台架</li>
+<li><a href="/learn/deep-52">解读 52</a>:新旧舵机差在哪</li>
+<li><code>microduck-replica/docs/换舵机重训全流程.md</code>(判定表、优先级、测试金字塔)</li>
+<li><code>microduck-replica/docs/执行器选型.md</code>(失效/保留表)</li>
+<li><code>microduck-replica/构建日志.md</code>(2026-09-07 决策与代价)</li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

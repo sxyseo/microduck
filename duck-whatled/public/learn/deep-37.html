@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>解读 37 · 踝脚:落地点的设计 · 什么鸭 WhatDuck</title>
+<meta name="description" content="microduck-replica-cad/组件图/06-左踝脚.png + microduck-replica/构建日志.md(首批打印件照片)+ microduck-repli">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="解读 37 · 踝脚:落地点的设计">
+<meta property="og:description" content="microduck-replica-cad/组件图/06-左踝脚.png + microduck-replica/构建日志.md(首批打印件照片)+ microduck-repli">
+<meta property="og:url" content="https://duck.whatled.com/learn/deep-37">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/deep-37">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">DEEP 37 · 第四辑 · 结构 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="解读-37-踝脚落地点的设计">解读 37 · 踝脚:落地点的设计</h1>
+<blockquote>
+<p><strong>解读对象</strong>:<code>microduck-replica-cad/组件图/06-左踝脚.png</code> + <code>microduck-replica/构建日志.md</code>(首批打印件照片)+ <code>microduck-replica/README.md</code>(关节参数)<br />
+<strong>需要的前置</strong>:<a href="/learn/deep-36">解读 36</a>;知道"摩擦力"是脚不打滑的原因。</p>
+</blockquote>
+<h2 id="图上的三层结构">图上的三层结构</h2>
+<p>06 号组件图从上到下三个零件、三种颜色:最上是橙红色的踝支架(树里 <code>ankle_left_脚踝</code>),左上孔里能清楚看到一圈银色滚珠轴承,右侧凸起面上一组沉头孔(螺丝头沉入的台阶孔);中间是蓝色脚体(<code>foot left_左脚</code>);最底是一条黄绿色软质脚垫(<code>sole_left_左脚底</code>,树里状态为"固定")。特征树里还有一条 <code>deep groove ball bearings</code>——深沟球轴承,最常见的一类滚动轴承。踝关节行程 ±90°(README 关节参数表),是腿部行程最大的关节之一,深蹲、跨越都靠它。</p>
+<p>构建日志的首批实物照片印证了配色:脚是红/黄双色,两只。注意:BOM 明确建议软性材料(TPU)的只有 <code>jaw_soft_软下巴</code> 和 <code>soft_mouth_top_软嘴顶部</code> 两件,脚垫是否软材料打印,文档没有写死——<strong>待验证</strong>。</p>
+<h2 id="落地点是整条链的地面接口">落地点是整条链的"地面接口"</h2>
+<p>机器人全部重量最终压在这两片几厘米长的脚垫上。落地点要同时干三件互相打架的事:</p>
+<ol>
+<li><strong>不打滑</strong>:足够的摩擦,起步蹬地、落地制动都靠它;脚底打滑 = 策略的观测输入里全是噪声;</li>
+<li><strong>不粘滞</strong>:太软太黏的"鞋底"抬脚时会吸地面,白白耗能;</li>
+<li><strong>不砸自己</strong>:落地冲击沿脚垫→踝→膝→髋向上传,脚垫里那点弹性就是最便宜的第一级缓冲。</li>
+</ol>
+<p>重量上还有一笔账:左踝+脚共 30g(README 装配结构),却是摆动腿的最远端。转动惯量随质量到髋轴距离的平方增长,脚上每省 1g 对摆腿的贡献,比躯干省 10g 还大——所以脚被做到极简:踝支架、脚体、脚垫,三层,没有第四件。</p>
+<p>一个工程管理细节:<code>ankle_left/right</code>、<code>foot_left/right</code>、<code>sole_left/right</code> 全是镜像件、各自都要打印(BOM),装反了脚型会内/外撇。左右件管理是复刻最容易乱的一层。</p>
+<h2 id="你带走的收获">你带走的收获</h2>
+<ul>
+<li>足端设计是摩擦、能耗、缓冲三目标的折中,没有"越软越好"。</li>
+<li>足端质量按距离平方放大进转动惯量,远端减重优先级最高。</li>
+<li>冲击沿运动链向上传,足端弹性是最便宜的第一级缓冲。</li>
+<li>镜像件要在打印清单里显式成对管理,装配前先分清左右。</li>
+<li>组件图特征树里的轴承条目,直接告诉你这个关节用什么支承方案。</li>
+</ul>
+<h2 id="延伸">延伸</h2>
+<ul>
+<li><a href="/learn/deep-36">解读 36</a>:往上一节的大腿小腿(<code>docs/deep-dive/36-腿部连杆.md</code>)</li>
+<li><a href="/learn/deep-38">解读 38</a>:另一端的质量管理(<code>docs/deep-dive/38-头颈配重.md</code>)</li>
+<li><a href="/learn/deep-40">解读 40</a>:轴承怎么压进座孔(<code>docs/deep-dive/40-轴承与公差.md</code>)</li>
+<li>图纸:github.com/fanhao375/microduck-replica-cad(「机械行者Robo」);右踝脚为 15 号组件。</li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

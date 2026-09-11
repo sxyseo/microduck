@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>解读 04 · safety.rs:安全层怎么写进代码 · 什么鸭 WhatDuck</title>
+<meta name="description" content="duck-control/src/safety.rs(580 行)">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="解读 04 · safety.rs:安全层怎么写进代码">
+<meta property="og:description" content="duck-control/src/safety.rs(580 行)">
+<meta property="og:url" content="https://duck.whatled.com/learn/deep-04">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/deep-04">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">DEEP 04 · 第一辑 · 运动控制核心 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="解读-04-safetyrs安全层怎么写进代码">解读 04 · safety.rs:安全层怎么写进代码</h1>
+<blockquote>
+<p><strong>解读对象</strong>:<code>duck-control/src/safety.rs</code>(580 行)<br />
+<strong>需要的前置</strong>:《什么鸭公开课》第 04 课(61→14 契约)</p>
+</blockquote>
+<p>这个模块的全部权威来自一句话:"它持有通往机器人的唯一写句柄"(safety.rs:3-6)。<code>Safety&lt;T: RobotIo&gt;</code> 泛型包住 IO(<code>T</code> 是约束在 <code>RobotIo</code> trait 上的类型参数,Rust 用它实现"传什么类型都能调同一套接口"),策略、仲裁器、客户端谁也拿不到 <code>RobotIo</code>,谁也就<strong>无法</strong>命令电机。注释说这由借用检查器强制,而不是靠"加第八个技能的前夜还得记得规矩"。</p>
+<h2 id="1-两条铁律加一道门">1. 两条铁律加一道门</h2>
+<p><code>apply</code>(safety.rs:234)是唯一的电机写入路径,内嵌两条无条件规则。其一,<strong>非有限值拒绝</strong>:<code>targets.iter().any(|v| !v.is_finite())</code> 命中就放弃目标、写入 <code>hold</code> 位姿并上报 <code>Limit::NotFinite</code>(safety.rs:251-255)。注释解释了为什么 NaN 不能钳位:钳位会产出边界值——一个"看起来合理的关节角",机器人会猛地窜向限位,而拒绝移动则安然无恙。其二,<strong>行程钳位</strong>:每个目标 <code>clamp</code> 在 <code>ACTUATOR_MIN/MAX = ∓π</code>(safety.rs:47-48,XL330 一圈的行程),被改动的 tick 记一个 <code>Limit::Range</code>。注释同样坦白:这是执行器行程,不是解剖学限位,挡得住 NaN 和垃圾张量,挡不住"机械上不明智"的姿势。</p>
+<p>门槛是 <code>gate</code>(safety.rs:218):意图超过 <code>deadman = 500ms</code>(<code>SafetyConfig</code>,safety.rs:74)没来,就把指令的 twist 三元组清零,<strong>只清 twist</strong>——头部目标过期无害,过期速度却会让机器人走进墙。注释点了题:"停止不是瘫软",失联的双脚机器人该站住,因为站立才是安全态。</p>
+<h2 id="2-摔倒是报告不是规则">2. 摔倒是报告,不是规则</h2>
+<p><code>observe</code>(safety.rs:181)每 tick 更新摔倒判定:投影重力 z 越过 <code>fall_gravity_z = -0.5</code>(直立约 -1.0,侧躺接近 0)持续 <code>fall_debounce = 200ms</code> 才算摔,任何一个直立样本立即清零累积。双向去抖的理由:一次硬落脚的冲击读起来就像摔。</p>
+<p>但关键设计是<strong>这个判定不拦截任何东西</strong>:摔倒的机器人照样被驱动,<code>apply</code> 里明写"这里没有摔倒闸"(safety.rs:243-246)。摔了怎么办是控制决策,住在上一层的 <code>robotd</code>:limp-fall 模式用 <code>fall.rs</code> 的预测器决定软下去,并像所有普通调用者一样走 <code>apply</code>,没有豁免通道。注释的论证值得抄:若这里有闸,起卧调姿就必须给闸开旁路——"带旁路的安全规则不是安全规则"。</p>
+<h2 id="3-一个真实事故未收敛的滤波器投了票">3. 一个真实事故:未收敛的滤波器投了票</h2>
+<p><code>observe</code> 开头有一步容易被删掉的守卫:<code>if !self.io.imu_ready() { return; }</code>(safety.rs:198)。SFLP 滤波器需要几秒样本四元数才有意义,没收敛时投影重力"读起来像在阈值之上",200 ms 后台面上的直立机器人就被判定摔倒,增益被写成 <code>gain_limp = 50</code>,几秒后自愈——增益却留在 50,没有任何可见状态能解释(safety.rs:184-193 的注释记了一块板子上的真实下午:手动设 137 的关节读回 50)。守卫在两个方向都取安全默认:启动时维持"未摔",运行中滤波器失就绪则维持"已摔"。</p>
+<h2 id="4-省出来的总线增益只写一次">4. 省出来的总线:增益只写一次</h2>
+<p><code>set_gain</code> 缓存上次写入值,相同就跳过(safety.rs:272-279)。测试算过账:50 Hz 下无脑重写是每秒 750 次多余的总线写(safety.rs:550-551),全花在控制环最需要的那条总线上。<code>gain()</code> 查询返回的是"实际在跑的",不是"调用方要的"——两者在守卫生效时不同。</p>
+<h2 id="你带走的收获">你带走的收获</h2>
+<ul>
+<li>"唯一写者"可以做成类型系统事实:包一层只暴露安全方法的门面,比 Code Review 约定可靠。</li>
+<li>NaN 要拒绝而不是钳位——钳位后的值看着合理,危害最大。</li>
+<li>位置判据(重力求)+时间去抖确认"已发生";要"将要发生"得另配速率判据(见 <a href="/learn/deep-05">解读 05</a>)。</li>
+<li>安全层只做无条件的事,有条件的响应(如摔后软倒)留给上层,同一入口进入,不开旁路。</li>
+<li>收敛中的传感器没有投票权:滤波器 ready 之前,姿态判定应冻结在上一个结论。</li>
+</ul>
+<h2 id="延伸">延伸</h2>
+<ul>
+<li>摔倒的"预测"版检测器: <a href="/learn/deep-05">解读 05</a></li>
+<li>它包住的 IO 与寄存器细节: <a href="/learn/deep-01">解读 01</a></li>
+<li>重力向量怎么算出来: <a href="/learn/deep-06">解读 06</a></li>
+<li>课程对照: <code>/Volumes/dev/dev/microduck/docs/course/04-61到14-鸭子的神经回路.md</code></li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

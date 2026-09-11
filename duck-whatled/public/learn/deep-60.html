@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>解读 60 · testbench:仿真-实物对照台 · 什么鸭 WhatDuck</title>
+<meta name="description" content="microduck-replica/upstream/microduck_rl/scripts/testbench_sim2real.py(611 行)与 scripts/vali">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="解读 60 · testbench:仿真-实物对照台">
+<meta property="og:description" content="microduck-replica/upstream/microduck_rl/scripts/testbench_sim2real.py(611 行)与 scripts/vali">
+<meta property="og:url" content="https://duck.whatled.com/learn/deep-60">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/deep-60">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">DEEP 60 · 第六辑 · 舵机与执行器 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="解读-60-testbench仿真-实物对照台">解读 60 · testbench:仿真-实物对照台</h1>
+<blockquote>
+<p><strong>解读对象</strong>:<code>microduck-replica/upstream/microduck_rl/scripts/testbench_sim2real.py</code>(611 行)与 <code>scripts/validate_bam_testbench.py</code>(277 行),交叉引用 <code>robot/testbench_constants.py</code><br />
+<strong>需要的前置</strong>:<a href="/learn/deep-56">解读 56</a>(模型从哪来) · <a href="/learn/deep-57">解读 57</a>(模型怎么进仿真)</p>
+</blockquote>
+<p>辨识出的 BAM 参数到底准不准?这两个脚本给出可执行的答案:<strong>让同一个 ONNX 策略(或同一条轨迹)分别在仿真和实物上跑,逐点对齐位置曲线,算 MAE</strong>。整机走路之前,先在单舵机台架上把"仿真=实物"这件事量出来。</p>
+<h2 id="testbench-sim2realpy同一策略两个世界">testbench_sim2real.py:同一策略,两个世界</h2>
+<p>骨架是三个 rollout 函数加一个对比器:</p>
+<ul>
+<li><code>make_target_schedule()</code>:生成确定性目标序列——每 4 s 在 ±80°(<code>MAX_ANGLE = math.radians(80.0)</code>)随机取一个角度,同一 <code>--seed</code> 仿真和实物拿到<strong>同一条</strong>轨迹;</li>
+<li><code>rollout_sim_bam()</code>:轻量路径——<code>bam.MujocoController</code> + <code>bam/models["m6"]</code> 驱动,<code>VIN = 7.4</code>、<code>KP_FW = 200.0</code>,200 Hz 记录(<code>SIM_DT = 0.005</code>);<code>rollout_sim_mjlab()</code> 则启动真正的 mjlab 训练环境(<code>make_testbench_env_cfg()</code>),和策略训练用的执行器完全一致;</li>
+<li><code>rollout_real()</code>:实物路径——<code>rustypot</code> 的 <code>Xl330PyController</code> 接真实 XL330(<code>--motor-id 1</code>、波特率默认 1_000_000),写 <code>position_p_gain</code> 后<strong>回读确认</strong>(注释:固件会静默钳位越界值);速度原始 tick 按常数 <code>DXL_VEL_TICK_TO_RAD_S ≈ 0.024 rad/s</code> 换算,读不到就差分兜底;</li>
+<li><code>compare_and_plot()</code>:<code>MAE q (sim vs real)</code> + 四联图(位置/跟踪误差/速度/策略动作),<code>npz_to_bam_log()</code> 还能把 .npz 转回 BAM 日志格式,喂给 <code>bam.plot</code> 复用整条辨识工具链。</li>
+</ul>
+<p>工作流写在文件头注释:sim 记 <code>sim.npz</code> → 实物记 <code>real.npz</code> → <code>--compare</code> 出对比图。</p>
+<h2 id="validate-bam-testbenchpy验执行器内核本身">validate_bam_testbench.py:验执行器内核本身</h2>
+<p>第二个脚本不跑策略,而是<strong>回放真实台架录制</strong>:把每条实测轨迹喂进 <code>mujoco_rollout()</code>——用 <code>compute_m6_friction()</code>(与 <code>bam/model.py</code> 同式的 M6 摩擦)一步步复现"固件 PD → 电压 → 电机力矩 → 摩擦裁剪"链路(<code>ERROR_GAIN = (4096/2π)/(256·885)</code> 是 XL330 固件的位置误差→PWM 增益),同时以 BAM 自家 Python 仿真器 <code>bam_python_rollout()</code> 作参照。输出三个数:<code>MAE bam_vs_real / mj_vs_real / bam_vs_mj</code>,判定逻辑写在 <code>main()</code>:<code>avg_diff &gt; 0.01</code> → "BAM 和 MuJoCo 显著分叉,内核可能有 bug";三数接近 → 内核正确。</p>
+<h2 id="这套对照台在流程里的位置">这套对照台在流程里的位置</h2>
+<p>台架硬件见 <a href="/learn/deep-55">解读 55</a>(120 g 负载,<code>TESTBENCH_ARM_MASS = 0.12</code>);换舵机重训全流程的测试金字塔里,它就是 <strong>L2 仿真评估</strong>的量尺:换 HL-1910 后,先用新辨识的 JSON 在台架上跑通"仿真-实物 MAE 可接受",再谈整机。策略级的验收(L3 的五指标、L5 吊装)是它的下游。</p>
+<h2 id="你带走的收获">你带走的收获</h2>
+<ul>
+<li><strong>"辨识对不对"必须变成一个数</strong>:同轨迹同种子、MAE 对齐——验证设计成可重复实验,而不是"看着挺像"。</li>
+<li>对照要三方:实物、你的仿真内核、官方参考实现(BAM Python 仿真器),两两比才能定位分歧在哪边。</li>
+<li>实物路径的工程细节决定数据质量:增益写后回读、速度 tick 换算常数、差分兜底、200 Hz 定时采样。</li>
+<li>轻量后端(bam+MuJoCo)和完整后端(mjlab)各留一条:一个跑得快,一个与训练零偏差,<code>--sim-backend</code> 一键切换。</li>
+<li>先单舵机后整机:台架上的 MAE 是整机 sim2real 的先行指标。</li>
+</ul>
+<h2 id="延伸">延伸</h2>
+<ul>
+<li><a href="/learn/deep-55">解读 55</a>:台架物理设计 · <a href="/learn/deep-57">解读 57</a>:参数写回</li>
+<li><a href="/learn/deep-58">解读 58</a>:重训后的测试金字塔</li>
+<li><code>microduck-replica/upstream/microduck_rl/scripts/testbench_sim2real.py</code>(三 rollout + 对比器)</li>
+<li><code>microduck-replica/upstream/microduck_rl/scripts/validate_bam_testbench.py</code>(M6 内核验证)</li>
+<li><code>microduck-replica/upstream/microduck_rl/src/mjlab_microduck/robot/testbench_constants.py</code>(台架实体配置)</li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>解读 01 · bus.rs:一条 1 Mbps 总线上的 15 个对话 · 什么鸭 WhatDuck</title>
+<meta name="description" content="duck-control/src/bus.rs(507 行)">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="解读 01 · bus.rs:一条 1 Mbps 总线上的 15 个对话">
+<meta property="og:description" content="duck-control/src/bus.rs(507 行)">
+<meta property="og:url" content="https://duck.whatled.com/learn/deep-01">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/deep-01">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">DEEP 01 · 第一辑 · 运动控制核心 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="解读-01-busrs一条-1-mbps-总线上的-15-个对话">解读 01 · bus.rs:一条 1 Mbps 总线上的 15 个对话</h1>
+<blockquote>
+<p><strong>解读对象</strong>:<code>duck-control/src/bus.rs</code>(507 行)<br />
+<strong>需要的前置</strong>:《什么鸭公开课》第 10 课(舵机从 SG90 到总线)</p>
+</blockquote>
+<p>15 个舵机加一块 IMU 板挂在同一条半双工串行总线上(<code>BAUD_RATE = 1_000_000</code>,见 <code>model.rs:80</code>),控制循环跑 50 Hz。每个 tick 只有一天 20 ms,这一篇看代码怎么把总线时间花在刀刃上。</p>
+<h2 id="1-一个-tick-一次对话imu-排第一">1. 一个 tick 一次对话:IMU 排第一</h2>
+<p><code>read()</code> 的核心是一句 <code>sync_read_raw_data(&amp;self.ids, READ_ADDR, READ_LEN)</code>(bus.rs:248):用 Dynamixel 的 sync_read 一条指令问遍所有设备。<code>READ_ADDR = 124</code>、<code>READ_LEN = 12</code>(bus.rs:27-28),12 字节正好装下 <code>present_pwm</code>、<code>present_current</code>、<code>present_velocity</code>、<code>present_position</code> 四个寄存器。IMU 板的 ID(<code>IMU_DXL_ID = 200</code>,<code>model.rs:78</code>)被排在 <code>ids</code> 的第 0 位(bus.rs:114-116),所以它的应答先回来,<code>blocks[0]</code> 就是 IMU。</p>
+<p>为什么合并成一次读?半双工总线上每笔事务都要付寻址和等待的固定开销,16 次单读的握手时间远大于 1 次批量读。这也是 <code>io.rs</code> 里 <code>RobotIo</code> trait 把"读"设计成一次拿全 <code>Sensors</code> 的原因。</p>
+<h2 id="2-快慢分离电压和温度单独一笔账">2. 快慢分离:电压和温度单独一笔账</h2>
+<p>电池电压在寄存器 144、温度在 146,中间隔着 <code>velocity_trajectory</code>/<code>position_trajectory</code> 共 12 字节没人要的数据(bus.rs:37-40)。硬把它们并进 tick 的读块,等于每次 tick 让每个舵机多答 8 字节,耗的总线时间反而超过单独读。于是有了 <code>SLOW_READ_ADDR = 144</code>、<code>SLOW_READ_LEN = 3</code>(bus.rs:41-42):一笔 3 字节的 sync_read 同时拿回两个量,约每秒一次而非每 tick。<code>slow_sensors()</code>(bus.rs:351)里电压取 15 个舵机的平均——同一块电池;温度不平均,因为"一个发热的关节"才是要看的信号,均值会把它藏掉。</p>
+<h2 id="3-开机体检把这台车为什么慢消灭在启动时">3. 开机体检:把"这台车为什么慢"消灭在启动时</h2>
+<p><code>check_registers()</code>(bus.rs:132)逐舵机核对 <code>EXPECTED_REGISTERS</code> 里的 EEPROM 寄存器(<code>return_delay_time</code>、<code>baud_rate</code>、<code>pwm_slope</code>、<code>shutdown</code>),不符就写回并计数。理由写在注释里:被恢复出厂的舵机 <code>return_delay_time = 250</code>,仅此一项就吃掉全总线约 40% 的 tick 预算(bus.rs:129-131)。启动时每寄存器一次读,换掉一整类"这台机器人莫名慢"的排查。</p>
+<p>同类心思还出现在 <code>set_gain()</code>(bus.rs:316):写 kP 时顺手把 ki、kd 固定为 0(<code>const KI/KD: u16 = 0</code>)。这些是 RAM 寄存器,每次上电回到出厂值,而出厂 D 增益非零——不归零,同样 kP 下机器人会比原型"明显偏软"(bus.rs:317-322)。</p>
+<h2 id="4-staleimutracker给沉默的谎言计数">4. StaleImuTracker:给"沉默的谎言"计数</h2>
+<p>总线读成功不代表数据是新的:IMU 板可能一直回同一个采样(<code>StaleImuTracker</code>,bus.rs:67)。<code>observe()</code>(bus.rs:78)比较当前块与上一块,相同则累计,返回连续重复长度。连续 <code>STALE_RUN_WARN = 25</code> 次——50 Hz 下的半秒(bus.rs:59)——才告警一次,之后每 500 次才再提醒(bus.rs:270)。注释说得很直白:第一次重复就报,只会教会所有人忽略这条消息。另外 <code>set_torque()</code>(bus.rs:202)故意"写完全部再报错":一个丢应答曾让关机流程半路死掉,腿还锁着就断电了。</p>
+<h2 id="你带走的收获">你带走的收获</h2>
+<ul>
+<li>半双工总线上,"一条批量指令问所有设备"省下的主要是每笔事务的握手开销,不是字节本身。</li>
+<li>控制环里只读必需字节,慢变量(电压/温度)合并成低频的独立事务——数据离得远时,"捎带"反而更贵。</li>
+<li>EEPROM 寄存器在启动时校验并改正,比运行期靠症状排查便宜一个数量级。</li>
+<li>要分清"读失败"和"读到旧值":后者只有靠显式计数器才能被看见。</li>
+<li>告警必须设阈值并限流,否则高频重复日志会毁掉整个日志系统的信用。</li>
+</ul>
+<h2 id="延伸">延伸</h2>
+<ul>
+<li>观测里那几个数怎么用: <a href="/learn/deep-02">解读 02</a></li>
+<li>IMU 块的 12 字节怎么解码: <a href="/learn/deep-06">解读 06</a></li>
+<li>谁拿着这个总线的唯一写权限: <a href="/learn/deep-04">解读 04</a></li>
+<li>课程对照: <code>/Volumes/dev/dev/microduck/docs/course/10-舵机从SG90到总线.md</code></li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>解读 31 · symmetry.py 与 backlash.py:对称与齿隙 · 什么鸭 WhatDuck</title>
+<meta name="description" content="tasks/symmetry.py(169 行)、tasks/backlash.py(92 行)">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="解读 31 · symmetry.py 与 backlash.py:对称与齿隙">
+<meta property="og:description" content="tasks/symmetry.py(169 行)、tasks/backlash.py(92 行)">
+<meta property="og:url" content="https://duck.whatled.com/learn/deep-31">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/deep-31">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">DEEP 31 · 第三辑 · 训练代码 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="解读-31-symmetrypy-与-backlashpy对称与齿隙">解读 31 · symmetry.py 与 backlash.py:对称与齿隙</h1>
+<blockquote>
+<p><strong>解读对象</strong>:<code>tasks/symmetry.py</code>(169 行)、<code>tasks/backlash.py</code>(92 行)<br />
+<strong>需要的前置</strong>:<a href="/learn/deep-23">解读 23</a>(61 维观测拼装)、<a href="/learn/deep-25">解读 25</a>、<a href="README.md">总纲</a></p>
+</blockquote>
+<h2 id="在做什么">在做什么</h2>
+<p>两个小文件,各管一件「模型改造」:symmetry.py 给 PPO 加左右镜像对称(mirror symmetry,即假设「机器人镜像后的观测应对应镜像后的动作」)损失;backlash.py 把任意环境配置一键换成带齿隙(backlash,齿轮副之间的空程)的机器人模型。前者作用于训练算法,后者作用于仿真模型——但都遵守同一纪律:<strong>观测/动作的维度和布局一字不改</strong>,这样运行时和导出链路完全不用动。</p>
+<h2 id="真实符号symmetrypy">真实符号:symmetry.py</h2>
+<p>61 维 actor 观测的布局在文件头逐段写明(symmetry.py:9-17):<code>[0:3]</code> 角速度、<code>[3:6]</code> 重力投影、<code>[6:20]</code> 关节位置、<code>[20:34]</code> 关节速度、<code>[34:48]</code> 上一动作、<code>[48:51]</code> twist 命令、<code>[51:55]</code> 头命令、<code>[55:61]</code> 身体命令。镜像就是两张表:置换表 <code>_JOINT_PERM = [9,10,11,12,13,5,6,7,8,0,1,2,3,4]</code>(:68,左腿 0-4 与右腿 9-13 互换,中线关节 5-8 原地不动)和符号表 <code>_JOINT_SIGN</code>(:71,置换后全取负,唯独 neck_pitch/head_pitch 保持 +1——矢状面关节在左右反射下不变号)。整个观测的 <code>_OBS_PERM</code>/<code>_OBS_SIGN</code>(:74-95)再把非关节段补上:角速度取负 roll/yaw,重力取负 gy,twist 取负 vy 和 ωz,头命令取负 yaw/roll,身体命令取负 y/roll/yaw。</p>
+<p>接口侧只有一个 dataclass:<code>PpoWithSymmetryCfg</code>(:49)给标准 PPO 配置加一个 <code>symmetry_cfg</code> 字段;实际参数是模块级字典 <code>SYMMETRY_CFG</code>(:56):<code>use_mirror_loss=True</code>、<code>mirror_loss_coeff = 0.5</code>、<code>use_data_augmentation=False</code>。核心函数 <code>microduck_vel_symmetry</code>(:118)把 <code>[原始; 镜像]</code> 沿 batch 维拼接返回。一个诚实的妥协:critic 观测只做原样复制不镜像(:149-153)——镜像损失只需要 actor 侧成立,critic 反正用特权信息,注释称之为无害近似。</p>
+<h2 id="真实符号backlashpy">真实符号:backlash.py</h2>
+<p><code>make_backlash_variant(cfg, robot_cfg=MICRODUCK_BACKLASH_ROBOT_CFG)</code>(backlash.py:42)做三件事。第一,换机器人:每个伺服关节串联一个<strong>不驱动</strong>的 <code>passive_&lt;joint&gt;_backlash</code> 铰链,±1° 空程,执行器是 <code>BacklashEncoderBamActuator</code>——它的固件 PD 环闭在<strong>穿过齿隙读到的编码器</strong>上,和真伺服(编码器装在齿轮空程的输出侧)同构(:6-14)。第二,换观测:<code>joint_pos</code>/<code>joint_vel</code> 两项的函数换成 <code>joint_pos_rel_backlash</code>/<code>joint_vel_rel_backlash</code>,策略看到的是 <code>qpos[伺服] + qpos[齿隙]</code> 的编码器视角,维度仍 14(:49-64)。第三,收拾两个会被齿隙关节误伤的旧项:<code>dof_pos_limits</code> 软限位惩罚只留伺服关节(齿隙关节一辈子顶着 ±1° 硬限位是它的本职,:68-72);<code>pose</code> 奖励的选择正则前面拼一段 <code>^(?!passive_.*_backlash)</code>,否则 <code>.*hip_yaw.*</code> 会同时匹配到齿隙关节并报错(:81-90)。</p>
+<h2 id="设计取舍">设计取舍</h2>
+<p>对称性的取舍在任务侧:所有 v1.5 环境默认 <code>ENABLE_SYMMETRY = False</code>,因为旧配置是为 51 维观测硬编码的,直到 2026-08-13 迁移到 61 维、并把输出键从 <code>"policy"</code> 改成 <code>"actor"</code>(:3-7)之后才可用;roulade 是第一个吃螃蟹的(29 篇),spin 则永远不能用——镜像会把左转变右转。文件里还留着一处陈年注释:<code># [B, 51]</code>(:144),实际已是 61 维,读代码时以表长为准。backlash 的设计哲学是「借道前缀」:所有环境已有的 <code>^(?!passive_).*</code> 正则天然排除齿隙关节,执行器、姿态奖励、关节观测选择都不用改(:23-26)——用命名约定换改造成本。</p>
+<h2 id="你带走的收获">你带走的收获</h2>
+<ul>
+<li>镜像对称 = 一张置换表加一张符号表;中线关节的符号(不变号)最容易写错。</li>
+<li>镜像损失(mirror loss)只需 actor 侧成立,critic 不镜像是有意的近似而非疏漏。</li>
+<li>给仿真加机械缺陷(齿隙)时,保持观测/动作维度不变,部署链零改动。</li>
+<li>奖励项的 joint 选择正则会因新增关节而误匹配——换模型先全局搜 <code>joint_names</code> 正则。</li>
+</ul>
+<h2 id="延伸">延伸</h2>
+<ul>
+<li>启用对称的第一个环境:<a href="/learn/deep-29">解读 29</a>;观测如何拼成 61 维:<a href="/learn/deep-23">解读 23</a></li>
+<li>本目录:<code>microduck-replica/upstream/microduck_rl/src/mjlab_microduck/tasks/symmetry.py</code>、<code>.../tasks/backlash.py</code></li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

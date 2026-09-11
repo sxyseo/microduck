@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>第 09 课 · 3D 打印第一课:测试片先行 · 什么鸭 WhatDuck</title>
+<meta name="description" content="仿真 STL 不是可打印工程件。这一课教你用一张 60×40×4mm 的测试片,先摸清自己打印机(或代打店)的真实精度,再决定全机 41 件要不要开打。">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="第 09 课 · 3D 打印第一课:测试片先行">
+<meta property="og:description" content="仿真 STL 不是可打印工程件。这一课教你用一张 60×40×4mm 的测试片,先摸清自己打印机(或代打店)的真实精度,再决定全机 41 件要不要开打。">
+<meta property="og:url" content="https://duck.whatled.com/learn/course-09">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/course-09">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">LESSON 09 · 阶段 C · 硬件入门 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="第-09-课-3d-打印第一课测试片先行">第 09 课 · 3D 打印第一课:测试片先行</h1>
+<blockquote>
+<p><strong>这一课解决什么问题</strong>:仿真 STL 不是可打印工程件。这一课教你用一张 60×40×4mm 的测试片,先摸清自己打印机(或代打店)的真实精度,再决定全机 41 件要不要开打。</p>
+<p><strong>前置</strong>:无硬性前置,可与<a href="/learn/course-08">第 08 课</a>并行。练习需要能碰到一台 3D 打印机——自己的或代打店都行。</p>
+</blockquote>
+<hr />
+<h2 id="1-核心判断仿真-stl-不是可打印工程件">1. 核心判断:仿真 STL 不是可打印工程件</h2>
+<p>官方公开的 47 个 STL 是给仿真用的:仿真只保证<strong>外形与惯量</strong>(第 01 课你开的就是它),不保证配合公差、螺纹、埋件座和走线空间。<code>microduck-replica/构建日志.md</code> 开头反复强调这句话,整个打印阶段就是在验证它到底对不对。</p>
+<p>翻译成人话:仿真里零件永远严丝合缝,真打印出来孔可能小 0.1–0.3mm(孔会缩),螺丝拧不进、轴承装不上。所以<strong>别直接打印整套</strong>。</p>
+<h2 id="2-先认识-5-个结构词">2. 先认识 5 个结构词</h2>
+<p>全机是 M2 螺丝系统(过孔 ×111、沉头孔 ×48、攻丝底孔 ×27),这三个词必须分清:</p>
+<table>
+<thead>
+<tr>
+<th>词</th>
+<th>一句话解释</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>过孔</td>
+<td>螺丝穿过去的孔,Ø2.2(比螺丝杆 2.0 略大)</td>
+</tr>
+<tr>
+<td>沉头孔</td>
+<td>让螺丝头<strong>埋进表面</strong>的台阶孔,Ø4.4</td>
+</tr>
+<tr>
+<td>攻丝底孔</td>
+<td>拧自攻螺丝的孔,Ø1.6——靠塑料被挤出螺纹</td>
+</tr>
+<tr>
+<td>公差补偿</td>
+<td>打印孔会缩,画图时提前放大(参考值 +0.15~0.25mm)</td>
+</tr>
+<tr>
+<td>轴承座轻压入</td>
+<td>轴承用手轻压就能进、不晃不裂——配合松紧刚刚好</td>
+</tr>
+</tbody>
+</table>
+<h2 id="3-测试片测什么一张片子五组阶梯">3. 测试片测什么:一张片子,五组阶梯</h2>
+<p><code>microduck-replica/docs/打印工艺调整表.md</code> 第二节给了现成的测试片设计,30 分钟出结论:</p>
+<pre><code class="language-text">过孔阶梯  Ø2.2 / 2.3 / 2.4 / 2.5   ← 哪档螺丝&quot;刚好能过&quot;?
+攻丝阶梯  Ø1.6 / 1.65 / 1.7 / 1.75 ← 哪档自攻&quot;拧得进且不裂&quot;?
+沉头一对  Ø4.4 + Ø2.2              ← 螺丝头能沉平吗?
+轴承孔    Ø21.9 / 22.0 / 22.1      ← 22×16×4 轴承的压入配合三档
+小轴承孔  Ø14.9 / 15.0 / 15.1      ← 15×10×3 轴承
+</code></pre>
+<p>判定标准:螺丝以<strong>手指力量</strong>能顺畅通过 = 合格过孔;自攻拧入 3 圈以上不裂不旷 = 合格底孔。</p>
+<h2 id="4-回填公差补偿最值钱的一行数据">4. 回填公差补偿:最值钱的一行数据</h2>
+<p>测完不是就完了——把每一档的实测结果<strong>回填</strong>进你的切片参数(孔径补偿),再记进 <code>构建日志.md</code> 的「尺寸与配合验证」表。这张表决定全部 41 件是否直接开打,是整个复刻里对后来者最值钱的一行数据。</p>
+<p>一条纪律(工艺调整表原话):<strong>全部件用同一台机器、同一材料、同一层高打</strong>——否则补偿值跨机器就失效了。</p>
+<h2 id="5-代打-vs-自打99-的真实经验">5. 代打 vs 自打:¥99 的真实经验</h2>
+<p>没有打印机怎么办?项目自己的答案是:<strong>代打</strong>。构建日志 2026-09-06 记录:¥99 按重计价的代打店,PLA 41 件搞定(全机约 300g PLA,一公斤卷都用不完)。但有两个真实教训:</p>
+<ul>
+<li><strong>TPU 被拒收</strong>。软下巴 + 软嘴两件(共 26g)是 TPU(软性耗材),该店只做 PLA。评估结论:只影响叼取技能和连杆弹性,不影响走路/装配/发声,单独找 TPU 渠道补打即可(约 ¥30–50,不在关键路径)。注意一句忠告:<strong>别让店家降填充冒充软料</strong>。</li>
+<li><strong>测试片先行同样适用于代打</strong>:先让店家打测试片,定了补偿值再批量下单,别让 41 件一次全废。</li>
+</ul>
+<h2 id="6-动手练习30-分钟-打印时间">6. 动手练习(30 分钟 + 打印时间)</h2>
+<ol>
+<li>从打印工艺调整表拿测试片 STL,打一张(自打)或让代打店打一张;</li>
+<li>逐档试装:M2 螺丝穿过哪一档?自攻在哪一档拧 3 圈不裂?</li>
+<li>把结论写成两行:"过孔补偿 = <strong><em>mm,攻丝补偿 = </em></strong>mm",回填进你的参数。</li>
+</ol>
+<h2 id="自查清单">自查清单</h2>
+<ul>
+<li>[ ] 我能解释"仿真 STL ≠ 可打印工程件"差在哪四个字:公差、螺纹、埋件座、走线空间</li>
+<li>[ ] 我知道过孔/沉头孔/攻丝底孔三种孔各干什么用</li>
+<li>[ ] 我打出(或委托打出)了测试片,并写下了自己的补偿值</li>
+<li>[ ] 我知道为什么所有件必须同一台机器同一材料同一层高</li>
+</ul>
+<h2 id="下一课预告">下一课预告</h2>
+<p>第 10 课回到电:从 ¥0 的 SG90 实验,亲手看一次"开环漂移"——那一下你就明白鸭子为什么非用带反馈的总线舵机不可。</p>
+<h2 id="延伸资源">延伸资源</h2>
+<ul>
+<li>打印工艺调整表(测试片设计出处):<code>microduck-replica/docs/打印工艺调整表.md</code></li>
+<li>构建日志(代打与 TPU 拒收记录):<code>microduck-replica/构建日志.md</code></li>
+<li>21 页装配说明书 PDF 与 56 个零件图纸:<code>microduck-replica-cad/</code></li>
+<li>浏览器看 STL 零安装:<a href="https://3dviewer.net">3dviewer.net</a>;要测量改用 FreeCAD(免费)</li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>第 10 课 · 舵机:从 SG90 到总线舵机 · 什么鸭 WhatDuck</title>
+<meta name="description" content="这一课先用 ¥0 的 SG90 实验建立手感,再讲清总线舵机的门牌号规则——鸭子 15 个舵机是最大的花钱项,别在它身上交学费。">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="第 10 课 · 舵机:从 SG90 到总线舵机">
+<meta property="og:description" content="这一课先用 ¥0 的 SG90 实验建立手感,再讲清总线舵机的门牌号规则——鸭子 15 个舵机是最大的花钱项,别在它身上交学费。">
+<meta property="og:url" content="https://duck.whatled.com/learn/course-10">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/course-10">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">LESSON 10 · 阶段 C · 硬件入门 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="第-10-课-舵机从-sg90-到总线舵机">第 10 课 · 舵机:从 SG90 到总线舵机</h1>
+<blockquote>
+<p><strong>这一课解决什么问题</strong>:这一课先用 ¥0 的 SG90 实验建立手感,再讲清总线舵机的门牌号规则——鸭子 15 个舵机是最大的花钱项,别在它身上交学费。</p>
+<p><strong>前置</strong>:<a href="/learn/course-02">第 02 课</a>(舵机与总线两个概念)。动手需要一块树莓派 + 一颗 SG90;总线调试板等第 12 课到位。</p>
+</blockquote>
+<hr />
+<h2 id="1-pwm-舵机-vs-总线舵机回扣第-02-课">1. PWM 舵机 vs 总线舵机(回扣第 02 课)</h2>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>SG90(PWM 舵机)</th>
+<th>总线舵机(Dynamixel/Feetech)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>怎么指挥</td>
+<td>信号线上的精确脉冲(0.5–2.5ms 脉宽对应角度)</td>
+<td>数据线上的数字指令,1 Mbps</td>
+</tr>
+<tr>
+<td>地址在哪</td>
+<td>它插的 GPIO 脚号——15 只舵机拉 15 根线</td>
+<td>ID 门牌号——一根线挂 15 只 + 1 块 IMU 板</td>
+</tr>
+<tr>
+<td>有没有反馈</td>
+<td>无,你只能"希望"它转到了</td>
+<td>有,每台有 Control Table:位置/速度/温度/电压,能读能写</td>
+</tr>
+</tbody>
+</table>
+<p>SG90 的"位置"是单方面命令;总线舵机的位置是<strong>读回来的事实</strong>。</p>
+<h2 id="2-为什么从-sg90-开始0-的四课实验">2. 为什么从 SG90 开始:¥0 的四课实验</h2>
+<p>项目手头正好有 SG90×6 和一台 Pi 2,构建日志的结论:SG90 反正上不了鸭(PWM 无反馈、力矩只有 1/3、孔位不同),但 + Pi 2 是最佳 PWM 入门台架——<strong>坏了不心疼,实验全程 ¥0</strong>。</p>
+<p>Mac 没有 GPIO,让 Pi 2 当代理:刷机、插网线、<code>ssh 用户名@raspberrypi.local</code> 连上,把教学脚本拷过去逐课跑(脚本:<code>microduck-replica/rl-series/scripts/pi_sg90_bench.py</code>,接线见头注释)。四课内容:</p>
+<pre><code class="language-text">① 单舵机扫角   接线和行程对不对
+② 负载保持     挂 100–200g,听扫齿、摸温度
+③ 六舵机波浪   供电扛不扛得住
+④ 开环漂移     命令 90° 后手指捏住输出轴
+</code></pre>
+<p>接线要点(改线前永远先断电):信号线接 GPIO 17/27/22/23/24;<strong>电源绝不要接 Pi 的 5V</strong>,用外接 5V≥3A 或 4 节 AA 电池盒(≈6V,在 SG90 规格内);电源负极和 Pi 的 GND 连一根线(共地,下一节)。</p>
+<p>第 ④ 课是灵魂:你捏住舵机轴,软件读到的"位置"永远是它自己写进去的 0.5——<strong>真实角度无人知晓</strong>。这就是鸭子必须用带编码器的总线舵机的全部理由,亲眼看一次胜过读十遍。</p>
+<h2 id="3-共地新手第一大故障">3. 共地:新手第一大故障</h2>
+<p>调试板只传数据不供电,舵机必须独立供电——于是有两套电。<strong>铁律:调试板的 GND 必须和舵机电源的 GND 连通</strong>(一根杜邦线的事)。忘了共地 = 扫描不到舵机或读数乱码,这是新手第一大故障。信号有没有参照,全看地通不通。上电顺序:接线 → 量短路 → 先舵机上电 → 再插 USB。</p>
+<h2 id="4-id-是总线的门牌号">4. ID 是总线的门牌号</h2>
+<p>总线上所有舵机共享一根线,靠 ID 区分"这句话是喊谁的"。出厂 ID 全是 1——<strong>两只出厂舵机一起挂上总线,两只同时抢答,谁也通信不了</strong>。两条铁律:<strong>总线上同时只允许存在一只还没设好 ID 的舵机;每设好一只,断电、贴标签,再接下一只。</strong></p>
+<p>用 Dynamixel Wizard 2.0(Mac 官方免费)设置:先只勾 57600 波特率扫描(出厂默认),扫到后在 Control Table 改:ID → 目标号;Baud Rate → <strong>1000000</strong>(运行时全总线 1Mbps);Return Delay 250 → <strong>0</strong>(不改的话 16 台设备一 tick 白吃 8ms,40% 预算);Shutdown 去掉电压错误触发(防电池带载波动误停机)。目标 ID 表:10–14 右腿、20–24 左腿、30–34 头颈嘴、200 留给 IMU 板。15 只约一个傍晚设完,别偷懒跳过贴标签。</p>
+<h2 id="5-两条路线选一条别混用">5. 两条路线,选一条别混用</h2>
+<table>
+<thead>
+<tr>
+<th>路线</th>
+<th>调试板</th>
+<th>Mac 软件</th>
+<th>项目现状</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Dynamixel</td>
+<td>U2D2 ≈¥200/套</td>
+<td>Wizard 2.0 官方 Mac 版</td>
+<td>XL330 报价 ≈¥2580+,贵</td>
+</tr>
+<tr>
+<td>Feetech</td>
+<td>FE-URT-1 ¥45 或第三方 ¥22–26</td>
+<td>Python SDK(Mac 直跑)</td>
+<td><strong>本项目实购 HL-1910-C001 ×15 ¥1500</strong></td>
+</tr>
+</tbody>
+</table>
+<p>本项目选了 Feetech(省约 ¥1100,详见<a href="/learn/course-12">第 12 课</a>);飞特出厂 Return Delay 已是 0、波特率已 1Mbps,要改的主要就是 ID。<strong>别混用</strong>:两家的 ID 表不一样(平价教程路线用 ID 1–15),部署代码按 ID 找关节——表混了 = 左腿当右腿 = 一上电就劈叉。起步门票:FE-URT-1 + 1 只总线舵机 ≈¥220。</p>
+<h2 id="动手练习一个周末0">动手练习(一个周末,¥0)</h2>
+<p>跑完四课实验,重点做第 ④ 课,把"捏住轴时软件读数不变"这个观察写进笔记。</p>
+<h2 id="自查清单">自查清单</h2>
+<ul>
+<li>[ ] 我能说清 PWM 舵机和总线舵机的区别(15 根线 vs 1 根线,命令 vs 反馈)</li>
+<li>[ ] 我亲眼见过"开环漂移",能解释它为什么证明 SG90 不能上鸭</li>
+<li>[ ] 我能背出共地铁律和两条 ID 铁律,以及忘了会发生什么</li>
+<li>[ ] 我知道本项目 15 只舵机买的是哪条路线、花了多少钱</li>
+</ul>
+<h2 id="下一课预告">下一课预告</h2>
+<p>第 11 课讲挂在 ID 200 上的那块小板子:官方没公开、全网买不到,只能自己画——但它只有 5 个芯片,是完美的第一块自绘板。</p>
+<h2 id="延伸资源">延伸资源</h2>
+<ul>
+<li>macOS 舵机调试、ID 设置与图纸查看手册(本课母本):<code>docs/macOS舵机调试与图纸查看指南.md</code></li>
+<li>SG90 四课实验脚本:<code>microduck-replica/rl-series/scripts/pi_sg90_bench.py</code></li>
+<li><a href="https://ftdichip.com/drivers/">FTDI 官方 VCP 驱动</a>(串口没出现时装)</li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

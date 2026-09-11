@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>第 27 课 · 把学习写成文章:输出倒逼输入 · 什么鸭 WhatDuck</title>
+<meta name="description" content="学了 27 课,怎么证明你真的学会?写出来。这一课给你一个固定的六段文章结构、一套选题方法(选题不是想出来的,是长出来的)和发布渠道建议。">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="第 27 课 · 把学习写成文章:输出倒逼输入">
+<meta property="og:description" content="学了 27 课,怎么证明你真的学会?写出来。这一课给你一个固定的六段文章结构、一套选题方法(选题不是想出来的,是长出来的)和发布渠道建议。">
+<meta property="og:url" content="https://duck.whatled.com/learn/course-27">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/course-27">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">LESSON 27 · 阶段 F · 迁移与扩展 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="第-27-课-把学习写成文章输出倒逼输入">第 27 课 · 把学习写成文章:输出倒逼输入</h1>
+<blockquote>
+<p><strong>这一课解决什么问题</strong>:学了 27 课,怎么证明你真的学会?写出来。这一课给你一个固定的六段文章结构、一套选题方法(选题不是想出来的,是长出来的)和发布渠道建议。</p>
+<p><strong>前置</strong>:做过任意一次实验(跑通 <a href="/learn/course-05">第 05 课</a> 即可)。素材在 <code>docs/microduck-30day/articles/</code>。</p>
+</blockquote>
+<hr />
+<h2 id="1-为什么公开写作">1. 为什么公开写作</h2>
+<p>两个理由,工作区里都有现成证据:</p>
+<ul>
+<li><strong>费曼式自检</strong>。第 00 课立过规矩:"能讲出来才算学懂"。写作就是讲给不认识的人听——读者没法追问你,所以每一步都得自己先接住。写不下去的地方,就是你没学懂的地方。</li>
+<li><strong>踩坑记录让别人绕坑</strong>。<code>microduck-replica/构建日志.md</code> 的"踩过的坑"一节开头写着:这一节是整份日志最有价值的部分——<strong>别人可以不重复踩</strong>。你写的每一篇排错文章,都可能替一个陌生人省下一整晚。</li>
+</ul>
+<p><strong>所以呢</strong>:写作不是"学成之后"的事,而是学习本身的最后一道工序——没有输出,闭环就没关上。</p>
+<h2 id="2-固定文章结构六段">2. 固定文章结构(六段)</h2>
+<p><code>docs/microduck-30day/articles/editorial-calendar.md</code> 规定每篇固定结构:<strong>问题、源码证据、实验命令、结果证据、结论、未解决问题</strong>。对照模板 <code>article-template.md</code> 和已成文范例 <code>day-01-5-iteration-smoke-test.md</code>,每段的要求:</p>
+<ol>
+<li><strong>问题</strong>:今天解决什么,边界在哪(2–3 段);</li>
+<li><strong>源码/文档证据</strong>:文件、行号、关键对象/函数、我的理解;</li>
+<li><strong>实验假设</strong>:一句填空——"如果我改变__,那么__应该变化,因为__";</li>
+<li><strong>实验命令</strong>:完整可复制,读者能原样跑;</li>
+<li><strong>结果证据</strong>:曲线/截图/视频,以及结果分析:哪些指标改善、哪些没改善、有没有替代解释;</li>
+<li><strong>结论 + 下一步</strong>:一句话区分已验证、推测、待验证;下一步只安排<strong>一个</strong>最小实验,不同时改多个变量。</li>
+</ol>
+<p>看范例怎么写"诚实的结论":第 1 天文章里,<code>mean_reward</code> 从 -0.0614 升到 0.0950,是积极信号但<strong>不是充分条件</strong>;<code>fell_over</code> 仍接近 1.0。所以正确结论是"训练链路通过",而不是"鸭子学会走路"——两个结论必须分开。六段结构的价值正在于此:它逼你把"链路通了"和"效果好了"写进不同的句子里,不给自我感动留缝。</p>
+<h2 id="3-选题不是想出来的是长出来的">3. 选题不是想出来的,是长出来的</h2>
+<p><code>docs/microduck-30day/README.md</code> 定义了每天的小闭环:</p>
+<pre><code class="language-text">读一小段源码 → 提出一个假设 → 跑一个小实验 → 保存证据 → 写一段结论
+</code></pre>
+<p>30 个选题就是 30 个小闭环的自然产物。看日历标题就知道:第 1 天《5 次迭代能不能证明训练环境可用?》来自冒烟测试;第 8 天《61 维 observation 是怎么拼出来的?》来自读观测代码;第 29 天《给机器人加上小智语音控制》来自第 23 课的 MCP 设计。<strong>没有一篇是凭空"想选题"想出来的——都是当天真的做了、真的卡了、真的验证了。</strong></p>
+<h2 id="4-你的第一个选题怎么挑">4. 你的第一个选题怎么挑</h2>
+<p>三条筛选,满足任意两条就写:</p>
+<ul>
+<li>最近两周你真的卡住过、又真的解决了(证据已在手——比如构建日志里那个 <code>IndexError</code> 和 <code>CUDA_VISIBLE_DEVICES=""</code> 的解法);</li>
+<li>你当时能搜到的中文资料很少(踩坑价值高);</li>
+<li>结论里有可复制的命令或数字(别人能验证)。</li>
+</ul>
+<h2 id="5-发布渠道建议">5. 发布渠道建议</h2>
+<ul>
+<li><strong>博客</strong>:自己完全掌控,适合长文和代码块,建议作为母本;</li>
+<li><strong>公众号</strong>:选题日历的栏目《从零复刻一只会走路的小鸭子》就是为它设计的,适合连载和传播;</li>
+<li><strong>GitHub</strong>:把文章和实验记录放同一个仓库,读者可以复跑——"文章 + <code>experiment-log.csv</code>"是最有说服力的组合。</li>
+</ul>
+<p>先选一个渠道,用固定结构写满 5 篇,再考虑一稿多发。</p>
+<h2 id="动手练习20-分钟">动手练习(20 分钟)</h2>
+<p>用 <code>article-template.md</code> 写出你第一篇文章的骨架:标题 + 问题段 + 已有证据清单。缺证据的段落留空并标"待补"——这份空格清单,就是你下一个实验的说明书。</p>
+<h2 id="自查清单">自查清单</h2>
+<ul>
+<li>[ ] 我能背出六段结构,并说出结论段要区分哪三种状态</li>
+<li>[ ] 我能解释为什么选题从"每天的小闭环"里长出来</li>
+<li>[ ] 我已经有第一篇文章的骨架,且知道下一个实验补哪个证据</li>
+</ul>
+<h2 id="下一课预告">下一课预告</h2>
+<p>第 28 课讲复盘:实验记录的最小字段表、踩坑日志的体例、周复盘四问和 30 天冲刺复盘模板——让 30 天后的你,比今天更强。</p>
+<h2 id="延伸资源">延伸资源</h2>
+<ul>
+<li>文章模板:<code>docs/microduck-30day/articles/article-template.md</code></li>
+<li>30 个选题日历:<code>docs/microduck-30day/articles/editorial-calendar.md</code></li>
+<li>已成文范例:<code>docs/microduck-30day/articles/day-01-5-iteration-smoke-test.md</code></li>
+<li>踩坑日志体例:<code>microduck-replica/构建日志.md</code></li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

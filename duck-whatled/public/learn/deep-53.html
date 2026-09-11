@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>解读 53 · 舵机协议:Dynamixel 与 Feetech 寄存器 · 什么鸭 WhatDuck</title>
+<meta name="description" content="microduck-replica/docs/硬件规格速查.md + microduck-replica/docs/硬件方案逆向.md §「飞特 STS/SCS 协议对照」,交叉引">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="解读 53 · 舵机协议:Dynamixel 与 Feetech 寄存器">
+<meta property="og:description" content="microduck-replica/docs/硬件规格速查.md + microduck-replica/docs/硬件方案逆向.md §「飞特 STS/SCS 协议对照」,交叉引">
+<meta property="og:url" content="https://duck.whatled.com/learn/deep-53">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/deep-53">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">DEEP 53 · 第六辑 · 舵机与执行器 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="解读-53-舵机协议dynamixel-与-feetech-寄存器">解读 53 · 舵机协议:Dynamixel 与 Feetech 寄存器</h1>
+<blockquote>
+<p><strong>解读对象</strong>:<code>microduck-replica/docs/硬件规格速查.md</code> + <code>microduck-replica/docs/硬件方案逆向.md</code> §「飞特 STS/SCS 协议对照」,交叉引用 <code>duck-control/src/bus.rs</code><br />
+<strong>需要的前置</strong>:第一辑解读 01(duck-control bus.rs 逐文件)· <a href="/learn/deep-59">解读 59</a></p>
+</blockquote>
+<p>换舵机最吓人的说法是"协议全变了"。把两张协议表并排放,会发现<strong>物理层完全同构,真正变的是包格式和出厂默认值</strong>。</p>
+<h2 id="物理层一模一样">物理层:一模一样</h2>
+<p>Dynamixel XL330 和飞特 STS/SCS/HL 都是<strong>单线半双工 TTL、3 线(GND-VCC-DATA)、1 Mbps</strong>。官方运行时 <code>bus.rs</code> 里搜不到任何方向控制 GPIO——方向切换由 HAT 上的硬件自动方向电路完成;飞特路线换成转接板即可,通信层不用重写(Open Duck Mini 用的 <code>rustypot.feetech</code> 与 XL330 的 <code>rustypot</code> 是同一个库的不同协议模块,波特率同为 1 Mbps)。</p>
+<h2 id="包格式三处不同">包格式:三处不同</h2>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Dynamixel V2(XL330)</th>
+<th>飞特 STS/SCS</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>包头</td>
+<td><code>FF FF FD 00</code></td>
+<td><code>FF FF</code></td>
+</tr>
+<tr>
+<td>校验</td>
+<td>CRC-16</td>
+<td><code>~sum</code>(取反和)</td>
+</tr>
+<tr>
+<td>批量读</td>
+<td><code>sync read</code>(官方实际用的)</td>
+<td><code>sync read 0x82</code></td>
+</tr>
+</tbody>
+</table>
+<p>一个关键更正(硬件方案逆向 §专节):Protocol V2 有更快的 <code>fast sync read</code>(0x8A,应答拼成一个包),<strong>但 Microduck 没有用</strong>——全库检索零命中,<code>bus.rs</code> 调的是普通 <code>sync_read_raw_data</code>。所以两边的应答机制相同:一条指令包出去,每个设备各回一个独立状态包。</p>
+<h2 id="出厂默认值反直觉的一局">出厂默认值:反直觉的一局</h2>
+<p><code>duck-control/src/model.rs:84-86</code> 原文:XL330 出厂 <code>return_delay_time = 250</code>,即 <strong>500 µs 转向延迟/设备,16 台设备一 tick 白吃 8 ms——40% 的 20 ms 预算</strong>。官方必须写 0 消掉。而飞特 STS 内存表第 7 号 Return Delay <strong>默认就是 0</strong>(备注 "Not functional on STS")——飞特天然没有这笔开销。飞特侧该调的是第 8 号 Response Level:默认 1(所有命令都应答),改成 0 后只有 read/ping 回包。<strong>出厂默认值是给通用场景的,高频控制回路必须自己调。</strong></p>
+<h2 id="代码侧长什么样">代码侧长什么样</h2>
+<p><code>bus.rs</code> 把协议细节收敛成三个常量:主循环 <code>READ_ADDR = 124</code>、<code>READ_LEN = 12</code>(15 舵机 + IMU 板 ID 200 在同一次 <code>sync_read</code> 里读回);慢速遥测 <code>SLOW_READ_ADDR = 144</code>、<code>SLOW_READ_LEN = 3</code>(电压+温度,寄存器 144–146)。设备列表 <code>ids = [IMU_DXL_ID, JOINT_IDS…]</code> 即 <code>[200, 20..24, 30..34, 10..14]</code>。换飞特时,改的只是这一层控制器,上层 <code>RobotIo</code> 接口不动(训练参数调整指南 §11.3)。</p>
+<p>寄存器编号两边各有各的表:Dynamixel 波特率在 EEPROM <code>baud_rate = 3</code>(=1 Mbps)、ID 在寄存器 3;飞特 ID 范围 0–253(寄存器 5)、波特率寄存器 6(<code>0 = 1M</code>)。HD-1910 出厂即 1 Mbps、ID 1,信号电平高 2–5 V / 低 0–0.45 V(规格书 7-3/7-4,经硬件方案逆向转述)。</p>
+<h2 id="你带走的收获">你带走的收获</h2>
+<ul>
+<li><strong>换协议 ≠ 换物理层</strong>:TTL 半双工 1 Mbps 通用,变的只是包头/校验/指令码,适配层即可解决。</li>
+<li>官方没用 fast sync read——"协议有更快的模式"和"这个项目用了它"是两回事,要以代码检索为准。</li>
+<li><strong>Return Delay 是隐藏带宽杀手</strong>:16 台 × 500 µs = 8 ms,新舵机上电先查这类默认值。</li>
+<li>好的通信设计把协议藏在常量后面:<code>READ_ADDR/READ_LEN</code> 一改,上层全不动。</li>
+<li>ID 空间、寄存器地址、默认波特率,换系列(SMS 走 RS485、SHC 走 CANopen)前必须重查手册。</li>
+</ul>
+<h2 id="延伸">延伸</h2>
+<ul>
+<li><a href="/learn/deep-59">解读 59</a>:ID 表与控制模式实操</li>
+<li><a href="/learn/deep-60">解读 60</a>:单舵机总线验证脚本</li>
+<li><code>duck-control/src/bus.rs</code>(READ_ADDR=124、sync_read 组合读)</li>
+<li><code>duck-control/src/model.rs</code>(return_delay_time 写 0 的出厂校准清单)</li>
+<li><code>microduck-replica/docs/硬件方案逆向.md</code>(STS/SCS 协议对照全表)</li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

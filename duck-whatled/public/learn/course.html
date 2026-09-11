@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>什么鸭公开课 · 从零看懂一只机器鸭 · 什么鸭 WhatDuck</title>
+<meta name="description" content="写给什么都不懂的新手的系列课:借一只机器鸭的复刻,把机器人、强化学习、硬件、部署一路学通,最后迁移到你自己的领域。六个阶段 30 课。">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="什么鸭公开课 · 从零看懂一只机器鸭">
+<meta property="og:description" content="写给什么都不懂的新手的系列课:借一只机器鸭的复刻,把机器人、强化学习、硬件、部署一路学通,最后迁移到你自己的领域。六个阶段 30 课。">
+<meta property="og:url" content="https://duck.whatled.com/learn/course">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/course">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">COURSE · 系列公开课 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="什么鸭公开课-从零看懂一只机器鸭">什么鸭公开课 · 从零看懂一只机器鸭</h1>
+<blockquote>
+<p>一门写给"什么都不懂但想学"的小白的系列课程。<br />
+以 Microduck 复刻项目为一条主线，把机器人、强化学习、硬件、部署一路讲通，<br />
+最后把学到的东西<strong>迁移到其他领域</strong>。全部内容基于本工作区已有的文档、实验记录与公开资料，<br />
+每一课都要求"学完能做出点什么"，不接受只看不练。</p>
+</blockquote>
+<ul>
+<li><strong>学员画像</strong>：会用电脑、能装软件，但不懂电路、不懂结构、没写过 Python、没听过强化学习——都没关系。</li>
+<li><strong>学习节奏</strong>：每课 15–45 分钟（含动手练习），每周 2–3 课，约 10–14 周学完。</li>
+<li><strong>课程规模</strong>：六个阶段，30 课。</li>
+<li><strong>铁律</strong>：所有结论必须有出处（仓库文件、实验记录或官方公开资料）；没有证据的写"待验证"。</li>
+</ul>
+<hr />
+<h2 id="课程地图六个阶段">课程地图：六个阶段</h2>
+<pre><code class="language-text">A 认识它（不懂代码） → B 让它在电脑里动（装软件）
+→ C 动手碰硬件 → D 训练自己的策略 → E 组装上电部署
+→ F 迁移到其他领域（这门课真正的终点）
+</code></pre>
+<h3 id="阶段-a-入门认知-先知道这是什么不写代码">阶段 A · 入门认知 —— 先知道"这是什么"（不写代码）</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: right;">课</th>
+<th>标题</th>
+<th>学完你能</th>
+<th>状态</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: right;">00</td>
+<td><a href="/learn/course-00">导学：这只鸭子是什么？为什么值得你花 30 天？</a></td>
+<td>用 6 个数字向外行讲清楚整个项目</td>
+<td>✅ 已发布</td>
+</tr>
+<tr>
+<td style="text-align: right;">01</td>
+<td><a href="/learn/course-01">先让它动起来：浏览器里开鸭子</a></td>
+<td>亲手开动一只仿真鸭，说清"运行"和"训练"的区别</td>
+<td>✅ 已发布</td>
+</tr>
+<tr>
+<td style="text-align: right;">02</td>
+<td><a href="/learn/course-02">十个必懂概念，每个三分钟</a></td>
+<td>把舵机/策略/仿真/sim2real 讲给朋友听</td>
+<td>✅ 已发布</td>
+</tr>
+</tbody>
+</table>
+<h3 id="阶段-b-软件与仿真-在电脑里养一只鸭子只需一台-macpc">阶段 B · 软件与仿真 —— 在电脑里养一只鸭子（只需一台 Mac/PC）</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: right;">课</th>
+<th>标题</th>
+<th>学完你能</th>
+<th>状态</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: right;">03</td>
+<td><a href="/learn/course-03">装好工具箱：git、uv 和第一个里程碑</a></td>
+<td>本地跑通官方现成策略</td>
+<td>✅ 已发布</td>
+</tr>
+<tr>
+<td style="text-align: right;">04</td>
+<td><a href="/learn/course-04">61 → 14：一只鸭子的神经回路</a></td>
+<td>说清观测、动作、50 Hz 控制环</td>
+<td>✅ 已发布</td>
+</tr>
+<tr>
+<td style="text-align: right;">05</td>
+<td><a href="/learn/course-05">第一次训练：5 次迭代冒烟测试</a></td>
+<td>完整跑通 训练→回放→导出→验证</td>
+<td>✅ 已发布</td>
+</tr>
+<tr>
+<td style="text-align: right;">06</td>
+<td><a href="/learn/course-06">看懂训练曲线：reward、ep_len 与失败的训练</a></td>
+<td>从 TensorBoard 判断练没练成</td>
+<td>✅ 已发布</td>
+</tr>
+<tr>
+<td style="text-align: right;">07</td>
+<td><a href="/learn/course-07">排错方法论：卡住了怎么办</a></td>
+<td>用固定流程解决任何报错</td>
+<td>✅ 已发布</td>
+</tr>
+</tbody>
+</table>
+<h3 id="阶段-c-硬件入门-开始动手碰真实世界">阶段 C · 硬件入门 —— 开始动手碰真实世界</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: right;">课</th>
+<th>标题</th>
+<th>学完你能</th>
+<th>状态</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: right;">08</td>
+<td><a href="/learn/course-08">看懂电路图：读图五步法</a></td>
+<td>把 imu_to_dxl 原理图读成一句人话</td>
+<td>✅ 已发布</td>
+</tr>
+<tr>
+<td style="text-align: right;">09</td>
+<td><a href="/learn/course-09">3D 打印第一课：测试片先行</a></td>
+<td>打出测试片并回填公差</td>
+<td>✅ 已发布</td>
+</tr>
+<tr>
+<td style="text-align: right;">10</td>
+<td><a href="/learn/course-10">舵机：从 SG90 到总线舵机</a></td>
+<td>用树莓派让第一颗舵机动起来</td>
+<td>✅ 已发布</td>
+</tr>
+<tr>
+<td style="text-align: right;">11</td>
+<td><a href="/learn/course-11">画自己的电路板：imu_to_dxl 的故事</a></td>
+<td>看懂连接表，知道画板流程</td>
+<td>✅ 已发布</td>
+</tr>
+<tr>
+<td style="text-align: right;">12</td>
+<td><a href="/learn/course-12">采购与预算：把钱花在刀刃上</a></td>
+<td>排出规格导向的采购单并记账</td>
+<td>✅ 已发布</td>
+</tr>
+</tbody>
+</table>
+<h3 id="阶段-d-训练进阶-教鸭子新动作需要-gpu">阶段 D · 训练进阶 —— 教鸭子新动作（需要 GPU）</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: right;">课</th>
+<th>标题</th>
+<th>学完你能</th>
+<th>状态</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: right;">13</td>
+<td><a href="/learn/course-13">参数地图：想改行为去哪改</a></td>
+<td>按目标定位到正确的配置文件</td>
+<td>✅ 已发布</td>
+</tr>
+<tr>
+<td style="text-align: right;">14</td>
+<td><a href="/learn/course-14">单变量 A/B 实验：像科学家一样调参</a></td>
+<td>注册假设→跑实验→出结论</td>
+<td>✅ 已发布</td>
+</tr>
+<tr>
+<td style="text-align: right;">15</td>
+<td><a href="/learn/course-15">sim2real 与域随机化：为什么仿真会骗你</a></td>
+<td>用 expD/expE 的教训设计鲁棒训练</td>
+<td>✅ 已发布</td>
+</tr>
+<tr>
+<td style="text-align: right;">16</td>
+<td><a href="/learn/course-16">从走到跑：课程学习与动作开发</a></td>
+<td>规划一个新动作的训练路线</td>
+<td>✅ 已发布</td>
+</tr>
+<tr>
+<td style="text-align: right;">17</td>
+<td><a href="/learn/course-17">GPU 与云训练：什么时候该花钱算力</a></td>
+<td>选对本地/云算力并控制成本</td>
+<td>✅ 已发布</td>
+</tr>
+</tbody>
+</table>
+<h3 id="阶段-e-集成部署-从仿真到真机">阶段 E · 集成部署 —— 从仿真到真机</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: right;">课</th>
+<th>标题</th>
+<th>学完你能</th>
+<th>状态</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: right;">18</td>
+<td><a href="/learn/course-18">Radxa 点亮：把 Rust 运行时装上板子</a></td>
+<td>一条命令把代码推上开发板</td>
+<td>✅ 已发布</td>
+</tr>
+<tr>
+<td style="text-align: right;">19</td>
+<td><a href="/learn/course-19">ONNX 合同：部署件的形状与校验</a></td>
+<td>校验要部署的 ONNX 真的能跑</td>
+<td>✅ 已发布</td>
+</tr>
+<tr>
+<td style="text-align: right;">20</td>
+<td><a href="/learn/course-20">组装与上电：安全清单</a></td>
+<td>按说明书装配并安全第一次上电</td>
+<td>✅ 已发布</td>
+</tr>
+<tr>
+<td style="text-align: right;">21</td>
+<td><a href="/learn/course-21">遥控与手柄：让鸭子听你的</a></td>
+<td>接上手柄，发目标控制行走</td>
+<td>✅ 已发布</td>
+</tr>
+<tr>
+<td style="text-align: right;">22</td>
+<td><a href="/learn/course-22">平价路线：树莓派 Zero 2 W 方案</a></td>
+<td>预算减半的另一条完整路线</td>
+<td>✅ 已发布</td>
+</tr>
+</tbody>
+</table>
+<h3 id="阶段-f-迁移与扩展-把鸭子变成你的能力本课的真正终点">阶段 F · 迁移与扩展 —— 把鸭子变成你的能力（本课的真正终点）</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: right;">课</th>
+<th>标题</th>
+<th>学完你能</th>
+<th>状态</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: right;">23</td>
+<td><a href="/learn/course-23">语音大脑：小智 ESP32 与 MCP</a></td>
+<td>给鸭子接上语音控制</td>
+<td>✅ 已发布</td>
+</tr>
+<tr>
+<td style="text-align: right;">24</td>
+<td><a href="/learn/course-24">迁移地图：这只鸭子教会你的五件事</a></td>
+<td>把方法迁移到游戏 AI/IoT/产品原型</td>
+<td>✅ 已发布</td>
+</tr>
+<tr>
+<td style="text-align: right;">25</td>
+<td><a href="/learn/course-25">具身智能行业地图</a></td>
+<td>看懂产业链、报告与自己的位置</td>
+<td>✅ 已发布</td>
+</tr>
+<tr>
+<td style="text-align: right;">26</td>
+<td><a href="/learn/course-26">毕业设计：选你自己的下一个项目</a></td>
+<td>用选型方法论开自己的坑</td>
+<td>✅ 已发布</td>
+</tr>
+<tr>
+<td style="text-align: right;">27</td>
+<td><a href="/learn/course-27">把学习写成文章：输出倒逼输入</a></td>
+<td>写出一篇有证据的技术文章</td>
+<td>✅ 已发布</td>
+</tr>
+<tr>
+<td style="text-align: right;">28</td>
+<td><a href="/learn/course-28">复盘方法论：30 天冲刺的复盘术</a></td>
+<td>建立自己的实验记录与复盘体系</td>
+<td>✅ 已发布</td>
+</tr>
+<tr>
+<td style="text-align: right;">29</td>
+<td><a href="/learn/course-29">社区与持续学习：从学习者到贡献者</a></td>
+<td>走进开源社区，规划下一程</td>
+<td>✅ 已发布</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="每一课的固定结构">每一课的固定结构</h2>
+<ol>
+<li><strong>这一课解决什么问题</strong> —— 一句话说清为什么要学。</li>
+<li><strong>前置</strong> —— 需要先学完哪几课、手头要有什么。</li>
+<li><strong>正文</strong> —— 整合工作区文档与公开资料的精华，讲原理也讲"所以呢"。</li>
+<li><strong>动手练习</strong> —— 当堂做一个产出（跑一条命令 / 打印一个件 / 写一段结论）。</li>
+<li><strong>自查清单</strong> —— 能答上来才算学懂。</li>
+<li><strong>延伸资源</strong> —— 本地文档 + 优质外部课程，想深入再去看。</li>
+</ol>
+<h2 id="资料地图这门课从哪里取材">资料地图（这门课从哪里取材）</h2>
+<p><strong>工作区内部</strong>（每课正文的原始素材）：</p>
+<table>
+<thead>
+<tr>
+<th>素材</th>
+<th>位置</th>
+<th>主要供哪阶段</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>新手学习文档</td>
+<td><code>docs/新手学习文档.md</code></td>
+<td>A、C</td>
+</tr>
+<tr>
+<td>进阶学习文档（训练仿真与部署）</td>
+<td><code>docs/进阶学习文档-训练仿真与部署.md</code></td>
+<td>B、D、E</td>
+</tr>
+<tr>
+<td>训练参数调整与新动作开发指南</td>
+<td><code>microduck-replica/docs/训练参数调整与新动作开发指南.md</code></td>
+<td>D</td>
+</tr>
+<tr>
+<td>macOS 舵机调试与图纸查看指南</td>
+<td><code>docs/macOS舵机调试与图纸查看指南.md</code></td>
+<td>C</td>
+</tr>
+<tr>
+<td>30 天源码地图与选题日历</td>
+<td><code>docs/microduck-30day/</code></td>
+<td>B、D、F</td>
+</tr>
+<tr>
+<td>实验总表与构建日志</td>
+<td><code>docs/microduck-30day/experiments/experiment-log.csv</code>、<code>microduck-replica/构建日志.md</code></td>
+<td>D、E</td>
+</tr>
+<tr>
+<td>OpenMicroDuck 中文资料（术语表/路线/排错）</td>
+<td><code>open-microduck/docs/zh-CN/</code></td>
+<td>A、B</td>
+</tr>
+<tr>
+<td>实体 AI 创业调研(可<a href="/learn/research">在线阅读</a>)</td>
+<td><code>docs/research/physical-ai-robot-startup-research-2026-09-04.md</code></td>
+<td>F</td>
+</tr>
+<tr>
+<td>平价复刻路线（含组装/手柄/使用文档）</td>
+<td><code>Microduck-build-tutorial/</code></td>
+<td>E</td>
+</tr>
+<tr>
+<td>小智语音 + MCP</td>
+<td><code>xiaozhi-esp32/</code></td>
+<td>F</td>
+</tr>
+<tr>
+<td>SolidWorks 图纸库</td>
+<td><code>microduck-replica-cad/</code>（图纸作者：机械行者Robo）</td>
+<td>C、E</td>
+</tr>
+<tr>
+<td>imu_to_dxl 设计包与接线表</td>
+<td><code>microduck-replica/docs/</code>、<code>microduck-replica/hardware/imu_to_dxl/</code></td>
+<td>C</td>
+</tr>
+</tbody>
+</table>
+<p><strong>外部精华</strong>（已甄选，供延伸阅读）：</p>
+<table>
+<thead>
+<tr>
+<th>资源</th>
+<th>适用</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="https://huggingface.co/spaces/pollen-robotics/microduck-simulator">官方 Microduck Sandbox</a></td>
+<td>A</td>
+<td>浏览器里直接开鸭子，零安装</td>
+</tr>
+<tr>
+<td><a href="https://huggingface.co/learn/deep-rl-course/unit0/introduction">Hugging Face 深度强化学习课</a>（<a href="https://github.com/sun1638650145/deep-rl-class-zh">中文版</a>）</td>
+<td>B、D</td>
+<td>免费系统 RL 课，从月球着陆器开练</td>
+</tr>
+<tr>
+<td><a href="https://spinningup.openai.com/en/latest/">OpenAI Spinning Up in Deep RL</a></td>
+<td>D</td>
+<td>算法谱系与概念的最严谨讲法</td>
+</tr>
+<tr>
+<td><a href="https://github.com/TianxingChen/Embodied-AI-Guide">Embodied-AI-Guide 具身智能技术指南</a></td>
+<td>F</td>
+<td>中文具身智能入门地图</td>
+</tr>
+<tr>
+<td><a href="https://github.com/pollen-robotics">Pollen Robotics</a> 官方仓库</td>
+<td>全程</td>
+<td>一切证据的源头</td>
+</tr>
+</tbody>
+</table>
+<h2 id="更新机制">更新机制</h2>
+<ul>
+<li>课程主体 30 课已全部发布；此后进入<strong>校对维护期</strong>：核对数字与最新实验记录、修复失效链接、根据项目进展修订内容、重新生成站点页面并部署。</li>
+<li>课表状态用 ✅（已发布）/ 🚧（更新中）/ ⬜（未开始）标记。</li>
+<li>校对原则：数字必须能对上 <code>experiment-log.csv</code> 与构建日志；链接必须可达；命令必须在本机验证过或标注"未实测"。</li>
+<li>网页版：<a href="https://duck.whatled.com/learn/course">https://duck.whatled.com/learn/course</a>（由 <code>duck-whatled/build_learn.py</code> 生成，课程文件按文件名自动发现）。</li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

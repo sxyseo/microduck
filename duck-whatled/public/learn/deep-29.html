@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>解读 29 · spin 与 roulade:特技动作的任务设计 · 什么鸭 WhatDuck</title>
+<meta name="description" content="tasks/microduck_spin_env_cfg.py(485 行)、tasks/microduck_roulade_env_cfg.py(772 行)">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="解读 29 · spin 与 roulade:特技动作的任务设计">
+<meta property="og:description" content="tasks/microduck_spin_env_cfg.py(485 行)、tasks/microduck_roulade_env_cfg.py(772 行)">
+<meta property="og:url" content="https://duck.whatled.com/learn/deep-29">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/deep-29">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">DEEP 29 · 第三辑 · 训练代码 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="解读-29-spin-与-roulade特技动作的任务设计">解读 29 · spin 与 roulade:特技动作的任务设计</h1>
+<blockquote>
+<p><strong>解读对象</strong>:<code>tasks/microduck_spin_env_cfg.py</code>(485 行)、<code>tasks/microduck_roulade_env_cfg.py</code>(772 行)<br />
+<strong>需要的前置</strong>:<a href="/learn/deep-27">解读 27</a>(发现期不上税)、<a href="/learn/deep-31">解读 31</a>(镜像损失)、<a href="README.md">总纲</a></p>
+</blockquote>
+<h2 id="在做什么">在做什么</h2>
+<p>两个「表演型」任务,代表两种截然不同的评价函数写法。spin(microduck_spin_env_cfg.py)让装着四个被动滚轮的机器人原地自转约一圈:命令槽被 <code>GroundPickPhaseCommand</code> 占用,输出 <code>[cos 2πφ, sin 2πφ, 0]</code> 相位编码(:381),<code>randomize_phase=False</code> 保证每集都从站立、相位 0 开始——和真机上按按钮的时机一致(:379-380)。roulade(microduck_roulade_env_cfg.py)是前滚翻:站立出发,从平头顶滚过去,再站起来;策略切换即触发,没有相位钟。</p>
+<h2 id="真实符号spin-怎么定义转得好">真实符号:spin 怎么定义「转得好」</h2>
+<p>主目标 <code>spin_rate_track</code>(权重 6.0,std 1.5,:138)让躯干偏航角速度跟踪梯形包络 ω<em>(φ):加速段、保持段、刹车段,常数 <code>SPIN_RATE_MAX</code> 等都定义在 mdp.py 里。但「转得好」还要同时满足四个侧面:<code>spin_stay_in_place</code>(权重 -3.0,:157)惩罚质心平移——这是区分「身体中心的 spin」和「单轮上的偏心 pivot」的</em><em>唯一</em>*项;<code>spin_wheel_differential</code>(:167)奖励左右轮反向滚动,把旋转压到「差动滚动」这个四被动轮上唯一可靠的物理机制上;<code>spin_grounded</code>(:187)要求两脚都在地上;<code>leg_antisymmetry</code>(:177)用髋/膝的「剪刀」动作做点火器,然后由课程在 1500/3000 迭代把权重从 1.0 衰减到 0.25——脚手架用完就拆(:409-419)。一个负向细节:<code>angular_momentum</code> 被刻意删除(:122-126),因为它惩罚 3D 角动量范数,会直接对抗自转;留下的 <code>body_ang_vel</code> 只罚 x/y 分量。</p>
+<h2 id="真实符号roulade-怎么定义滚得好">真实符号:roulade 怎么定义「滚得好」</h2>
+<p>核心是<strong>支撑门控的旋转累加器</strong>:奖励 <code>roulade_progress</code>(权重 8.0,:232)只支付「到目前为止的最大累计前向旋转」的增量,且仅在机器人某处触地时计数——弹道式的甩翻挣不到进度,总支付封顶 2π 的量,原地扎营每步为零。超额速度要弃权(<code>max_paid_rate = 5.0</code>,实测过头顶的物理滚转本来就跑 3.5–5.5 rad/s,:241)并另缴 <code>roulade_overspeed</code> 的税(阈值 7.0,:246)。落地奖励全部被旋转门控:<code>LANDING_GATE_LO/HI = 260°/330°</code>(:113),滚没滚完,站立的「年金」(<code>roulade_landing_composite</code> 4.0、<code>roulade_stand_tax</code> 5.0)就不生效——「啥也不干」的策略什么都拿不到。</p>
+<p>最值得抄的是<strong>反向课程</strong>:一半的集数直接出生在滚转到 50°–340° 之间的蜷缩姿态(<code>MIDROLL_PITCH_MIN/MAX</code>,:92),带 0–3 rad/s 前向角动量,累加器预置到出生角。前半段滚翻难发现,后半段本质是 standup 已经解决过的仰卧起身问题——把难的部分变成出生点,课程 <code>roulade_spawn_mix</code> 再随训练把比例从 0.5 挪回 0.8 站立开局(:637)。头也是任务的一部分:<code>head_ground_contact</code> 传感器盯 <code>jaw_soft</code> 体(:177),「过头顶接触闩」配合下巴收紧的 <code>TUCK_OVERRIDES</code>(<code>neck_pitch −1.0 / head_pitch +1.0</code>,:101),把侧滚作弊(从肩膀滚,更省力)挡在计数之外。</p>
+<h2 id="设计取舍">设计取舍</h2>
+<p>spin 因左右不对称而关闭镜像学习(注释:「对称会把左转变右转」,:23-24);roulade 恰好矢状对称,是<strong>第一个</strong>启用 symmetry.py 的环境(:46)。动作税的时机取舍也相反:roulade 的 <code>gentle_landing</code>(|a_z| 冲击罚)从第 0 步就生效——因为这个环境发现动作很容易,稀缺的是「风格」;而 <code>body_ang_vel</code> 被压到 -0.002,毕竟滚翻本身就是大角速度事件(:377)。</p>
+<h2 id="你带走的收获">你带走的收获</h2>
+<ul>
+<li>「结果型」评价(跟踪 ω*)要配机制型奖励(差动、在地面、原地),否则策略找物理捷径。</li>
+<li>支撑门控累加器:把「过程量」变成一次性总付的进度奖励,既稠密又不可刷。</li>
+<li>反向课程(中途出生点)把已解决的子问题变成新技能的尾巴。</li>
+<li>特技任务里,删掉一个默认正则项(angular_momentum)和加一个奖励项同样重要。</li>
+</ul>
+<h2 id="延伸">延伸</h2>
+<ul>
+<li>相位命令的来源任务:<a href="/learn/deep-30">解读 30</a>;镜像机制:<a href="/learn/deep-31">解读 31</a></li>
+<li>本目录:<code>microduck-replica/upstream/microduck_rl/src/mjlab_microduck/tasks/</code></li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

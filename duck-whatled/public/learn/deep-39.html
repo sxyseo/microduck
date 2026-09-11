@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>解读 39 · M2 紧固件系统与热熔螺母 · 什么鸭 WhatDuck</title>
+<meta name="description" content="microduck-replica/docs/紧固件反推.md + microduck-replica/BOM.md(紧固件节)+ microduck-replica/docs/打">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="解读 39 · M2 紧固件系统与热熔螺母">
+<meta property="og:description" content="microduck-replica/docs/紧固件反推.md + microduck-replica/BOM.md(紧固件节)+ microduck-replica/docs/打">
+<meta property="og:url" content="https://duck.whatled.com/learn/deep-39">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/deep-39">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">DEEP 39 · 第四辑 · 结构 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="解读-39-m2-紧固件系统与热熔螺母">解读 39 · M2 紧固件系统与热熔螺母</h1>
+<blockquote>
+<p><strong>解读对象</strong>:<code>microduck-replica/docs/紧固件反推.md</code> + <code>microduck-replica/BOM.md</code>(紧固件节)+ <code>microduck-replica/docs/打印工艺调整表.md</code><br />
+<strong>需要的前置</strong>:<a href="/learn/deep-33">解读 33</a>的孔位统计方法。</p>
+</blockquote>
+<h2 id="一套-m2三种孔">一套 M2,三种孔</h2>
+<p>这只 25cm、737g 的鸭子,整机紧固件是清一色的小螺丝。反推统计(《紧固件反推》,不加权口径)给出的孔径分布,对应三种孔、三种用途:</p>
+<ul>
+<li><strong>Ø2.2 过孔 ×77</strong>:螺丝杆从中穿过,不打螺纹。M2 螺杆 2.0mm,标准间隙孔 2.2–2.4;</li>
+<li><strong>Ø4.4 沉头孔 ×28</strong>:螺丝头沉进去的台阶孔。M2 内六角柱头直径 3.8,沉孔取 4.0–4.5;</li>
+<li><strong>Ø1.6 攻丝底孔 ×20</strong>:螺丝直接拧进塑料,靠塑料被挤压自己成形出螺纹。</li>
+</ul>
+<p>另有 Ø2.4×22(松配)、Ø2.0×12(紧配)、少量 M2.5 与 Ø4.8 沉孔。Ø2.2 与 Ø4.4 总是<strong>成对</strong>出现在 <code>yaw2roll</code>、<code>leg</code>、<code>ankle_left</code> 等件上——"过孔+沉头"正是内六角圆柱头螺丝的一对特征,螺丝头型就此锁定。所谓内六角圆柱头:头部为圆柱、用六角扳手从正上方拧的螺丝,头顶不凸出、可拧大力矩,是小型机器人默认选项。交叉验证:<code>xl330.stl</code> 自带 Ø2.0×4 + Ø1.6×8,与 XL330 官方 M2 安装孔一致。</p>
+<h2 id="热熔螺母打印件的第二条命">热熔螺母:打印件的第二条命</h2>
+<p>攻丝底孔的毛病是拆装几次就滑丝——塑料螺纹是一次性的。热熔螺母(heat-set insert)是解法:一颗带滚花的铜螺母,用烙铁加热压进塑料孔,滚花熔进孔壁,从此这个孔就是可反复拆装的金属螺纹。BOM 建议备 <strong>60 颗 M2 热熔螺母</strong>,注明"打印件推荐,比直接攻丝牢得多"。</p>
+<h2 id="从孔数到采购单">从孔数到采购单</h2>
+<p>按装配体用量加权,整机 M2 级孔共 <strong>237 个</strong>:60 个在舵机本体上(15×4)、21 个在轴承/PCB/电池等外购件上、结构件约 156 个。螺丝长度按孔深分布推:0–3mm 51 个、3–5mm 24 个、8–12mm 4 个,于是有了采购档——M2×4 买 60、M2×6 买 80(主力)、M2×8 买 40、M2×12 买 15,另 M2 螺母 50、M2.5×6 20,合计约 <strong>325 件</strong>,对 237 个孔位留 1.37× 余量(损耗+试装)。</p>
+<p>这一节还藏着一个值得学的工作流:早期文档写"213 个",复算发现两处口径错误(没加权、混入未引用网格),于是公开勘误为 237,并写明两张表为什么不能相加。<strong>数字跟着口径走,勘误跟着数字走</strong>——开源项目里,这比"永远正确"更可信。</p>
+<p>实物侧,构建日志已确认腿部件 M2 螺丝真实装入;精确孔径的实测行在"尺寸与配合验证"表里还空着,等测试片来填。</p>
+<h2 id="你带走的收获">你带走的收获</h2>
+<ul>
+<li>孔径是紧固件的指纹:过孔≈螺杆+0.2~0.4,沉头≈柱头+0.6,底孔≈螺杆×0.8。</li>
+<li>可拆装性要提前设计:一次性自攻与热熔螺母,差的是整个调试期的心情。</li>
+<li>螺丝按"长度档×余量"下单,1.3–1.5× 余量是常规操作。</li>
+<li>同一颗螺丝留下多个孔特征,统计以"过孔"为准,避免重复计数。</li>
+<li>数字有误就改掉并留勘误记录,比悄悄删掉更专业。</li>
+</ul>
+<h2 id="延伸">延伸</h2>
+<ul>
+<li><a href="/learn/deep-33">解读 33</a>:孔是怎么被数出来的(<code>docs/deep-dive/33-装配反推方法.md</code>)</li>
+<li><a href="/learn/deep-40">解读 40</a>:打印收缩怎么改这些数字(<code>docs/deep-dive/40-轴承与公差.md</code>)</li>
+<li>采购链接见 <code>microduck-replica/docs/机械采购清单.md</code>;图纸与 21 页装配说明书:github.com/fanhao375/microduck-replica-cad(「机械行者Robo」)。</li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

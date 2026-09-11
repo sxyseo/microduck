@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>第 25 课 · 具身智能行业地图 · 什么鸭 WhatDuck</title>
+<meta name="description" content="复刻了 20 多课,现在把镜头拉远——鸭子所处的"具身智能"行业是什么?产业链有哪些角色、桌面赛道有哪些真实玩家?看完你会知道自己在这个链条里的位置。">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="第 25 课 · 具身智能行业地图">
+<meta property="og:description" content="复刻了 20 多课,现在把镜头拉远——鸭子所处的"具身智能"行业是什么?产业链有哪些角色、桌面赛道有哪些真实玩家?看完你会知道自己在这个链条里的位置。">
+<meta property="og:url" content="https://duck.whatled.com/learn/course-25">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/course-25">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">LESSON 25 · 阶段 F · 迁移与扩展 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="第-25-课-具身智能行业地图">第 25 课 · 具身智能行业地图</h1>
+<blockquote>
+<p><strong>这一课解决什么问题</strong>:复刻了 20 多课,现在把镜头拉远——鸭子所处的"具身智能"行业是什么?产业链有哪些角色、桌面赛道有哪些真实玩家?看完你会知道自己在这个链条里的位置。</p>
+<p><strong>前置</strong>:<a href="/learn/course-24">第 24 课</a>。本课主要素材是调研报告 <code>docs/research/physical-ai-robot-startup-research-2026-09-04.md</code>。</p>
+</blockquote>
+<hr />
+<h2 id="1-具身智能一句话">1. 具身智能一句话</h2>
+<p><strong>给 AI 一个身体,让它在物理世界里完成"感知 → 决策 → 执行 → 反馈"的闭环。</strong></p>
+<p>这张图第 01 课见过:输入来自传感器(感知),网络算出 14 个角度(决策),关节转动改变世界(执行),传感器再喂回新状态(反馈)。鸭子全身就是一个跑在 50 Hz 上的闭环——"具身"二字说的就是:<strong>智能离不开和物理世界的循环交互</strong>。</p>
+<h2 id="2-产业链角色表每个角色你都摸过实物">2. 产业链角色表:每个角色你都摸过实物</h2>
+<table>
+<thead>
+<tr>
+<th>角色</th>
+<th>干什么</th>
+<th>鸭子项目里对应的实物</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>本体</td>
+<td>造身体:结构、电机、电池</td>
+<td>25 cm 鸭身、15 个舵机(第 12 课采购)</td>
+</tr>
+<tr>
+<td>大脑</td>
+<td>感知与决策:策略、模型</td>
+<td>61 → 14 的 ONNX 策略文件(第 04/19 课)</td>
+</tr>
+<tr>
+<td>仿真器</td>
+<td>给大脑"练级"的虚拟世界</td>
+<td>MuJoCo 训练环境、官方 Sandbox(第 01/05 课)</td>
+</tr>
+<tr>
+<td>数据</td>
+<td>训练与验证的证据</td>
+<td>训练曲线、<code>docs/microduck-30day/experiments/experiment-log.csv</code></td>
+</tr>
+<tr>
+<td>内容生态</td>
+<td>让产品持续有新玩法</td>
+<td>Reachy Mini 官方应用页的 58 个应用(调研报告)</td>
+</tr>
+</tbody>
+</table>
+<p>这张表从"造身体"到"造内容",价值逻辑完全不同。报告第 2 节的判断:桌面机器人的长期价值可以来自"应用和行为不断增加",而不是一次性展示更多机械自由度。</p>
+<h2 id="3-桌面机器人赛道的两个真实玩家">3. 桌面机器人赛道的两个真实玩家</h2>
+<p>调研报告把两个明星产品放在一起对比,这组对比值得背下来:</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Reachy Mini</th>
+<th>MicroDuck</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>卖什么</td>
+<td><strong>持续互动入口</strong></td>
+<td><strong>可训练的物理身体</strong></td>
+</tr>
+<tr>
+<td>规格</td>
+<td>约 28 cm、1.5 kg,头部 6 自由度,摄像头+四麦克风</td>
+<td>25 cm、15 个电机,行走/起身/踢球/轮滑</td>
+</tr>
+<tr>
+<td>价格</td>
+<td>Lite 399 美元 / Wireless 499 美元(官方页面展示价)</td>
+<td>399 美元起</td>
+</tr>
+<tr>
+<td>生态证据</td>
+<td>官方应用页显示 58 个应用</td>
+<td>围绕 MuJoCo/RL/ONNX 的训练流程</td>
+</tr>
+<tr>
+<td>参考价值</td>
+<td>产品闭环与社区机制</td>
+<td>运动训练与 Physical AI 技术路线</td>
+</tr>
+</tbody>
+</table>
+<p>报告的核心对比:对普通消费者,双足走路是强 Demo,却不是天然的日常场景;Reachy Mini 的关键不是"能转头",而是"听见/看见 → 表达 → 用户编程 → 发布行为 → 社区产生新玩法"这个循环完整。记住开源边界:软件开源不等于机械/电子设计文件全部开放(报告第 2 节)。</p>
+<h2 id="4-2026-年趋势一句话">4. 2026 年趋势一句话</h2>
+<p><strong>从实验室演示走向量产,行业重心从"灵活的肢体"转向"聪明的大脑"。</strong></p>
+<p>这是本课程基于调研报告的概括:路线评分里,表达型交互"3 个月拿到反馈"5 分,双足 Physical AI 壁垒 5 分但拿反馈 2 分;"一个核心、多个身体"的本质也是先做好大脑和生态,身体后加。行业整体进展未做独立验证,标<strong>待验证</strong>。</p>
+<h2 id="5-小白在链条里的位置">5. 小白在链条里的位置</h2>
+<p>你不必造本体才能入场。参照报告第 8 节的四层收入(硬件/内容/服务/开发者),个人有四个现实位置:</p>
+<ol>
+<li><strong>学习</strong>:复刻一只鸭子,把全链路走通——你已经在这条路上;</li>
+<li><strong>复刻与记录</strong>:按平价路线装出自己的鸭子,把过程公开(第 27/28 课);</li>
+<li><strong>内容</strong>:写教程、拍视频、做行为包——内容生态正是行业的缺口;</li>
+<li><strong>配件</strong>:外壳、替换件、小改件,3D 打印机就是你的产线(第 09 课)。</li>
+</ol>
+<p><strong>所以呢</strong>:行业地图的用处不是谈资,是选位——下一课选毕业设计时,在这张地图上挑一个能拿到真实反馈的位置。</p>
+<h2 id="动手练习10-分钟">动手练习(10 分钟)</h2>
+<p>从调研报告第 3 节竞品地图里再挑一个产品(如 Petoi Bittle X 或 EMO),照上面的表补三行:卖什么、生态证据、对你毕业设计的启发。写不出来说明证据不够,回报告找,不许编。</p>
+<h2 id="自查清单">自查清单</h2>
+<ul>
+<li>[ ] 我能用一句话定义具身智能,并指出鸭子闭环的四个环节</li>
+<li>[ ] 产业链五个角色,我各能举出一个鸭子项目里的实物</li>
+<li>[ ] 我能说清 Reachy Mini 和 MicroDuck "卖的东西"有什么不同</li>
+<li>[ ] 我知道自己现在位于链条的哪个位置,下一步想去哪</li>
+</ul>
+<h2 id="下一课预告">下一课预告</h2>
+<p>第 26 课是毕业设计:用"反馈速度 × 成本 × 你的独特优势"三维打分,从四条路线里选出你自己的下一个项目,并把团队的 8 周方案改造成个人版模板。</p>
+<h2 id="延伸资源">延伸资源</h2>
+<ul>
+<li>本课主要素材(竞品地图、主控与软件栈选型):<code>docs/research/physical-ai-robot-startup-research-2026-09-04.md</code></li>
+<li><a href="https://github.com/TianxingChen/Embodied-AI-Guide">Embodied-AI-Guide 具身智能中文入门地图</a></li>
+<li><a href="https://github.com/pollen-robotics">Pollen Robotics 官方 GitHub</a></li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

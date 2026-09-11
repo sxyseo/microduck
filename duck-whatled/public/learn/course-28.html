@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>第 28 课 · 复盘方法论:30 天冲刺的复盘术 · 什么鸭 WhatDuck</title>
+<meta name="description" content="同样 30 天,为什么有人越练越清楚,有人过完只剩"感觉学会了"?区别在记录与复盘。这一课给你最小字段表、踩坑日志体例、周复盘四问和 30 天复盘模板。">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="第 28 课 · 复盘方法论:30 天冲刺的复盘术">
+<meta property="og:description" content="同样 30 天,为什么有人越练越清楚,有人过完只剩"感觉学会了"?区别在记录与复盘。这一课给你最小字段表、踩坑日志体例、周复盘四问和 30 天复盘模板。">
+<meta property="og:url" content="https://duck.whatled.com/learn/course-28">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/course-28">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">LESSON 28 · 阶段 F · 迁移与扩展 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="第-28-课-复盘方法论30-天冲刺的复盘术">第 28 课 · 复盘方法论:30 天冲刺的复盘术</h1>
+<blockquote>
+<p><strong>这一课解决什么问题</strong>:同样 30 天,为什么有人越练越清楚,有人过完只剩"感觉学会了"?区别在记录与复盘。这一课给你最小字段表、踩坑日志体例、周复盘四问和 30 天复盘模板。</p>
+<p><strong>前置</strong>:学过 <a href="/learn/course-14">第 14 课</a>,做过至少一次实验。</p>
+</blockquote>
+<hr />
+<h2 id="1-记录为什么比记忆可靠">1. 记录为什么比记忆可靠</h2>
+<p>回看 <code>docs/microduck-30day/experiments/experiment-log.csv</code> 里 expD 那一行:</p>
+<pre><code class="language-text">expD-m4-512:512 env 续训自 expC/2198;ep_len 315-&gt;744 站稳,
+但步态未成(air_time_mean 卡 0.04s,shuffle 局部最优)
+</code></pre>
+<p>如果没有这张表,"512 环境那次训练"只会留下一句模糊记忆:"好像练了一下,没成。"为什么没成?从哪续训?卡在哪个指标?<strong>说不清。</strong> 有了这一行,失败才能变成地基——expE 正是据此把 feet_air_time 阈值从 0.125 降到 0.04,让步态奖励"可见",训练才继续往前走。</p>
+<p>记忆会美化,记录不会。<code>docs/microduck-30day/README.md</code> 的记录原则里还有一句铁律:<strong>没有实际证据的内容标为"待验证"</strong>——这句话既防别人,也防三个月后自信过头的你自己。</p>
+<h2 id="2-实验记录的最小字段表">2. 实验记录的最小字段表</h2>
+<p>不需要复杂系统,一张 CSV 就够。列名直接抄真实实验总表:</p>
+<table>
+<thead>
+<tr>
+<th>列名</th>
+<th>记什么</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>实验短名(如 expD-m4-512)</td>
+</tr>
+<tr>
+<td><code>date</code></td>
+<td>日期</td>
+</tr>
+<tr>
+<td><code>task</code></td>
+<td>任务 ID</td>
+</tr>
+<tr>
+<td><code>device</code></td>
+<td>cpu / GPU 型号</td>
+</tr>
+<tr>
+<td><code>num_envs</code> / <code>steps_per_env</code> / <code>iterations</code></td>
+<td>三个规模参数</td>
+</tr>
+<tr>
+<td><code>run_dir</code></td>
+<td>日志目录(以后还能找回曲线)</td>
+</tr>
+<tr>
+<td><code>checkpoint</code> / <code>onnx</code></td>
+<td>产物文件路径</td>
+</tr>
+<tr>
+<td><code>status</code></td>
+<td>passed / running / superseded …</td>
+</tr>
+<tr>
+<td><code>notes</code></td>
+<td>一句话结论:失败原因和下一步</td>
+</tr>
+</tbody>
+</table>
+<p>对照 30day README 的记录原则(代码 commit、训练命令、环境数量、迭代数量、日志目录、checkpoint、显存/时间、关键曲线、失败原因和下一步),这张表覆盖了绝大部分;commit 号和显存/时间写进 <code>notes</code>,或放同目录的实验记录页。</p>
+<h2 id="3-踩坑日志现象-原因-解决">3. 踩坑日志:现象 → 原因 → 解决</h2>
+<p><code>microduck-replica/构建日志.md</code> 的"踩过的坑"一节,每条都按同一格式写,没解决的就老实写"未解决"。两个真实例子:</p>
+<ul>
+<li><strong>现象</strong>:<code>uv run train</code> 直接崩 <code>IndexError: list index out of range</code>。<strong>原因</strong>:无 CUDA 的机器上 GPU 列表为空,按索引取值越界。<strong>解决</strong>:环境变量 <code>CUDA_VISIBLE_DEVICES=""</code>。</li>
+<li><strong>现象</strong>:默认 logger 是 wandb,没配 API key 直接报错。<strong>解决</strong>:加 <code>--agent.logger tensorboard</code>。</li>
+</ul>
+<p>这个格式的好处:现象让搜索到的人对上号,原因让懂行的人一眼判断,解决让下一个新手直接抄。第 07 课排错流程的产出,最终都应该沉淀成这样的条目——排错是过程,踩坑条目才是资产。</p>
+<h2 id="4-周复盘四问">4. 周复盘四问</h2>
+<p>每周固定 15 分钟,回答四个问题,写进笔记:</p>
+<ol>
+<li><strong>本周产出是什么?</strong>(可指认的文件/零件/文章)</li>
+<li><strong>证据在哪?</strong>(曲线、照片、CSV 的行号——指不出来的产出不算产出)</li>
+<li><strong>哪些假设还没验证?</strong>(把标了"待验证"的清单过一遍)</li>
+<li><strong>下周只做的一件事是什么?</strong></li>
+</ol>
+<p>第 4 问只允许一件事——这是第 14 课"单变量"思想用在计划上:同时追两个目标,等于两个都没对照。</p>
+<h2 id="5-30-天冲刺复盘模板">5. 30 天冲刺复盘模板</h2>
+<pre><code class="language-text">1. 目标回顾:开工时写的目标是什么?(原文贴出,不许改写)
+2. 结果盘点:哪些结论被验证(附 CSV/日志证据),哪些被证伪,
+   哪些至今待验证
+3. 三个最有价值的坑:按&quot;现象→原因→解决&quot;各写一条
+4. 方法沉淀:哪几个流程值得固化成脚本或模板?
+5. 下一个 30 天:只定一个主线目标 + 第一件小事
+</code></pre>
+<p>选题日历的第 30 天《30 天复刻复盘:哪些结论真的被验证了?》就是这个模板的实例——复盘本身就是一篇最有说服力的文章(第 27 课的六段结构现成可用)。</p>
+<h2 id="动手练习20-分钟">动手练习(20 分钟)</h2>
+<p>给自己建一张 <code>experiment-log.csv</code>(照第 2 节列名),把已经做过的实验补录进去;缺证据的格子别编,在 <code>notes</code> 里标"待验证"。</p>
+<h2 id="自查清单">自查清单</h2>
+<ul>
+<li>[ ] 我能说出记录为什么不能靠记忆(举出 expD 的例子)</li>
+<li>[ ] 我建了自己的记录表,列名与真实 CSV 一致</li>
+<li>[ ] 我能按"现象→原因→解决"写出最近踩的一个坑</li>
+<li>[ ] 我能不假思索地答出周复盘四问</li>
+</ul>
+<h2 id="下一课预告">下一课预告</h2>
+<p>第 29 课是最后一课:走进开源社区,从学习者变成贡献者,并规划课程之后的持续学习路线。</p>
+<h2 id="延伸资源">延伸资源</h2>
+<ul>
+<li>记录原则原文:<code>docs/microduck-30day/README.md</code></li>
+<li>实验总表(真实列名与真实数据):<code>docs/microduck-30day/experiments/experiment-log.csv</code></li>
+<li>踩坑体例:<code>microduck-replica/构建日志.md</code></li>
+<li>实验记录模板:<code>docs/microduck-30day/experiments/experiment-template.md</code></li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

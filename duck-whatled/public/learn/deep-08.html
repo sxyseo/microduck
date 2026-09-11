@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>解读 08 · lib.rs 与 crate 组织:控制库的分层 · 什么鸭 WhatDuck</title>
+<meta name="description" content="duck-control/src/lib.rs(25 行)及两个 Cargo.toml">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="解读 08 · lib.rs 与 crate 组织:控制库的分层">
+<meta property="og:description" content="duck-control/src/lib.rs(25 行)及两个 Cargo.toml">
+<meta property="og:url" content="https://duck.whatled.com/learn/deep-08">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/deep-08">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">DEEP 08 · 第一辑 · 运动控制核心 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="解读-08-librs-与-crate-组织控制库的分层">解读 08 · lib.rs 与 crate 组织:控制库的分层</h1>
+<blockquote>
+<p><strong>解读对象</strong>:<code>duck-control/src/lib.rs</code>(25 行)及两个 <code>Cargo.toml</code><br />
+<strong>需要的前置</strong>:Rust 的 crate(编译单元)与模块概念;各模块细节见<a href="/learn/deep-01">解读 01</a>–<a href="/learn/deep-07">解读 07</a></p>
+</blockquote>
+<h2 id="1-25-行的-librs主要内容是一句不">1. 25 行的 lib.rs,主要内容是一句"不"</h2>
+<p>整个文件只有模块声明和再导出,开头的模块注释是这个库的宪法(lib.rs:1-5):"Deliberately not a daemon. There is no tokio here, no socket, no systemd — <code>robotd</code> owns all of that. The boundary is enforced by the compiler rather than by discipline."——刻意不做守护进程:没有 tokio(异步运行时)、没有 socket、没有 systemd,进程层的事全归 <code>robotd</code>。关键在最后半句:边界靠编译器而不是靠纪律——crate 里根本没有那些依赖,想在这层开 socket 都写不出来。</p>
+<p>接着列出控制路径:model、bus、<code>io::RobotIo</code>、observations、policy、safety(lib.rs:7-8),注明设计出处是 <code>docs/design/robotd-design.md</code> §2。其余是 <code>pub mod</code> 声明(bus、fall、imu、io、model、obs、policy、safety)和 <code>pub use</code> 再导出(lib.rs:19-25)——把 <code>battery_percent</code>、<code>Sensors</code> 等常用类型顶到 crate 根,下游写 <code>duck_control::Sensors</code> 而不必背模块路径。</p>
+<h2 id="2-一条不寻常的依赖边">2. 一条不寻常的依赖边</h2>
+<p><code>duck-control</code> 依赖 <code>duck-ipc-proto</code>——一个 IPC 协议 crate,控制库为什么依赖通信协议?Cargo.toml 注释值得当范文读:为了 <code>JOINT_NAMES</code> 这一个常量。关节<em>顺序</em>就是协议——状态流里的 <code>joints</code>、<code>targets</code> 是裸数组,按下标索引,所以名字表应住在每个客户端都已链接的 crate 里,由本 crate 再导出,"而不是留两份副本手工同步"。注释同时堵住误读:"Not a door onto IPC: nothing here speaks to a socket"——依赖是单常量的,没有打开任何通信能力;<code>robotd</code> 本就同时链接两个 crate,没有二进制因此多出一条依赖边。</p>
+<p>这是"一个常量的真相来源放哪"的答案:放在所有消费者共有的最低层。</p>
+<h2 id="3-cargotoml-里的三个工程决定">3. Cargo.toml 里的三个工程决定</h2>
+<p>依赖列表本身也是文档(duck-control/Cargo.toml):</p>
+<ul>
+<li><code>ort</code> 用 <code>load-dynamic</code> 特性:运行时 dlopen(动态加载)libonnxruntime 而非链接。两个好处——aarch64 交叉编译不需要目标架构的 ONNX Runtime;没装 so 的笔记本照样编译、照样跑所有不建会话的测试。版本钉在 <code>=2.0.0-rc.11</code>,"板子要保持它已经验证过的 ABI"。</li>
+<li><code>rustypot = "1.6.0"</code> 是下限不是偏好:1.6.0 之前,状态包载荷里的 <code>FF FF FD</code> 会被错误解包,定长 <code>sync_read</code> 读回来就是垃圾——"这是总线的正确性约束,不是为了赶时髦的升级"。</li>
+<li><code>serialport</code> 关掉默认特性:默认的 <code>libudev</code> 只用于枚举串口,这里按配置路径打开一个就够;libudev-sys 需要 pkg-config sysroot,交叉编译直接断。注释补了一刀:rustypot 也为同样理由关了它——"本 crate 必须跟着关,否则 cargo 的特性合并(feature unification:特性在构建图里取并集)会把它再打开"。</li>
+</ul>
+<h2 id="4-守护进程那边的镜像">4. 守护进程那边的镜像</h2>
+<p><code>robotd/Cargo.toml</code> 是同一枚硬币的反面:依赖 duck-control、robotd-params、duck-ipc-proto、kinematics、sounds 等;<code>arc-swap</code> 的注释一句——"无锁单值槽,控制循环每拍一次原子 load,永远不会被 IPC 任务卡住"。更讲究的是 dev-dependencies(仅测试链接):<code>updater</code> 出现在这里,因为有测试要驱动真实更新引擎对着真 robotd 二进制验证契约;注释解释了测试为何住在 robotd 包里——只有这里 cargo 定义 <code>CARGO_BIN_EXE_robotd</code> 并保证二进制是新的,放在 updater 那边就得猜路径。</p>
+<h2 id="你带走的收获">你带走的收获</h2>
+<ul>
+<li>分层最有效的执行方式不是规范文档,是依赖图:下层没有那个依赖,越界代码写不出来。</li>
+<li>共享常量的真相来源放在所有消费者共有的最低层,并写清楚"这不是后门"。</li>
+<li>Cargo.toml 的依赖注释是低成本高回报的文档:每个非常规选择写一句"为什么"。</li>
+<li>特性合并会让 A crate 关掉的 feature 从 B crate 回来,两边都要关;测试专属依赖放 dev-dependencies,并写明"测试为什么住在这个包里"。</li>
+</ul>
+<h2 id="延伸">延伸</h2>
+<ul>
+<li>被分层挡在下面的总线与观测:<a href="/learn/deep-01">解读 01</a>、<a href="/learn/deep-02">解读 02</a></li>
+<li>拿着这些模块跑起来的守护进程:<a href="/learn/deep-09">解读 09</a></li>
+<li>本地路径:<code>/Volumes/dev/dev/microduck/duck-control/Cargo.toml</code>、<code>/Volumes/dev/dev/microduck/robotd/Cargo.toml</code></li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

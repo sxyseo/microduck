@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>第 16 课 · 从走到跑:课程学习与动作开发 · 什么鸭 WhatDuck</title>
+<meta name="description" content="走路练成了,想教它跑步、跳舞这类新动作,从哪下手?这一课给出三阶段开发方法论,讲清"奖励塑形"和"课程学习"两个核心工具,并用正在进行的实验 expE 做现场教学。">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="第 16 课 · 从走到跑:课程学习与动作开发">
+<meta property="og:description" content="走路练成了,想教它跑步、跳舞这类新动作,从哪下手?这一课给出三阶段开发方法论,讲清"奖励塑形"和"课程学习"两个核心工具,并用正在进行的实验 expE 做现场教学。">
+<meta property="og:url" content="https://duck.whatled.com/learn/course-16">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/course-16">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">LESSON 16 · 阶段 D · 训练进阶 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="第-16-课-从走到跑课程学习与动作开发">第 16 课 · 从走到跑:课程学习与动作开发</h1>
+<blockquote>
+<p><strong>这一课解决什么问题</strong>:走路练成了,想教它跑步、跳舞这类新动作,从哪下手?这一课给出三阶段开发方法论,讲清"奖励塑形"和"课程学习"两个核心工具,并用正在进行的实验 expE 做现场教学。</p>
+<p><strong>前置</strong>:<a href="/learn/course-13">第 13 课</a> 与 <a href="/learn/course-06">第 06 课</a>。</p>
+</blockquote>
+<hr />
+<h2 id="1-跑步不是一个参数是一个项目">1. "跑步"不是一个参数,是一个项目</h2>
+<p>最容易犯的错:把速度上限从 0.4 拉到 0.8,指望鸭子跑起来。指南第 8 节开宗明义:当前任务列表里<strong>没有独立的 Running 环境</strong>(配置里的 <code>std_running</code> 目前就等于 <code>std_walking</code>),而只提速度上限,策略大概率用更快的小碎步或拖脚来"换分"——不是跑,是作弊。</p>
+<p>所以新动作要按项目来开发。指南的三阶段:</p>
+<pre><code class="language-text">阶段一  先做&quot;走快&quot;,不碰&quot;跑&quot;
+阶段二  给&quot;跑态&quot;一个可辨认的物理定义
+阶段三  用课程学习分阶段逼近
+</code></pre>
+<h2 id="2-三阶段各自做什么">2. 三阶段各自做什么</h2>
+<p><strong>阶段一:走快。</strong> 以现有走路任务为模板建独立任务,只动三处:<code>lin_vel_x</code> 正向上限 0.4 → 0.5 m/s;训练样本里加中高速档,避免高速样本太稀;回放固定测 0、0.2、0.4、0.5 m/s。通过标准:0.5 m/s 跟踪误差下降,同时低速和站立能力没有明显退化。</p>
+<p><strong>阶段二:定义跑态。</strong> 跑步不只是速度快。先选定义:快速步行(至少一脚总接地)?跑步(允许短暂双脚离地)?跳跃式?Microduck 个子小、舵机怕冲击,指南建议先做快速步行。配套的奖励改法里最关键的一条是<strong>速度条件化</strong>:高速度时才放宽腾空奖励,别让零速度命令的环境靠蹦跳刷分。</p>
+<p><strong>阶段三:课程。</strong> 指南给出的起点(原文强调:只是实验起点,不是验证过的配方):0~500 迭代复制已验证步态,500~1200 加入 0.4~0.5 m/s,1200~2500 加入 0.5~0.6 并加强脚高目标,2500 以后再加强摩擦、电压、推扰和动作平滑。</p>
+<p>所以呢?先让"快走"在低风险下成立,再逐步提高要求——和教人游泳先下浅水区是一个道理。</p>
+<h2 id="3-奖励塑形把希望它做什么翻译成分数">3. 奖励塑形:把"希望它做什么"翻译成分数</h2>
+<p>奖励塑形(reward shaping)就是这条翻译工作:希望迈步 → 给 <code>air_time</code> 加分;希望稳 → 惩罚躯干晃动;希望平滑 → 惩罚相邻动作差。翻译得不好,鸭子会钻空子——expD 的 shuffle 局部最优就是"翻译漏洞"的实证(第 15 课)。</p>
+<p>翻译还有个时机问题:指南 6.6 节记录,动作平滑惩罚不是一上来就 <code>-1.0</code>,而是从 <code>-0.1</code> 分阶段收紧,约 1500 次 PPO 迭代才到 <code>-1.0</code>——早期太严会压死探索,鸭子学成"站着最安全"。</p>
+<h2 id="4-expe课程学习的现场版">4. expE:课程学习的现场版</h2>
+<p>实验总表 expE-gait-ramp 行(2026-09-09 启动,512 环境,从 12500 迭代向 50000 目标推进,进行中)正在做的正是这套方法:</p>
+<pre><code class="language-text">把 feet_air_time 的 threshold_min 从 0.125 降到 0.04
+  → 步态奖励先&quot;看得见&quot;(任何真实抬脚都能得分)
+等 Metrics/air_time_mean &gt; 0.10
+  → 再把门槛收紧回 0.125
+</code></pre>
+<p>这就是课程学习(curriculum learning,把一个大目标拆成由易到难的小台阶,逐级解锁)在真实项目里的用法:第 14 课那个预注册假设("0.125 s 门槛太高,策略收不到抬脚正反馈"),最终变成了这个正式实验。</p>
+<h2 id="5-什么时候进入下一阶段看指标">5. 什么时候进入下一阶段:看指标</h2>
+<p>阶段切换不靠感觉,靠指南 7.3 节的指标表:episode length 上升后稳定;速度跟踪 reward 升、误差降;<code>air_time_mean</code> 脱离零附近(也不是越大越好);脚高接近目标不过冲;躯干直立稳定;action std 逐步下降但不突然塌缩;所有惩罚项贡献 ≤ 0。换算提醒(指南 6.9 节):课程表的 <code>step</code> 是环境步,当前每迭代每环境 24 步,即 step = 迭代号 × 24。</p>
+<h2 id="动手练习20-分钟">动手练习(20 分钟)</h2>
+<p>为"跳舞"写一份三阶段路线图:阶段一做什么最简单的版本?阶段二给"舞步"什么物理定义?阶段三的奖励和课程怎么排?参考指南第 9 节(第一支舞只做四拍)。</p>
+<h2 id="自查清单">自查清单</h2>
+<ul>
+<li>[ ] 我能说出新动作开发的三阶段及各自的通过标准</li>
+<li>[ ] 我能解释奖励塑形是什么,并举一个"翻译漏洞"的例子</li>
+<li>[ ] 我能复述 expE 把门槛 0.125 → 0.04 再收紧的逻辑</li>
+<li>[ ] 我知道阶段切换要看哪几个指标</li>
+</ul>
+<h2 id="下一课预告">下一课预告</h2>
+<p>expE 目标 50000 迭代、官方参考 4096 环境跑 1–2 小时——这些数字背后是算力账。第 17 课讲 GPU 与云训练:什么实验本机 CPU 就够,什么时候才值得花钱,以及云端训练的安全五条。</p>
+<h2 id="延伸资源">延伸资源</h2>
+<ul>
+<li><code>microduck-replica/docs/训练参数调整与新动作开发指南.md</code> 第 8 节(从走到跑)与第 9 节(从舞蹈到复杂动作)</li>
+<li><code>docs/microduck-30day/experiments/experiment-log.csv</code> expE-gait-ramp 行(实时进展)</li>
+<li>想理解奖励与策略梯度背后的理论:<a href="https://huggingface.co/learn/deep-rl-course/unit0/introduction">Hugging Face 深度强化学习课</a></li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

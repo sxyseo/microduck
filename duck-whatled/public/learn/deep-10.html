@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>解读 10 · robotd/intents.rs:意图层 · 什么鸭 WhatDuck</title>
+<meta name="description" content="robotd/src/intents.rs(681 行)">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="解读 10 · robotd/intents.rs:意图层">
+<meta property="og:description" content="robotd/src/intents.rs(681 行)">
+<meta property="og:url" content="https://duck.whatled.com/learn/deep-10">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/deep-10">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">DEEP 10 · 第一辑 · 运动控制核心 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="解读-10-robotdintentsrs意图层">解读 10 · robotd/intents.rs:意图层</h1>
+<blockquote>
+<p><strong>解读对象</strong>:<code>robotd/src/intents.rs</code>(681 行)<br />
+<strong>需要的前置</strong>:消费方见<a href="/learn/deep-09">解读 09</a>;死手开关见<a href="/learn/deep-04">解读 04</a></p>
+</blockquote>
+<h2 id="1-槽戳和多旧才算旧">1. 槽、戳、和"多旧才算旧"</h2>
+<p>intents.rs 解决的问题是:多个客户端(语音、手柄、程序)同时跟一个 50 Hz 循环说话,循环又绝不能等客户端。方案是每个意图一个 <code>ArcSwap</code> 槽——原子指针槽,读者一次原子 load,写者一次原子 store,谁也堵不住谁(intents.rs:3-5)。真正的设计量在后面三句:</p>
+<ol>
+<li><strong>twist 和 head 故意分槽</strong>(intents.rs:7-10)。合成一个槽要读-改-写才能更新一个字段,两个客户端——手柄开身体姿态、另一个程序转头——会静默互相覆盖。分开后每个槽实际单写者,"last-writer-wins"才字面成立。</li>
+<li><strong>每个槽都盖时间戳</strong>(intents.rs:12-13):<code>Stamped&lt;T&gt;</code> 就是值 + 微秒时间(intents.rs:44-48)。循环的真问题从来不是"值是多少"而是"它多旧了"——死手开关读的正是 <code>twist_age</code>。</li>
+<li><strong>冷启动即最旧</strong>:<code>Intents::new</code> 把 twist 戳在 0(intents.rs:264-267),任何客户端连上之前它已经"最大程度过期",死手开关从一开始就按住鸭子。测试 <code>the_twist_starts_stale</code>(intents.rs:610)钉住这一点。</li>
+</ol>
+<h2 id="2-边沿电平事件三种到达方式分三类">2. 边沿、电平、事件:三种到达方式分三类</h2>
+<p>这个文件最值得学的是它拒绝用一种机制接所有请求:</p>
+<ul>
+<li><strong>边沿(取走即无)</strong>:<code>power</code> 是 <code>AtomicU8</code> 编码的请求,<code>take_power_request</code> 用 <code>swap</code> 取走(intents.rs:539-545)。注释算过账(intents.rs:149-156):一次 <code>set_torque</code> 是每关节一笔总线事务,电平槽会让每拍都写十六次。<code>mode_switch</code>、<code>shutdown</code>、技能掩码同理,<code>take_skills</code> 一次 <code>swap(0)</code>(intents.rs:348-355)。</li>
+<li><strong>电平(新值顶旧值)</strong>:twist、head、pose、mouth。嘴用 <code>AtomicU64</code> 存 <code>f64</code> 的位(intents.rs:146),注释坦白:客户端死了嘴张着,"原型就是这样"。</li>
+<li><strong>事件队列</strong>:只有 <code>chorale_heard</code> 用 <code>Mutex&lt;Vec&gt;</code>(intents.rs:171)。理由在字段注释里:其他意图是电平,错过的值本来就该被顶掉;而信标是<strong>带到达时刻的事件</strong>,被 last-writer-wins 吃掉的一个节拍是相位锁永远平均不到的一拍。队列封顶 64,满了丢最旧的——积压说明循环没在跑,那只有最新的值得要(intents.rs:508-514)。</li>
+</ul>
+<p>哨兵值也有讲究:<code>MODE_NONE = u8::MAX</code>(intents.rs:22),注释一句话道破坑:0 是真实的模式码,和取值空间撞车的哨兵会让"切到行走"变成无声空操作。</p>
+<h2 id="3-一个枚举救回来的第三种语义">3. 一个枚举救回来的第三种语义</h2>
+<p><code>PolicyChange</code>(intents.rs:210-224)是"类型承载语义"的实例:线上是两个 <code>Option</code>,只能表达四种组合,而实际要说的有三件事——槽指到文件、全部回默认、<strong>重载但什么都不改</strong>。第三种是为"装了新策略集、配置本来就对、只是内存里的会话旧了"准备的;注释承认历史上把 Reload 和 ResetAll 混为一谈,"每次装新策略集都会把板子上的覆盖全部抹掉"。旁边 <code>MAX_SKILLS = 30</code>(intents.rs:111)说明上限为什么存在:不是防滥用,是让超限成为"带理由的拒绝"而不是被静默忽略的按钮。</p>
+<h2 id="4-没按住是两种状态">4. "没按住"是两种状态</h2>
+<p><code>WheeeHold</code> 三态是最小而完整的案例(intents.rs:128-135):<code>Held</code>(新鲜)、<code>Released</code>(活着的客户端说停)、<code>Decayed</code>(<code>WHEEE_HOLD_FRESH = 300 ms</code> 内没有再通知,intents.rs:119)。wheee 是一段按住就循环、松开才收尾的"骑乘"声音(源码称 ride),两种"没按住"对应两种结局:Released 在原地切断,Decayed 把骑乘放完——压成 bool 会直接丢掉 end 段,因为被切断的骑乘只看得见断掉的管道。测试 <code>a_stale_hold_reads_as_decayed_not_released</code>(intents.rs:577)按时间线走完三个状态。</p>
+<h2 id="你带走的收获">你带走的收获</h2>
+<ul>
+<li>跨线程递送先分清三种语义:边沿取走、电平覆盖、事件排队——一种机制包打天下必然丢信息。</li>
+<li>共享槽盖时间戳,"值多旧"和"值是多少"一样是一等公民;冷启动按"最旧"初始化。</li>
+<li>哨兵值不要和真实取值空间重叠,<code>MAX</code> 当"无"比 0 安全;枚举而非多个 Option 承载互斥语义。</li>
+<li>每个槽的单写者属性是设计出来的(分槽),不是碰运气。</li>
+</ul>
+<h2 id="延伸">延伸</h2>
+<ul>
+<li>这些意图在循环顶部怎么被消费:<a href="/learn/deep-09">解读 09</a></li>
+<li><code>Intents</code> 为何住 robotd 而控制库住 duck-control:<a href="/learn/deep-08">解读 08</a></li>
+<li>本地路径:<code>/Volumes/dev/dev/microduck/robotd/src/intents.rs</code></li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

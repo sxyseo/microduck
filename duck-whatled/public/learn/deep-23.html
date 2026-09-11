@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>解读 23 · velocity 配置(中):动作与观测 · 什么鸭 WhatDuck</title>
+<meta name="description" content="microduck-replica/upstream/microduck_rl/src/mjlab_microduck/tasks/microduck_velocity_env_c">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="解读 23 · velocity 配置(中):动作与观测">
+<meta property="og:description" content="microduck-replica/upstream/microduck_rl/src/mjlab_microduck/tasks/microduck_velocity_env_c">
+<meta property="og:url" content="https://duck.whatled.com/learn/deep-23">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/deep-23">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">DEEP 23 · 第三辑 · 训练代码 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="解读-23-velocity-配置中动作与观测">解读 23 · velocity 配置(中):动作与观测</h1>
+<blockquote>
+<p><strong>解读对象</strong>:<code>microduck-replica/upstream/microduck_rl/src/mjlab_microduck/tasks/microduck_velocity_env_cfg.py</code> 第 193–638 行<br />
+<strong>需要的前置</strong>:<a href="/learn/deep-22">解读 22</a>(开关常量);term(项)= 挂在某个 manager 下"一个函数+参数+权重"的最小单元</p>
+</blockquote>
+<p><code>make_microduck_velocity_env_cfg(play=False, rough=False)</code>(193 行)不是从零写配置,而是<br />
+"取 mjlab 官方模板,再逐项改造":263 行 <code>cfg = make_velocity_env_cfg()</code> 拿到基座,266 行<br />
+把机器人换成 <code>MICRODUCK_WALK_ROBOT_CFG</code>,267 行装上三个自研传感器配置<br />
+(<code>feet_ground_cfg</code> 220 行、<code>self_collision_cfg</code> 234 行、<code>foot_height_scan_cfg</code> 246 行)。</p>
+<h2 id="动作14-维关节位置缩放-10">动作:14 维关节位置,缩放 1.0</h2>
+<p>271–273 行把 <code>cfg.actions["joint_pos"]</code>(一个 <code>JointPositionActionCfg</code>)的 <code>scale</code> 设为<br />
+1.0——策略输出直接是目标关节位置偏移,14 个下肢与颈部关节(两条腿各 5 + 颈部 4)。623–627 行解释了为什么<br />
+观测恰好也是 14 维:<code>passive_*</code> 下颌连杆关节被正则 <code>^(?!passive_).*</code> 排除,否则观测会是<br />
+原始的 16 维,与动作维数对不上。</p>
+<h2 id="观测改造删换加延迟加噪声">观测改造:删、换、加延迟、加噪声</h2>
+<p>这一段是全文件最能体现 sim2real 思路的部分(534–638 行):</p>
+<ul>
+<li><strong>删</strong>:actor 组删掉 <code>base_lin_vel</code>(535 行,真机没有这个量)和 <code>height_scan</code>(539–540 行,<br />
+  机器人没装机身地形传感器);</li>
+<li><strong>加 privilege</strong>:critic 组单独补回 <code>base_lin_vel</code>(543–546 行)——critic(critic=价值网络,<br />
+  只在训练时用)可以吃策略看不到的"特权信息";</li>
+<li><strong>延迟</strong>:560–573 行给 <code>base_ang_vel</code> 与重力项 deepcopy 后设 <code>delay_min_lag=0</code>,<br />
+<code>delay_max_lag=1</code>,<code>delay_update_period=64</code>(注释:曾为 3,真机 IMU 链路实测快,收紧到<br />
+  ±20 ms 包络);611–616 行给 <code>joint_vel</code> 固定 1 拍延迟——Dynamixel 固件的 present_velocity<br />
+  是滑动平均,天生旧一拍;</li>
+<li><strong>换函数</strong>:598–605 行(若 <code>ENABLE_IMU_ORIENTATION_RANDOMIZATION</code>)把观测函数换成<br />
+<code>base_ang_vel_imu_misaligned</code> / <code>projected_gravity_imu_misaligned</code>(实现见<br />
+<a href="/learn/deep-25">解读 25</a>);</li>
+<li><strong>噪声</strong>:590–593 行,<code>Unoise</code> 即均匀噪声配置:角速度 ±0.03、重力 ±0.01、关节位置<br />
+  ±0.001、关节速度 ±0.25(注释都标了旧值 0.2/0.15/0.05/2.0——从"拍脑袋"收敛到实测);</li>
+<li><strong>防串味</strong>:626 行 deepcopy 每个观测 term,因为 actor/critic 共享同一 term 对象,直接改<br />
+  会互相泄漏(比如下面的 <code>biased</code> 标志);633–636 行让 actor 读带偏置的关节角<br />
+  (<code>biased=True</code>),critic 读真值。</li>
+</ul>
+<h2 id="顺带的奖励微调与事件">顺带的奖励微调与事件</h2>
+<p>同区间还夹着奖励覆盖:<code>pose</code> 权重 1.0(289 行)、<code>upright</code> 权重 2.0/std²=0.05(300–301 行,<br />
+注释给出 4° 前倾代价从 0.05→0.19/步的计算)、<code>foot_slip</code> 弱化到 -0.1(314 行)、<code>air_time</code><br />
+权重 3.0、<code>threshold_min=0.04</code>(333–339 行)。事件区注册了 <code>push_robot</code>(398–409 行)与<br />
+一排 DR 事件(<code>randomize_com</code> 417、<code>randomize_head_com</code> 429、<code>randomize_mass_inertia</code> 465<br />
+等),实现见 <a href="/learn/deep-26">解读 26</a>。</p>
+<h2 id="你带走的收获">你带走的收获</h2>
+<ul>
+<li><strong>"模板+补丁"式配置</strong>:不复制官方配置,取 <code>make_velocity_env_cfg()</code> 再逐项覆盖,上游升级不丢。</li>
+<li><strong>观测每维都要过一遍"真机有没有"</strong>:没有的删,有的加延迟/噪声/偏置,critic 才准吃特权。</li>
+<li><strong>共享配置对象必须 deepcopy</strong>——actor/critic 共用 term 时,一处原地修改两边都变。</li>
+<li>延迟建模精确到固件行为(1 拍 joint_vel),而不是笼统"加噪声"。</li>
+</ul>
+<h2 id="延伸">延伸</h2>
+<ul>
+<li>观测维数怎么凑成 61:命令项 <code>head_command</code>/<code>body_command</code> 在 <a href="/learn/deep-24">解读 24</a> 696–704 行补齐;</li>
+<li>被换上的观测函数实现:<a href="/learn/deep-25">解读 25</a>;</li>
+<li>本地路径:<code>microduck-replica/upstream/microduck_rl/src/mjlab_microduck/tasks/microduck_velocity_env_cfg.py</code></li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

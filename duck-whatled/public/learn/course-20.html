@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>第 20 课 · 组装与上电:安全清单 · 什么鸭 WhatDuck</title>
+<meta name="description" content="打印件、舵机、电路板到齐了。组装和第一次上电是新手最容易损失一周预算的环节——这一课给你装配顺序和上电前检查清单。">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="第 20 课 · 组装与上电:安全清单">
+<meta property="og:description" content="打印件、舵机、电路板到齐了。组装和第一次上电是新手最容易损失一周预算的环节——这一课给你装配顺序和上电前检查清单。">
+<meta property="og:url" content="https://duck.whatled.com/learn/course-20">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/course-20">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">LESSON 20 · 阶段 E · 集成部署 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="第-20-课-组装与上电安全清单">第 20 课 · 组装与上电:安全清单</h1>
+<blockquote>
+<p><strong>这一课解决什么问题</strong>:打印件、舵机、电路板到齐了。组装和第一次上电是新手最容易损失一周预算的环节——这一课给你装配顺序和上电前检查清单。</p>
+<p><strong>前置</strong>:<a href="/learn/course-09">第 09 课</a>(打完测试片并回填公差)、<a href="/learn/course-12">第 12 课</a>(物料已到齐)。</p>
+</blockquote>
+<hr />
+<h2 id="1-装配顺序躯干是基准件">1. 装配顺序:躯干是基准件</h2>
+<p>装配说明书(见延伸资源,21 页 PDF,图纸作者机械行者Robo)把整机排成编号 01–15 的组件,<strong>顺着编号装就是推荐顺序</strong>。经验大原则(<code>docs/新手学习文档.md</code> 6.6 节):<strong>躯干(基准件,先固定) → 左腿 → 右腿 → 颈 → 头</strong>。</p>
+<p>为什么躯干先装?它是<strong>装配基准</strong>——一切组件都往它身上挂,基准不固定,后面全歪。</p>
+<p>四条经验,都是拿返工换来的:</p>
+<ol>
+<li><strong>每装完一个组件,手动转一下关节</strong>,顺滑无卡滞再装下一个——现在改只要十秒,装完才发现就是全部拆开;</li>
+<li><strong>螺丝分批不拧死</strong>:先全部"带上劲",再按对角顺序逐步拧紧,避免单边受力把塑料件拉翘;</li>
+<li><strong>M2 自攻螺丝不要拧到底硬怼</strong>:塑料滑丝不可逆,阻力明显增大就停手;</li>
+<li><strong>舵机装上前先在调试板设好 ID</strong>(第 10 课的技能)——装进整机再改,等于全部拆开重来。</li>
+</ol>
+<h2 id="2-三种孔热熔螺母">2. 三种孔、热熔螺母</h2>
+<p>全机一套 M2 螺丝系统,三种孔三种用途(数字来自新手文档 6.2 节):</p>
+<table>
+<thead>
+<tr>
+<th>孔</th>
+<th>直径 × 数量</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>过孔</td>
+<td>Ø2.2 × 111</td>
+<td>螺丝穿过去</td>
+</tr>
+<tr>
+<td>沉头孔</td>
+<td>Ø4.4 × 48</td>
+<td>平头螺丝的头埋进表面</td>
+</tr>
+<tr>
+<td>攻丝底孔</td>
+<td>Ø1.6 × 27</td>
+<td>拧自攻螺丝,靠塑料被挤出螺纹</td>
+</tr>
+</tbody>
+</table>
+<p>还会遇到<strong>热熔螺母</strong>:用烙铁把铜螺母烫进塑料孔,得到可反复拆装的金属螺纹——塑料螺纹拧几次就废,金属的能拆几十次。</p>
+<h2 id="3-第一次上电前的检查清单">3. 第一次上电前的检查清单</h2>
+<p>上电是分水岭:之前错了顶多重打几个孔,之后错了可能烧舵机。逐项打勾:</p>
+<ul>
+<li>[ ] <strong>供电电压对不对</strong>:万用表确认正负极、通断档确认无短路(新手文档第 10 节);舵机与主控各用几伏,以你的电源方案为准;</li>
+<li>[ ] <strong>共地没</strong>:调试板、电源、舵机必须共地——"共地不良"是故障排查表(<code>docs/macOS舵机调试与图纸查看指南.md</code> 第 7 节)的最常见项;</li>
+<li>[ ] <strong>舵机自由状态能手动转</strong>:断电状态下每个关节手转一遍,顺滑、无卡死、无异响——装反的 ID、顶死的连杆现在都摸得出来;</li>
+<li>[ ] <strong>急断电方案</strong>:电源开关在哪、伸手够不够得着。听到舵机"嗡嗡"异响<strong>立刻断电</strong>——<strong>堵转</strong>(被卡住还猛发力)几秒内就能烧齿轮或芯片。</li>
+</ul>
+<p>三条长期规矩:电池不过放(NP-F550 单芯低于 3.0V 就停)、充电时人不离开、焊点套热缩管绝缘。</p>
+<h2 id="4-第一个目标站着不是走路">4. 第一个目标:站着,不是走路</h2>
+<p>新手最大的冲动是上电就走。请按 <code>microduck-replica/docs/训练参数调整与新动作开发指南.md</code> 13.6 节的<strong>真机测试金字塔</strong>来:</p>
+<pre><code class="language-text">L1 单舵机台架 → L2 15 舵机总线空载 → L3 整机悬空、低增益、人工急停
+→ L4 吊装带少量负载 → L5 软垫地面、零命令站立 → L6 低速直行 → ……
+</code></pre>
+<p>首个真机验收顺序(进阶文档 3.5 节):不装腿先空跑 HOME 姿态 → 吊装测试 → 软垫 → 平地,<strong>第一次必须手扶</strong>。"低增益"指把关节输出力度调小——真机第一目标是安全验证闭环通了,不是表演。</p>
+<p>任何一级出现方向错误、撞限位、过流、过热,退回前一级,不靠运气硬扛。环境记住十二个字:低重心、软垫、手扶、远离桌沿。</p>
+<h2 id="5-出问题先断电">5. 出问题先断电</h2>
+<p>故障处理第一原则:<strong>先断电,再排查</strong>——带电排查容易小病变大病。关机也有流程(新手文档第 10 节):软件关机 → 等 15 秒 → 断电源开关,别直接拔电。</p>
+<h2 id="6-动手练习20-分钟">6. 动手练习(20 分钟)</h2>
+<ol>
+<li>把第 3 节清单抄成一张纸质"上电卡",贴在工位上;</li>
+<li>完成 L2 级:总线挂舵机不装负载,上电,记录每只回 HOME 的现象(顺序、异响、发热);</li>
+<li>给悬空姿态的鸭子拍一张"出厂照",存进实验记录。</li>
+</ol>
+<h2 id="自查清单">自查清单</h2>
+<ul>
+<li>[ ] 我能按顺序说出装配四条经验,并解释为什么躯干先装</li>
+<li>[ ] 我能背出上电前四项检查,并说出堵转的后果</li>
+<li>[ ] 我能默写真机测试金字塔的前五级</li>
+<li>[ ] 我知道正确的关机流程</li>
+</ul>
+<h2 id="下一课预告">下一课预告</h2>
+<p>鸭子能站了,该让它听你的。第 21 课接上手柄:摇杆给的不是关节角度,而是速度指令——回扣第 01 课那句"你发目标,策略管过程"。</p>
+<h2 id="延伸资源">延伸资源</h2>
+<ul>
+<li>21 页装配说明书:<code>microduck-replica-cad/安装说明书/microduck装配安装说明书.pdf</code>(图纸作者:机械行者Robo)</li>
+<li>平价路线组装文档(电机→走线→腿→躯干→电子→总装):<code>Microduck-build-tutorial/microduck/docs/assembly.md</code></li>
+<li>装配经验与安全守则:<code>docs/新手学习文档.md</code> 第 6、10 节</li>
+<li>舵机故障排查表:<code>docs/macOS舵机调试与图纸查看指南.md</code> 第 7 节</li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>第 00 课 · 导学:这只鸭子是什么 · 什么鸭 WhatDuck</title>
+<meta name="description" content="在投入时间之前弄清:这是什么项目、你能学到什么、30 课怎么走。含 6 个关键数字与两个 5 分钟练习。">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="第 00 课 · 导学:这只鸭子是什么">
+<meta property="og:description" content="在投入时间之前弄清:这是什么项目、你能学到什么、30 课怎么走。含 6 个关键数字与两个 5 分钟练习。">
+<meta property="og:url" content="https://duck.whatled.com/learn/course-00">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/course-00">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">LESSON 00 · 阶段 A · 认识它 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="第-00-课-导学这只鸭子是什么为什么值得你花-30-天">第 00 课 · 导学:这只鸭子是什么?为什么值得你花 30 天?</h1>
+<blockquote>
+<p><strong>这一课解决什么问题</strong>:在投入任何时间之前,先弄清楚三件事——这是什么项目、你能从中学到什么、接下来 30 课怎么走。这一课不需要装任何软件,读完 + 做完两个 5 分钟小练习即可。</p>
+<p><strong>前置</strong>:无。会开浏览器就行。</p>
+</blockquote>
+<hr />
+<h2 id="1-一只-25-厘米的鸭子凭什么值得学">1. 一只 25 厘米的鸭子,凭什么值得学?</h2>
+<p>Microduck 是 Pollen Robotics 做的一只<strong>双足机器鸭</strong>:25 厘米高、约 737–800 克,身上 15 个舵机,用<strong>强化学习</strong>(而不是人类逐帧编程)学会走路、起身、踢球。官方整机约 $399,软件完全开源(Apache-2.0),机械只公开了一部分——47 个 STL 零件和仿真模型。</p>
+<p>这个项目里的人在做的事叫<strong>复刻</strong>:用官方公开的仿真模型、源码和逆向出来的资料,自己把一只真正造出来。而这门课要做的事更进一步:<strong>借这只鸭子,把机器人从零到一的全套知识学一遍</strong>。</p>
+<p>为什么选鸭子而不是选一本书?</p>
+<ul>
+<li><strong>它是活的</strong>。书读完可能只记住 30%,但一只会走路的鸭子是每天看得见的反馈。</li>
+<li><strong>它足够小</strong>。25 厘米、800 克、15 个舵机——坏不了大事,烧不起来了火,适合第一次动手。</li>
+<li><strong>它五脏俱全</strong>。机械结构、电路、嵌入式、强化学习、sim-to-real、语音交互,现代机器人的一整条链路全在里面,一课都不少。</li>
+</ul>
+<h2 id="2-先记住-6-个数字">2. 先记住 6 个数字</h2>
+<p>这门课后面会反复回到这 6 个数字。现在不用理解,先混个脸熟——学完阶段 A,你要能不看资料把它们讲给别人听:</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: right;">数字</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: right;"><strong>15</strong></td>
+<td>全机舵机数量(第 15 个驱动嘴巴,不参与走路)</td>
+</tr>
+<tr>
+<td style="text-align: right;"><strong>14</strong></td>
+<td>走路策略实际控制的关节数</td>
+</tr>
+<tr>
+<td style="text-align: right;"><strong>61 → 14</strong></td>
+<td>神经网络每次吃进 61 个数(姿态 + 关节状态),吐出 14 个数(每个关节往哪转)</td>
+</tr>
+<tr>
+<td style="text-align: right;"><strong>50 Hz</strong></td>
+<td>每 20 毫秒重复一次"读全部关节 → 算 → 下发"的循环</td>
+</tr>
+<tr>
+<td style="text-align: right;"><strong>1 Mbps</strong></td>
+<td>舵机总线的通信速度</td>
+</tr>
+<tr>
+<td style="text-align: right;"><strong>737 g</strong></td>
+<td>整机重量——其中头就占 189 g,接近 1/4,这是它走路难训的根源</td>
+</tr>
+</tbody>
+</table>
+<p>感受一下 61 → 14 + 50 Hz 意味着什么:每 20 毫秒,这块小主板要读完 14 个关节的状态,喂给一个神经网络,再把 14 个输出变成舵机指令。你的手机刷新率是 60–120 Hz,而这只鸭子全身上下就是一个跑在 50 Hz 上的闭环控制系统。</p>
+<h2 id="3-这个项目分几个方向课程地图预告">3. 这个项目分几个方向?(课程地图预告)</h2>
+<p>复刻一只鸭子 = 五个方向的知识,对应本课程六个阶段:</p>
+<pre><code class="language-text">A 认识它        —— 它是什么?别人怎么做的?(本课 + 下一课)
+B 软件与仿真    —— 让鸭子先在电脑里学会(第 03–07 课)
+C 硬件入门      —— 电路图、3D 打印、舵机、采购(第 08–12 课)
+D 训练进阶      —— 教会它新动作的方法论(第 13–17 课)
+E 集成部署      —— 组装上电,把大脑装进身体(第 18–22 课)
+F 迁移与扩展    —— 把学到的能力带到其他领域(第 23–29 课)
+</code></pre>
+<p>阶段 F 是这门课真正的终点:学完你会拿到一张"迁移地图"——</p>
+<ul>
+<li>强化学习的方法 → 游戏 AI、推荐系统、任何"试错学习"问题;</li>
+<li>总线通信与嵌入式 → IoT、智能家居、任何设备互联;</li>
+<li>CAD 与 3D 打印流程 → 产品原型、创客项目;</li>
+<li>实验方法论(假设→实验→证据→结论)→ 任何技术领域的调参与排错;</li>
+<li>具身智能行业地图 → 判断下一个项目值不值得做。</li>
+</ul>
+<h2 id="4-练习一5-分钟打开官方-sandbox开一次鸭子">4. 练习一(5 分钟):打开官方 Sandbox,开一次鸭子</h2>
+<p>不装任何东西,浏览器打开官方仿真器:<a href="https://huggingface.co/spaces/pollen-robotics/microduck-simulator"><strong>Microduck Sandbox</strong></a>。</p>
+<p>用方向键或 WASD 控制它移动,按 <code>R</code> 让它翻滚,<code>Q</code>/<code>E</code> 踢球,<code>Space</code> 重置。</p>
+<p>玩的目的是观察两件事:</p>
+<ol>
+<li>它摔倒之后<strong>自己爬起来</strong>——这个动作不是动画师做的,是策略自己学出来的;</li>
+<li>你按方向键其实是在改"速度指令",鸭子自己决定腿怎么迈——<strong>你发目标,它管过程</strong>。</li>
+</ol>
+<blockquote>
+<p>下一次有人问你"这鸭子怎么走路的",标准答案是:没人写它的走路动作。有人给它定目标(往哪走、多快),它身后的神经网络每 20 毫秒算一次 61 个数,输出 14 个关节角度。那套网络是它在仿真里自己练出来的。</p>
+</blockquote>
+<h2 id="5-练习二5-分钟把-6-个数字讲一遍">5. 练习二(5 分钟):把 6 个数字讲一遍</h2>
+<p>合上资料,向(想象中的)朋友解释这 6 个数字各是什么意思。讲不出来的那几个,就是后面要重点听的部分。这门课每一课都有这样的"自查清单",<strong>能讲出来才算学懂</strong>。</p>
+<h2 id="6-这门课怎么学先说清规矩">6. 这门课怎么学(先说清规矩)</h2>
+<ol>
+<li><strong>每课必做练习</strong>。只读不练,三周后你什么都不记得。</li>
+<li><strong>不追求一次看懂</strong>。第一遍有印象即可,后面的课会不断回扣前面的数字和概念。</li>
+<li><strong>所有结论认证据</strong>。本课程的所有数字都能溯源到工作区的实验记录、构建日志或官方公开资料;查不到出处的会标"待验证"。这也是阶段 F 要教给你的方法论之一。</li>
+<li><strong>卡住了就跳</strong>。装环境失败、命令报错,先跳过继续学概念,阶段 B 有整一课教排错。</li>
+<li><strong>预算意识</strong>。阶段 A、B 全程 ¥0;阶段 C 起才可能花钱,每课会提前标注要花多少。</li>
+</ol>
+<h2 id="自查清单">自查清单</h2>
+<ul>
+<li>[ ] 我能用一句话说清 Microduck 是什么、这个项目在做什么</li>
+<li>[ ] 我能背出 6 个数字,并解释 61 → 14 是什么意思</li>
+<li>[ ] 我在浏览器里开动过一次鸭子,知道"你发目标、策略管过程"</li>
+<li>[ ] 我知道课程分六个阶段,以及每个阶段大致学什么</li>
+</ul>
+<p>全部打勾,进入<a href="/learn/course-01">第 01 课:先让它动起来</a>。</p>
+<h2 id="延伸资源">延伸资源</h2>
+<ul>
+<li>新手学习文档第 1–2 节(项目地图与十个概念):<code>docs/新手学习文档.md</code></li>
+<li>OpenMicroDuck 小白术语表(本地):<code>open-microduck/docs/zh-CN/getting-started/glossary.md</code></li>
+<li>项目进度主页:<a href="https://duck.whatled.com">duck.whatled.com</a>(复刻进行时,每周更新)</li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

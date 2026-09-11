@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>解读 02 · obs.rs:61 维观测是怎么拼出来的 · 什么鸭 WhatDuck</title>
+<meta name="description" content="duck-control/src/obs.rs(399 行)">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="解读 02 · obs.rs:61 维观测是怎么拼出来的">
+<meta property="og:description" content="duck-control/src/obs.rs(399 行)">
+<meta property="og:url" content="https://duck.whatled.com/learn/deep-02">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/deep-02">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">DEEP 02 · 第一辑 · 运动控制核心 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="解读-02-obsrs61-维观测是怎么拼出来的">解读 02 · obs.rs:61 维观测是怎么拼出来的</h1>
+<blockquote>
+<p><strong>解读对象</strong>:<code>duck-control/src/obs.rs</code>(399 行)<br />
+<strong>需要的前置</strong>:《什么鸭公开课》第 04 课(61→14 契约)</p>
+</blockquote>
+<p>模块注释自称"crate 里风险最高的代码"(obs.rs:3-6):一个 61 维浮点数组,每个下标都必须和训练时一致。偏移错了不会报错,只会得到一只"看起来正常但老摔跤"的鸭子,症状像调参问题而不是索引问题。</p>
+<h2 id="1-一张写进注释的布局表">1. 一张写进注释的布局表</h2>
+<p><code>OBS_LEN = 61</code>(obs.rs:51),布局是:陀螺仪 0..3、投影重力 3..6、关节位置(减 home 位)6..20、关节速度 20..34、上一次动作 34..48、命令块 48..61(obs.rs:13-20)。所有 alpha 策略都是 <code>obs[1,61] → actions[1,14]</code>,所以只有一种布局——原型里的 51/54/49/85 维旧契约全被砍掉了。</p>
+<p><code>Observation::build</code>(obs.rs:167)用 <code>split_first_chunk_mut::&lt;N&gt;()</code> 把定长数组逐块"切"出来(obs.rs:182-188):每块是 <code>[f32; N]</code>,宽度写进类型。填块用泛型函数 <code>fill&lt;const N&gt;(block, values)</code>(obs.rs:134),两边宽度不同就编译不过。注释点破了这个要害:<code>zip</code> 会在短的一侧静默停下,留下一段全零尾巴——而观测里的零意味着"关节在 home 位",策略会认真对待一台不存在的机器人。</p>
+<h2 id="2-15-个关节14-个槽位一个映射管两个方向">2. 15 个关节、14 个槽位:一个映射管两个方向</h2>
+<p>机器人有 15 个关节,嘴(<code>MOUTH_INDEX = 9</code>,<code>model.rs:31</code>)不在任何策略里。<code>joint_of(slot)</code>(obs.rs:123)一行解决:<code>if slot &lt; MOUTH_INDEX { slot } else { slot + 1 }</code>——嘴之前的槽位直通,之后的整体上移一格。妙处在复用:<code>policy_joints</code>(obs.rs:109)读的时候过这个映射把 15 压成 14,<code>scatter_action</code>(obs.rs:230)写的时候用同一个映射把 14 摊回 15。注释明说:两个方向走同一份代码,"就不可能对不上"。错一位的后果是第 9 号之后的关节全部错位,"既灾难性又完全无声"(obs.rs:228-229)。</p>
+<p>还有一道编译期保险:<code>const</code> 块断言 <code>OBS_LEN == duck_ipc_proto::POLICY_OBS_LEN</code>(obs.rs:60-63)。同一个数在策略清单协议里还有一份副本,测试让两份副本漂移时直接编译失败。</p>
+<h2 id="3-命令块三个确认过而不是假设的细节">3. 命令块:三个"确认过而不是假设"的细节</h2>
+<p>命令块 48..61 是唯一没有第二真相来源的部分,有三个坑(obs.rs:34-45):</p>
+<ol>
+<li><strong>body x、y、yaw 硬编码为零</strong>(obs.rs:213-218)。它们在训练环境里未被绑定,全零就是"标准编码",不是占位符。</li>
+<li><strong>身体块内部是 <code>z, roll, pitch</code> 顺序</strong>,不是 <code>z, pitch, roll</code>(obs.rs:45)。写反的症状是"让它前倾它侧倾"。</li>
+<li><strong>头部目标是命令,不是输出叠加</strong>。原型在有的模式里把头目标再加到策略输出上,两头一起弯;这里只走观测通道。</li>
+</ol>
+<p>每条都有测试钉住:<code>unbound_body_axes_are_always_zero</code>、<code>the_body_block_is_z_roll_pitch</code>(obs.rs:313、325)。测试里的值都是刻意可区分的,让"块挪了位置"表现为一个具体下标错了,而不是"机器人走路变差"。</p>
+<h2 id="你带走的收获">你带走的收获</h2>
+<ul>
+<li>sim2real 契约要"编译期断言 + 可区分值的偏移测试"双重钉死;运行期发现就晚了。</li>
+<li>把宽度编码进类型(定长数组、<code>const N</code> 泛型),一整类布局错误从运行期移到编译期。</li>
+<li>一对互逆的映射(读压缩/写摊开)共用同一个函数,是对齐偏差的根治法。</li>
+<li>关节位置喂给策略要减 home 位——训练时看的是相对角,喂绝对角等于给 14 个输入加一个没见过的常数偏置。</li>
+<li>上一次动作回填的是策略原始输出(obs.rs:197-199),缩放之后的那份不能回填。</li>
+</ul>
+<h2 id="延伸">延伸</h2>
+<ul>
+<li>gyro 和 gravity 从哪来: <a href="/learn/deep-06">解读 06</a></li>
+<li>这些字节怎么从总线读回来: <a href="/learn/deep-01">解读 01</a></li>
+<li>策略端怎么校验 61/14: <a href="/learn/deep-03">解读 03</a></li>
+<li>课程对照: <code>/Volumes/dev/dev/microduck/docs/course/04-61到14-鸭子的神经回路.md</code></li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

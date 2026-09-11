@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>解读 27 · standup 配置:起身的课程设计 · 什么鸭 WhatDuck</title>
+<meta name="description" content="microduck-replica/upstream/microduck_rl/src/mjlab_microduck/tasks/microduck_standup_env_cf">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="解读 27 · standup 配置:起身的课程设计">
+<meta property="og:description" content="microduck-replica/upstream/microduck_rl/src/mjlab_microduck/tasks/microduck_standup_env_cf">
+<meta property="og:url" content="https://duck.whatled.com/learn/deep-27">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/deep-27">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">DEEP 27 · 第三辑 · 训练代码 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="解读-27-standup-配置起身的课程设计">解读 27 · standup 配置:起身的课程设计</h1>
+<blockquote>
+<p><strong>解读对象</strong>:<code>microduck-replica/upstream/microduck_rl/src/mjlab_microduck/tasks/microduck_standup_env_cfg.py</code>(1159 行)<br />
+<strong>需要的前置</strong>:<a href="/learn/deep-24">解读 24</a>(velocity 的 reward 栈)、<a href="README.md">总纲</a></p>
+</blockquote>
+<h2 id="在做什么">在做什么</h2>
+<p>这个文件定义「从坐姿关键帧 gently 站起来」的任务:reset 在坐姿(躯干高度 <code>SIT_Z = 0.060</code>,microduck_standup_env_cfg.py:88),目标是站姿(<code>STAND_Z = 0.115</code>,:94,注释强调这是仿真实测的自然平衡高度,旧值 0.120 比机械可达高 5 mm,逼出过还债式的后仰)。策略从 t=0 就只追一个固定目标——没有轨迹路标、没有阶段时钟,起身的路径让策略自己发现。课程(curriculum,即按训练迭代分阶段改参数的机制)不是用来切分动作的,而是用来<strong>编排难度和惩罚的出场顺序</strong>。</p>
+<h2 id="真实符号">真实符号</h2>
+<p>入场姿态由 <code>set_ground_state</code> 事件控制(microduck_standup_env_cfg.py:701),四类开局按概率混合:坐姿 0.40、站立 0.40、俯卧(face_down)0.20、仰卧(face_up)0.00。课程 <code>ground_state_mix</code>(:861)用 <code>event_param_curriculum</code> 按 0/600/1500/2500 迭代(每迭代 24 步)把混合推到最终的 0.15/0.20/0.30/0.35——难的姿态后出场、且后期占比更高。</p>
+<p>reward 栈分两层。目标层:<code>height_stand</code>(std=0.04 宽高斯,:302)+ <code>height_stand_sharp</code>(std=0.015,提供最后一厘米的梯度,:311)+ <code>height_stand_l1</code>(权重 7.5,注释说明是把旧值 30 除以 4 后的结果,:324)+ <code>standing_composite</code>(高度×直立×姿态的乘法合成分,权重 3.75,:441)。动作层:<code>com_upward_velocity</code>(权重 0.75,只在 0.125 m 以下奖励向上速度——为「起身的动作本身」付钱,防止坐着不动成为局部最优,:351)。</p>
+<p>最讲究的是<strong>惩罚的定时引信</strong>。<code>arrival_damping</code>(到站阻尼,惩罚站定后的躯干角速度)权重从 0 开始,课程 <code>arrival_damping_weight</code> 在 3000 迭代才给 -0.025(:969)。注释记录了两次失败运行的结论:任何在「发现期」就生效的动作税,都会让翻身尝试净收益为负,策略学会躺平——<strong>解药是时机,不是数值</strong>。同一引信模式还用在 <code>head_pose_bias</code>、<code>joint_torque_rate_l2</code> 和 <code>body_pose_tracking</code>(2500 迭代起 ramp 到 4.0,:1022)上。</p>
+<h2 id="设计取舍">设计取舍</h2>
+<p>两处值得咀嚼。其一,2026-07 的「÷4 迁移修复」(:222):任务项总权重从约 49 降到约 12,与 velocity 环境的约 11 对齐——PPO 会归一化优势,绝对刻度无所谓,但正则项(action_rate 等)与任务项的<strong>相对</strong>强度决定 sim2real 质量,此前等权正则在这里实际上弱了 4 倍,导致真机上抖动几乎免费。其二,符号约定陷阱:<code>gentle_rise</code> 用的 <code>trunk_vertical_accel_penalty</code> 本身返回负值,权重必须写<strong>正</strong> 0.005(:373)——曾经写成负数,双重否定变成「奖励摔震」。这类「函数自带负号」的约定是奖励代码里最容易埋雷的地方。</p>
+<h2 id="你带走的收获">你带走的收获</h2>
+<ul>
+<li>课程不只能调难度,还能调度<strong>惩罚的生效时刻</strong>:先让技能被发现,再收紧执行质量。</li>
+<li>多层高斯(宽 std 拉启动 + 窄 std 给末段梯度)是对付「奖励饱和、梯度消失」的标准手法。</li>
+<li>换任务环境时,正则项权重相对任务权重的比例比绝对值重要——对齐总任务质量是可操作的迁移手法。</li>
+<li>起身奖励还引入了命令化的身体控制(6D 命令槽只跟踪 z/roll/pitch 三轴,:466),为真机运行时接口留位。</li>
+</ul>
+<h2 id="延伸">延伸</h2>
+<ul>
+<li>下一对的互逆版本:<a href="/learn/deep-28">解读 28</a>;特技任务:<a href="/learn/deep-29">解读 29</a></li>
+<li>reward/事件函数的实现:<code>microduck-replica/upstream/microduck_rl/src/mjlab_microduck/tasks/mdp.py</code></li>
+<li>本文件:<code>microduck-replica/upstream/microduck_rl/src/mjlab_microduck/tasks/microduck_standup_env_cfg.py</code></li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

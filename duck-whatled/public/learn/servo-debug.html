@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>macOS 舵机调试、ID 设置与图纸查看手册 · 什么鸭 WhatDuck</title>
+<meta name="description" content="SG90 过树莓派的四课实验、总线舵机的供电与共地、Dynamixel Wizard 改 ID 的精确操作,以及 CAD 与电路图在 macOS 上用什么软件看。">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="macOS 舵机调试、ID 设置与图纸查看手册">
+<meta property="og:description" content="SG90 过树莓派的四课实验、总线舵机的供电与共地、Dynamixel Wizard 改 ID 的精确操作,以及 CAD 与电路图在 macOS 上用什么软件看。">
+<meta property="og:url" content="https://duck.whatled.com/learn/servo-debug">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/servo-debug">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">MANUAL 04 · 调试篇 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="macos-舵机调试id-设置与图纸查看手册">macOS 舵机调试、ID 设置与图纸查看手册</h1>
+<blockquote>
+<p>回答三个问题：① Mac 上怎么调试舵机？② 怎么给舵机设置 ID？③ 各类图纸/电路图用什么软件看？<br />
+前置：<a href="新手学习文档.md">新手学习文档</a>（概念）、<a href="进阶学习文档-训练仿真与部署.md">进阶篇</a>（训练与部署）。<br />
+本手册只讲 macOS 实操，所有路径都对应你工作区里的真实文件。</p>
+</blockquote>
+<hr />
+<h2 id="0-一张表先回答全部问题">0. 一张表先回答全部问题</h2>
+<table>
+<thead>
+<tr>
+<th>你想干的事</th>
+<th>硬件怎么连</th>
+<th>Mac 上用什么软件</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>调试 SG90（PWM 舵机）</td>
+<td>Mac 无法直连 GPIO —— 用你手头的 <strong>Pi 2 当代理</strong>，Mac 只负责 <code>ssh</code></td>
+<td>终端（ssh/scp）、VS Code Remote-SSH</td>
+</tr>
+<tr>
+<td>调试 Dynamixel（XL330）</td>
+<td><strong>U2D2</strong>（官方 USB 调试板）+ 独立供电</td>
+<td><strong>Dynamixel Wizard 2.0 有官方 macOS 版</strong>（免费）</td>
+</tr>
+<tr>
+<td>调试 Feetech（STS/HL-1910）</td>
+<td><strong>FE-URT-1</strong>（¥45）等 USB 调试板</td>
+<td>macOS 上用 Python SDK；FD 图形软件是 Windows 的（见 §3.1 的三个替代）</td>
+</tr>
+<tr>
+<td>给总线舵机设 ID</td>
+<td>任意 USB 调试板，<strong>一次只接一只</strong></td>
+<td>Wizard（Dynamixel）或 SDK（Feetech），见 §4</td>
+</tr>
+<tr>
+<td>看原理图/PCB/说明书 PDF</td>
+<td>—</td>
+<td>macOS 自带「预览 Preview」</td>
+</tr>
+<tr>
+<td>打开 .eprj2（嘉立创工程）</td>
+<td>—</td>
+<td>嘉立创 EDA 专业版（有 macOS 客户端，免费）</td>
+</tr>
+<tr>
+<td>打开官方 HAT 的 KiCad 工程</td>
+<td>—</td>
+<td>KiCad 9 for Mac（免费）</td>
+</tr>
+<tr>
+<td>看 STL/STEP 三维文件</td>
+<td>—</td>
+<td>浏览器开 3dviewer.net（零安装）；要测量改 FreeCAD</td>
+</tr>
+</tbody>
+</table>
+<p><strong>一个核心认知先建立</strong>：Mac 在整个项目里的角色是"指挥室"（终端、上位机软件、编译器），不是"接线台"。它没有 GPIO，也永远不要把舵机电源接到 Mac 的 USB 口上。</p>
+<hr />
+<h2 id="1-调试-sg90pi-2-方案本周就能做0">1. 调试 SG90：Pi 2 方案（本周就能做，¥0）</h2>
+<h3 id="11-为什么必须经过-pi">1.1 为什么必须经过 Pi</h3>
+<p>SG90 是 PWM 舵机：它需要一根线上的<strong>精确脉冲</strong>（0.5–2.5ms 脉宽对应角度）来指挥。Mac 没有任何能输出这种脉冲的接口。你的 Pi 2 有 40 个 GPIO，且仓库里已经写好了教学脚本。</p>
+<h3 id="12-准备半小时">1.2 准备（半小时）</h3>
+<ol>
+<li>Pi 2 刷 Raspberry Pi OS（用官方 Imager，刷时设置好用户名密码；没有屏幕就用 Imager 的 "Configure OS" 预开启 SSH）；</li>
+<li>Pi 2 没有无线网卡 —— <strong>插网线</strong>到路由器；</li>
+<li>Mac 上验证连通：</li>
+</ol>
+<pre><code class="language-bash">ssh 你的用户名@raspberrypi.local
+# 解析不了就去路由器后台查 IP，用 ssh 用户名@192.168.x.x
+</code></pre>
+<h3 id="13-接线改线前永远先断电">1.3 接线（改线前永远先断电）</h3>
+<p>照 <a href="../microduck-replica/rl-series/scripts/pi_sg90_bench.py">pi_sg90_bench.py</a> 头注释：</p>
+<pre><code>SG90 橙线(信号) → GPIO 17 / 27 / 22 / 23 / 24（BCM 编号，物理引脚见 pinout.xyz）
+SG90 红线(电源) → 外接 5V≥3A 电源正极     ⚠️ 绝不要接 Pi 的 5V！
+SG90 棕线(地)   → 外接电源负极，并且和 Pi 的 GND 至少连一根线（共地！）
+</code></pre>
+<p>没有 5V 大电流电源？<strong>4 节 AA 电池盒（≈6V）对 SG90 完全安全</strong>（SG90 规格 4.8–6V），而且自带共地问题也简单——电池负极接 Pi 的 GND 即可。</p>
+<h3 id="14-跑四课实验">1.4 跑四课实验</h3>
+<pre><code class="language-bash"># Mac 上把脚本拷到 Pi
+scp ../microduck-replica/rl-series/scripts/pi_sg90_bench.py 用户名@raspberrypi.local:~/
+
+# ssh 进 Pi 后逐课跑
+python3 pi_sg90_bench.py 1   # ① 单舵机扫角：接线和行程对不对
+python3 pi_sg90_bench.py 2   # ② 负载保持：挂 100–200g，听扫齿、摸温度
+python3 pi_sg90_bench.py 3   # ③ 六舵机波浪：供电扛不扛得住
+python3 pi_sg90_bench.py 4   # ④ 开环漂移：命令 90° 后手指捏住输出轴
+</code></pre>
+<p>第 ④ 课是整个台架的灵魂：<strong>你捏住舵机轴，软件读到的"位置"永远是它自己写进去的 0.5——真实角度无人知晓。</strong> 这就是鸭子必须用带编码器的总线舵机的全部理由，亲眼看一次胜过读十遍。</p>
+<p>小技巧：Mac 装 VS Code + Remote-SSH 插件，就能在 Mac 上直接编辑 Pi 里的脚本，体验和本地一样。</p>
+<hr />
+<h2 id="2-总线舵机调试硬件与供电">2. 总线舵机调试：硬件与供电</h2>
+<blockquote>
+<p>适用 XL330（Dynamixel）和 STS3215/HL-1910（Feetech）。这是第 2–3 周买回"USB 调试板 + 1 只总线舵机"之后的事。</p>
+</blockquote>
+<h3 id="21-买哪个调试板">2.1 买哪个调试板</h3>
+<table>
+<thead>
+<tr>
+<th>路线</th>
+<th>调试板</th>
+<th>价格</th>
+<th>macOS 软件</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Dynamixel（保官方模型）</td>
+<td>ROBOTIS <strong>U2D2</strong>（+ 建议配 U2D2 Power Hub 供电）</td>
+<td>≈¥200/套</td>
+<td><strong>Wizard 2.0 官方 Mac 版</strong> ✅</td>
+</tr>
+<tr>
+<td>Feetech（省钱重训）</td>
+<td><strong>FE-URT-1</strong>（飞特官方店）或 ¥22–26 第三方 ST/SC 转接板</td>
+<td>¥22–45</td>
+<td>图形软件是 Windows 的，见下</td>
+</tr>
+</tbody>
+</table>
+<p>来源：<a href="../microduck-replica/docs/电控采购清单.md">电控采购清单</a>（含淘宝实链）、<a href="../microduck-build-tutorial/README.md">Microduck-build-tutorial BOM</a>。</p>
+<p><strong>Feetech 舵机 + 没有图形软件的三个替代</strong>（按省事排序）：<br />
+1. <strong>Python SDK</strong>：Feetech 官方 SCServo SDK（GitHub 上有 Python 版），Mac 终端直接跑，扫 ID、改 ID、读角度几行代码的事；<br />
+2. <strong>在 Pi 上跑</strong>：把调试板插 Pi，用 SDK/串口调试，Mac ssh 过去——和 SG90 台架同一套工作流；<br />
+3. <strong>借一台 Windows 笔记本用一次</strong>：装 Feetech 的 FD 软件设完 ID 就还回去（设置 ID 是一次性工作，借一次不亏）。UTM 虚拟机装 Windows 也能跑但 USB 透传对新手偏玄学，不作为首选。</p>
+<h3 id="22-供电与共地本节最重要">2.2 供电与共地（本节最重要）</h3>
+<p><strong>USB 调试板只传数据，不供电。</strong> 舵机必须独立供电：</p>
+<table>
+<thead>
+<tr>
+<th>台架对象</th>
+<th>供电方案</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1–2 只 XL330</td>
+<td>4×AA 电池盒（6V）✅ 最简单；或 2S 锂电（7.4V，XL330 规格 5.0–7.4V）；或可调电源 6V</td>
+</tr>
+<tr>
+<td>Feetech STS/SCS</td>
+<td>同上，多数规格 6–8.4V，按 datasheet</td>
+</tr>
+<tr>
+<td>SG90</td>
+<td>4×AA 或 5V≥3A</td>
+</tr>
+</tbody>
+</table>
+<p><strong>共地铁律</strong>：调试板（U2D2/FE-URT-1）的 GND 必须和舵机电源的 GND 连通。用 U2D2 Power Hub 则自动完成；手动接线就拿一根杜邦线把电源负极和调试板 GND 连起来。<strong>忘了共地 = 扫描不到舵机或乱码</strong>，这是新手第一大故障。</p>
+<p>上电顺序：接完线 → 万用表通断档确认电源正负没短路 → 先给舵机上电 → 再插 USB。改任何线之前断电。</p>
+<h3 id="23-macos-串口准备一分钟">2.3 macOS 串口准备（一分钟）</h3>
+<pre><code class="language-bash"># 插上 USB 调试板后：
+ls /dev/tty.usb*
+# 应看到 /dev/tty.usbserial-XXXX（U2D2/FTDI 芯片）或 /dev/tty.usbserial-XXXX（FE-URT-1）
+</code></pre>
+<ul>
+<li>没出现 → 换根 USB 线试试（有些线只能充电），再装 <a href="https://ftdichip.com/drivers/">FTDI 官方 VCP 驱动</a>（Apple Silicon 兼容）；</li>
+<li>出现了就别用 <code>screen</code> 命令去调 1Mbps——macOS 的 <code>screen</code> 波特率上限不够，<strong>总线调试一律用 Wizard 或 Python（pyserial 支持 1Mbps）</strong>。</li>
+</ul>
+<hr />
+<h2 id="3-用-dynamixel-wizard-20-调试dynamixel-路线">3. 用 Dynamixel Wizard 2.0 调试（Dynamixel 路线）</h2>
+<ol>
+<li><strong>安装</strong>：ROBOTIS 官网 Support → Software → 下载 <strong>DYNAMIXEL Wizard 2.0 macOS 版</strong>（免费 dmg），拖进应用程序；</li>
+<li><strong>连接</strong>：打开 Wizard → 上方齿轮/Options → 勾选你的端口（<code>/dev/tty.usbserial-XXX</code>）→ 协议勾 <strong>2.0</strong> → 波特率先只勾 <strong>57600</strong> → OK；</li>
+<li><strong>扫描</strong>：点 Scan。<strong>第一次必须用 57600</strong> —— XL330 出厂默认波特率就是它，1Mbps 是你待会儿要改上去的参数。扫不到换波特率再扫；</li>
+<li>找到舵机后左侧出现设备树，点开就是 <strong>Control Table</strong>（一张"寄存器表格"：ID、波特率、当前位置、温度、电压……总线舵机的全部秘密都在这张表里，每一行都能读能写）。</li>
+</ol>
+<p>之后按第 4 节设置 ID。日常调试好用的几行：Control Table 里实时看 <strong>Present Position/Velocity/Temperature/Voltage</strong>，手转舵机轴看位置数字变化——这就是"有反馈"和 SG90 的本质区别， wizard 里一眼就懂。</p>
+<hr />
+<h2 id="4-设置舵机-id重点">4. 设置舵机 ID（重点）</h2>
+<h3 id="41-先懂概念">4.1 先懂概念</h3>
+<p>总线上所有舵机共享一根线，靠 <strong>ID（门牌号）</strong> 区分"这句话是喊谁的"。ID 冲突 = 两只舵机同时应答 = 总线瘫痪。所以有两条铁律：</p>
+<blockquote>
+<p><strong>铁律一：总线上同时只允许存在一只"还没设好 ID"的舵机。</strong><br />
+<strong>铁律二：每设好一只，断电、贴标签，再接下一只。</strong></p>
+</blockquote>
+<p>原因：XL330 和 STS3215 出厂都是 ID=1。如果你把两只出厂舵机一起挂上总线，两只都抢着应答，谁也通信不了，新手会以为板子坏了。</p>
+<h3 id="42-wizard-里改-id-的精确操作">4.2 Wizard 里改 ID 的精确操作</h3>
+<p>在 Control Table 找到这几行（括号内是寄存器地址），逐项改：</p>
+<table>
+<thead>
+<tr>
+<th>项目</th>
+<th>出厂值</th>
+<th>改成</th>
+<th>为什么</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>ID</strong> (3)</td>
+<td>1</td>
+<td>目标 ID（见 4.3 的表）</td>
+<td>门牌号</td>
+</tr>
+<tr>
+<td><strong>Baud Rate</strong> (4)</td>
+<td>57600</td>
+<td><strong>1000000</strong></td>
+<td>运行时全总线 1Mbps</td>
+</tr>
+<tr>
+<td><strong>Return Delay Time</strong> (5)</td>
+<td>250</td>
+<td><strong>0</strong></td>
+<td>出厂 250=500µs 延迟，16 台设备一 tick 白吃 8ms（40% 预算！），官方运行时要求写 0（出处：<code>duck-control/src/model.rs</code>）</td>
+</tr>
+<tr>
+<td>PWM Slope</td>
+<td>255</td>
+<td>255（不用改）</td>
+<td>推荐参数</td>
+</tr>
+<tr>
+<td><strong>Shutdown</strong> (18)</td>
+<td>含 Input Voltage Error</td>
+<td><strong>去掉电压错误触发</strong></td>
+<td>电池带载电压波动会误停机（出处：build-tutorial README）</td>
+</tr>
+</tbody>
+</table>
+<p>改完 ID 后 Wizard 会用新 ID 重连。<strong>断电 → 在舵机机身贴标签写上 ID → 接下一只出厂舵机 → 重复。</strong> 15 只大约一个傍晚设完，别偷懒跳过贴标签——两周后你不会记得哪只是 13 号。</p>
+<h3 id="43-目标-id-表两条路线选一条就别混用">4.3 目标 ID 表（两条路线，选一条就别混用）</h3>
+<p><strong>官方/复刻路线</strong>（Radxa Zero 3W + 官方 Rust 运行时——你的路线）：</p>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>部位</th>
+<th>ID</th>
+<th>部位</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>10–14</td>
+<td>右腿（髋yaw/roll/pitch、膝、踝）</td>
+<td>20–24</td>
+<td>左腿（同序）</td>
+</tr>
+<tr>
+<td>30–34</td>
+<td>颈/头 yaw·roll·pitch/嘴</td>
+<td>200</td>
+<td>IMU 板（自己画的 imu_to_dxl，不是舵机）</td>
+</tr>
+</tbody>
+</table>
+<p>出处：<a href="../microduck-replica/docs/硬件规格速查.md">硬件规格速查</a>。</p>
+<p><strong>平价教程路线</strong>（Pi Zero 2W + OpenRB-150，仅作对照）：ID 1–15（1=右踝…10=左踝…11–14=头颈，15=嘴），出处见 <a href="../microduck-build-tutorial/README.md">Microduck-build-tutorial</a>。</p>
+<p>装错表的后果：部署代码按 ID 找关节，表混了 = 左腿当成右腿 = 一上电就劈叉。</p>
+<h3 id="44-feetech-舵机设-id">4.4 Feetech 舵机设 ID</h3>
+<p>同样一次一只（出厂 ID 也是 1）。FD 软件里直接改 ID/波特率；Python SDK 里调 <code>WriteByte(ID, 5, new_id)</code> 一类的接口（不同 SDK 封装略有差异，照其 examples/ping 改）。飞特出厂 Return Delay 已是 0（出处：<a href="../microduck-replica/docs/电控采购清单.md">电控采购清单</a> 注释）， baud 出厂 1Mbps，要改的主要就是 ID。改完同样贴标签。</p>
+<h3 id="45-sg90-没有-id">4.5 SG90 没有 ID</h3>
+<p>PWM 舵机每只独占一根信号线，"地址"就是它插的 GPIO 脚号（17/27/22/23/24/25）——这也是 PWM 方案 15 只舵机要拉 15 根线、总线方案只要一根线的直观区别。</p>
+<hr />
+<h2 id="5-图纸与电路图文件类型-macos-软件">5. 图纸与电路图：文件类型 → macOS 软件</h2>
+<p>你仓库里的图纸共 8 种格式，一一对应：</p>
+<table>
+<thead>
+<tr>
+<th>文件（去哪找）</th>
+<th>是什么</th>
+<th>macOS 怎么开</th>
+<th>要装软件吗</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>microduck-replica/hardware/imu_to_dxl/imu_to_dxl-原理图.pdf</code> / <code>-PCB.pdf</code></td>
+<td>原理图/PCB 图</td>
+<td><strong>「预览」双击即开</strong></td>
+<td>❌</td>
+</tr>
+<tr>
+<td><code>microduck-replica-cad/安装说明书/microduck装配安装说明书.pdf</code></td>
+<td>21 页装配说明书</td>
+<td>预览</td>
+<td>❌</td>
+</tr>
+<tr>
+<td><code>microduck-replica/assets/hw/Microduck硬件图集.pdf</code></td>
+<td>7 张 A3 硬件图集</td>
+<td>预览</td>
+<td>❌</td>
+</tr>
+<tr>
+<td><code>microduck-replica/hardware/imu_to_dxl/imu_to_dxl.eprj2</code></td>
+<td>嘉立创 EDA 专业版工程（可编辑原理图+PCB+3D）</td>
+<td><strong>嘉立创 EDA 专业版</strong>（官网有 macOS 客户端），或网页版导入</td>
+<td>免费</td>
+</tr>
+<tr>
+<td>官方 HAT（github <code>pollen-robotics/elec_RPI_Robot_HAT</code>）</td>
+<td>KiCad 9 工程 + Gerber</td>
+<td><strong>KiCad 9 for Mac</strong>（免费）；Gerber 也可拖进网页 tracespace.io 看</td>
+<td>免费</td>
+</tr>
+<tr>
+<td><code>cad/*.stl</code>、<code>print/打印件/*.stl</code></td>
+<td>三维零件/装配体</td>
+<td><strong>浏览器开 3dviewer.net 拖入</strong>（零安装）；要测量/剖切/改动 → <strong>FreeCAD</strong>（免费）</td>
+<td>浏览器即可</td>
+</tr>
+<tr>
+<td><code>microduck-replica/hardware/imu_to_dxl/imu_to_dxl-PCB.step</code></td>
+<td>电路板 3D 模型</td>
+<td>3dviewer.net 或 FreeCAD</td>
+<td>浏览器即可</td>
+</tr>
+<tr>
+<td><code>microduck-replica-cad/SolidWorks 源文件</code></td>
+<td>可编辑装配体</td>
+<td><strong>不用装</strong>——组件图已出成 PNG、说明书出成 PDF；非要打开装 <strong>eDrawings for Mac</strong>（官方免费查看器，只能看不能编）</td>
+<td>可不装</td>
+</tr>
+<tr>
+<td><code>*.md</code>（接线表/BOM/构建日志）</td>
+<td>文本文档</td>
+<td>VS Code（推荐，装个 Markdown 预览）</td>
+<td>推荐</td>
+</tr>
+<tr>
+<td><code>robot_walk.xml</code> 等 MJCF</td>
+<td>仿真模型（文本 XML）</td>
+<td>VS Code 看结构 + <code>uv run scripts/infer_policy.py</code> 在 MuJoCo 里看动态</td>
+<td>已有</td>
+</tr>
+</tbody>
+</table>
+<p><strong>建议的阅读顺序</strong>（配合新手篇第 5、6 节的读图五步法）：先看 <a href="../microduck-replica/docs/硬件规格速查.md">硬件规格速查</a> 的系统框图（知道有哪些块）→ 接线表（知道每根线去哪）→ 原理图 PDF（块内怎么连）→ 嘉立创 EDA 打开工程（对照 3D 看 PCB）→ 装配爆炸图 PNG（机械侧）→ 21 页说明书（装配顺序）。</p>
+<hr />
+<h2 id="6-一个周末的实操串联">6. 一个周末的实操串联</h2>
+<p><strong>周六（SG90 日，¥0）</strong><br />
+1. Pi 2 刷机 + 网线 + ssh 通（1 小时）；<br />
+2. 接线四要点自查：信号脚号、外接供电、共地、断电改线（30 分钟）；<br />
+3. 跑四课脚本，第 ④ 课"开环漂移"务必做（1.5 小时）；<br />
+4. 构建日志记三条观察。</p>
+<p><strong>周日（读图日，¥0）</strong><br />
+1. 「预览」打开硬件图集 PDF，看懂五个模块（40 分钟）；<br />
+2. 接线表 + 原理图 PDF 对照，把 23 个网络里电源类（VDD_BUS/VDD_F/+3V3/GND）四个吃透（1 小时）；<br />
+3. 3dviewer.net 打开一个腿部 STL 转着看，找 M2 过孔和轴承座（30 分钟）；<br />
+4. 有兴致：装嘉立创 EDA 打开 eprj2，看 PCB 3D 视图（30 分钟）。</p>
+<p><strong>下周再花钱</strong>：USB 调试板 + 1 只总线舵机（§2），按第 3–4 节扫描、读 Control Table、设 ID、贴标签。</p>
+<hr />
+<h2 id="7-故障排查表">7. 故障排查表</h2>
+<table>
+<thead>
+<tr>
+<th>症状</th>
+<th>按顺序查</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ls /dev/tty.usb*</code> 什么都 没有</td>
+<td>换 USB 线（很多线只能充电）→ 换口 → 装 FTDI VCP 驱动</td>
+</tr>
+<tr>
+<td>Wizard 扫描不到舵机</td>
+<td>① 舵机电源有没有独立供？② 调试板和电源<strong>共地</strong>了吗？③ 波特率勾对了吗（新舵机 57600，设过的 1000000）？④ 总线上是不是挂了两只同 ID 舵机？⑤ 数据线插反没（Dynamixel 3pin 有方向）</td>
+</tr>
+<tr>
+<td>舵机烫手/发抖</td>
+<td>立刻断电。查：供电电压超规格没、是否堵转（被结构卡死）、ID 冲突</td>
+</tr>
+<tr>
+<td>Pi 一动舵机就重启</td>
+<td>供电不足——舵机电源绝不能取自 Pi 5V，独立 5V≥3A 或 4×AA</td>
+</tr>
+<tr>
+<td>Wizard 能连，读数乱跳</td>
+<td>共地不良（最常见）、杜邦线接触、波特率勉强</td>
+</tr>
+<tr>
+<td><code>screen</code> 连不上 1Mbps</td>
+<td>正常，macOS screen 波特率上限不够——用 Wizard 或 Python</td>
+</tr>
+<tr>
+<td>改了 ID 但重启后又变回去</td>
+<td>ID 是写 EEPROM 的，Wizard 改完要确认写入成功（表里回读一下）；某些 SDK 要单独发 save/REG WRITE+ACTION</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<p><em>到这里，"Mac + Pi 2 + 一只舵机 + 一叠 PDF"就是你全部的实验环境——这套配置已经能完成台架、设 ID、读图三件事，而这些正是舵机大单到货前唯一需要准备的能力。</em></p>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

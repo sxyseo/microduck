@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>第 14 课 · 单变量 A/B 实验:像科学家一样调参 · 什么鸭 WhatDuck</title>
+<meta name="description" content="改了参数,结果变好变坏怎么判断?这一课教你强化学习版实验方法:一次只改一个变量、先预注册假设、跑 A/B 对照、写下有边界的结论——全程用本仓库 2026-09-06 的真实实验 ">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="第 14 课 · 单变量 A/B 实验:像科学家一样调参">
+<meta property="og:description" content="改了参数,结果变好变坏怎么判断?这一课教你强化学习版实验方法:一次只改一个变量、先预注册假设、跑 A/B 对照、写下有边界的结论——全程用本仓库 2026-09-06 的真实实验 ">
+<meta property="og:url" content="https://duck.whatled.com/learn/course-14">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/course-14">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">LESSON 14 · 阶段 D · 训练进阶 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="第-14-课-单变量-ab-实验像科学家一样调参">第 14 课 · 单变量 A/B 实验:像科学家一样调参</h1>
+<blockquote>
+<p><strong>这一课解决什么问题</strong>:改了参数,结果变好变坏怎么判断?这一课教你强化学习版实验方法:一次只改一个变量、先预注册假设、跑 A/B 对照、写下有边界的结论——全程用本仓库 2026-09-06 的真实实验 exp001 演示。</p>
+<p><strong>前置</strong>:<a href="/learn/course-13">第 13 课</a> 与 <a href="/learn/course-06">第 06 课</a>。</p>
+</blockquote>
+<hr />
+<h2 id="1-为什么一次只改一个变量">1. 为什么一次只改一个变量</h2>
+<p>同时改脚高目标、速度上限和学习率,结果变好了——功劳算谁的?变坏了——锅算谁的?都不知道。这和种花一样:同时换土又换肥料,花开得再好你也学不到经验。强化学习训练一次成本不低(哪怕 exp001 那种小实验也要几分钟),让每次训练只回答一个问题,是最省钱的用法。</p>
+<p>所以呢?"只改一处"不是风格偏好,而是让每一次训练都能产出可用结论的前提。</p>
+<h2 id="2-第-0-步预注册假设">2. 第 0 步:预注册假设</h2>
+<p>预注册 = <strong>在跑实验之前</strong>,把预期白纸黑字写下来。指南第 7.1 节给了一个真实例子,当时鸭子只会贴地碎步:</p>
+<pre><code class="language-text">现象:air_time_mean 长期约 0.04 s,air_time 奖励近零。
+假设:0.125 s 的奖励门槛太高,策略从未收到抬脚正反馈。
+只改:threshold_min 0.125 → 0.04。
+不改:速度范围、脚高目标、PPO、域随机化、随机种子。
+</code></pre>
+<p>先写预期的最大好处是防"事后诸葛":结果出来后,人总能给任何结果找到解释;而预注册的假设若被推翻,那才是真正学到了东西。</p>
+<h2 id="3-真实案例exp0018-分钟跑完的-ab">3. 真实案例:exp001,8 分钟跑完的 A/B</h2>
+<p>构建日志 2026-09-06 条目记录了一次教科书式的小实验:</p>
+<ul>
+<li><strong>A 组</strong>:IMU 观测随机化 ON;<strong>B 组</strong>:OFF(只改一行补丁,跑完还原);</li>
+<li>规模:各 100 迭代 × 64 环境。原以为要跑一晚,实测<strong>单组仅 4 分钟</strong>(约 2.3 s/迭代),本机 CPU 8 分钟跑完两组;</li>
+<li>结果:B 组(世界更乖)末段 reward 反超,<strong>1.014 vs 0.801</strong>,其余四项指标几乎重合;</li>
+<li>最妙的是:预注册时写好的预案命中了——"100 迭代只能得出前期动力学差异"。没人慌,也没人乱下结论。</li>
+</ul>
+<p>所以呢?小实验跑得便宜,预注册让你赢得体面:结论早就写好了,数据只是来对答案的。</p>
+<h2 id="4-结论要有边界随机化的收益怎么看">4. 结论要有边界:随机化的收益怎么看</h2>
+<p>B 组 reward 领先,能说"随机化没用"吗?不能。随后的扰动测试 exp001b(用 <code>rl-series/scripts/eval_imu_robustness.py</code> 扫全角度区间)显示:A 组更平稳,最大衰减 -4.6% vs B 的 -6.0%,10° 起 A 反超——但 1–2% 的差异在<strong>单个随机种子的噪声</strong>内,100 迭代尺度下的诚实结论是"不可测",留待长训练后复测。连回放里 A 摔 1 次、B 摔 4 次这种"肉眼证据",日志也标注了"属噪声,别过度解读"。</p>
+<p>所以呢?exp001 的完整结论是:<strong>短期动力学差异可见(B 前期学得快);随机化的鲁棒性收益,要用扰动测试在更长训练上看</strong>。结论不带边界,就是谣言的开始。</p>
+<h2 id="5-每个实验必须记录什么">5. 每个实验必须记录什么</h2>
+<p>指南 7.2 节的清单,<code>docs/microduck-30day/README.md</code> 的记录原则与之同源:</p>
+<pre><code class="language-text">[ ] git commit 与 diff(改了哪几行)
+[ ] task ID、环境数、迭代数、随机种子
+[ ] 唯一变量是什么
+[ ] A/B 两组的 checkpoint 与 run 目录
+[ ] 同一组命令下的回放
+[ ] 结论、是否回滚、下一步
+</code></pre>
+<p><code>docs/microduck-30day/experiments/experiment-log.csv</code> 的每一行(lesson-01、expD、expE)就是按这个精神记的。另有一个很容易踩的坑(指南 7.3 节):检查日志里每个惩罚项的贡献是否始终 ≤ 0——惩罚函数符号配错权重,训练会静默地朝反方向走。</p>
+<h2 id="动手练习20-分钟">动手练习(20 分钟)</h2>
+<p>仿照第 2 节的格式,为"把 <code>foot_swing_height.target_height</code> 从 0.02 m 提到 0.03 m"写一份预注册:现象、假设、只改什么、不改什么、预期哪个指标动。写完先别跑,下一课正好要用。</p>
+<h2 id="自查清单">自查清单</h2>
+<ul>
+<li>[ ] 我能说清为什么一次只改一个变量</li>
+<li>[ ] 我能写出一份含"只改/不改"清单的预注册假设</li>
+<li>[ ] 我能复述 exp001 的结果(1.014 vs 0.801)以及它为什么不能否定随机化</li>
+<li>[ ] 我知道一个实验记录清单里至少有哪六项</li>
+</ul>
+<h2 id="下一课预告">下一课预告</h2>
+<p>为什么"世界更乖"的 B 组反而可能是坑?第 15 课讲 sim2real 与域随机化:仿真和现实差在哪、怎么故意把仿真做"糙"、以及 expD 那次"指标变好但步态没成"的教训。</p>
+<h2 id="延伸资源">延伸资源</h2>
+<ul>
+<li><code>microduck-replica/docs/训练参数调整与新动作开发指南.md</code> 第 7 节(单变量 A/B 实验原版方法论)</li>
+<li><code>microduck-replica/构建日志.md</code> 2026-09-06 三条目(exp001 / exp001b / 3D 回放)</li>
+<li>实验总表:<code>docs/microduck-30day/experiments/experiment-log.csv</code></li>
+<li>系统学实验与算法:<a href="https://huggingface.co/learn/deep-rl-course/unit0/introduction">Hugging Face 深度强化学习课</a></li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

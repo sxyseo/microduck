@@ -1,0 +1,5 @@
+id,date,task,device,num_envs,steps_per_env,iterations,run_dir,checkpoint,onnx,status,notes
+lesson-01,2026-09-05,Mjlab-Velocity-Flat-MicroDuck,cpu,8,24,5,microduck-replica/upstream/microduck_rl/logs/rsl_rl/velocity/2026-09-05_00-14-47_lesson-01,model_4.pt,microduck-replica/upstream/microduck_rl/logs/rsl_rl/velocity/2026-09-05_00-14-47_lesson-01/lesson-01-explicit.onnx,passed,pipeline smoke test; not a usable walking policy
+
+expD-m4-512,2026-09-07,Mjlab-Velocity-Flat-MicroDuck,cpu,512,24,12500->,microduck-replica/upstream/microduck_rl/logs/rsl_rl/velocity/2026-09-07_00-06-08_expD-m4-512,model_12500.pt,,superseded,512env续训自expC/2198；ep_len 315->744站稳但步态未成(air_time_mean卡0.04s,shuffle局部最优)
+expE-gait-ramp,2026-09-09,Mjlab-Velocity-Flat-MicroDuck,cpu,512,24,12500->50000,microduck-replica/upstream/microduck_rl/logs/rsl_rl/velocity/2026-09-09_*_expE-gait-ramp,,,running,feet_air_time threshold_min 0.125->0.04 让步态奖励可见；air_time_mean>0.10后收紧回0.125

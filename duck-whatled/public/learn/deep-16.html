@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>解读 16 · odometry/lib.rs:里程估计 · 什么鸭 WhatDuck</title>
+<meta name="description" content="odometry/src/lib.rs(348 行)">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="解读 16 · odometry/lib.rs:里程估计">
+<meta property="og:description" content="odometry/src/lib.rs(348 行)">
+<meta property="og:url" content="https://duck.whatled.com/learn/deep-16">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/deep-16">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">DEEP 16 · 第二辑 · 感知与系统服务 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="解读-16-odometrylibrs里程估计">解读 16 · odometry/lib.rs:里程估计</h1>
+<blockquote>
+<p><strong>解读对象</strong>:<code>odometry/src/lib.rs</code>(348 行)<br />
+<strong>需要的前置</strong>:<a href="/learn/deep-13">解读 13</a>;第一辑《解读 06》(IMU)有助于理解输入。</p>
+</blockquote>
+<h2 id="没有轮子锚住一只脚">没有轮子,锚住一只脚</h2>
+<p>双足机器人没有轮编码器可积。这份代码(lib.rs:1-21)是原型运行时接触式里程计的移植,源自 Rhoban 的人形 <code>model_service</code>。核心想法一句话:任一时刻,一只脚底上的某个点就是机器人与大地的全部接触——把它锚定在世界系(平地,故其世界 Z 恒为 0,X/Y 即它成为锚那一刻的位置),躯干朝向由 IMU 给出,躯干的世界位置由前向运动学反推。换步时,另一只脚的某个角落降到锚之下,锚就搬过去、并保留该角已有的世界 X/Y——估计因此<strong>永不跳变</strong>。</p>
+<p>实现是一个小而有状态的类型 <code>Odometry</code>(lib.rs:47):锚在哪只脚(<code>anchor_foot</code>)、锚在脚底的局部坐标(<code>anchor_local</code>)、锚的世界 X/Y(<code>anchor_xy</code>),外加一个待确认候选 <code>pending</code>。每帧 <code>update</code>(lib.rs:104)只做三件事:把关节角经 <code>joint_map</code> 写进模型序数组(嘴关节映射为 <code>None</code>,lib.rs:50-52——嘴动不了腿);两只脚各做一次 FK(lib.rs:114-117;原型对每个角重走整条腿链,每 tick 9 次链求值,现在 2 次);重投影。</p>
+<h2 id="位置是差出来的换锚要确认">位置是差出来的,换锚要确认</h2>
+<p><code>reproject</code>(lib.rs:183-191)就是那句"差出来":躯干位置 = 锚的 X/Y 减去世界系下躯干→接触向量,<code>Z = -contact_z</code>。<code>lowest_corner</code>(lib.rs:195-220)扫两只脚各四个角(角点由 <code>SOLE_HALF_LEN = 0.0270</code>、<code>SOLE_HALF_WIDTH = 0.0206</code> 构成,lib.rs:31-32——注释明说是 v1.5 鞋底 bbox 的占位值,alpha 的 <code>sole_left.stl</code> 尚未实测,待验证),低于 <code>-SWITCH_MARGIN</code>(−0.010 m,lib.rs:37)者获得竞标资格。</p>
+<p>但竞标不等于当选:<code>SWITCH_CONFIRM_TICKS = 2</code>(lib.rs:42,50 Hz 下即 40 ms)要求候选连续两帧保持最低,FK 与 IMU 的单帧毛刺就偷不走锚。测试 <code>the_anchor_switches_only_after_the_claim_holds</code>(lib.rs:279)专门演这一条:单帧滚转不换脚,连续保持才换。<strong>状态切换加时间确认</strong>,是对抗传感器毛刺最廉价通用的模式。</p>
+<p>两个诚实的细节:</p>
+<ul>
+<li>朝向完全取 IMU 的 yaw(lib.rs:155),没有磁力计,世界系就是"开机时机器人看着的方向"(lib.rs:19-21)——对相对运动的消费者够用,而且明说了。</li>
+<li>首帧 <code>needs_init</code>(lib.rs:119-123)用实际启动姿态播种锚,让躯干从 (0,0) 起步,而不是带着脚的偏移。</li>
+</ul>
+<p>测试的取向也值得学:<code>standing_still_stays_at_the_origin</code>(lib.rs:239)防"常量输入积成漂移";<code>stance_leg_motion_translates_the_trunk_continuously</code>(lib.rs:309)要求每 tick 位移小于 2 cm——连续性本身是断言。</p>
+<h2 id="你带走的收获">你带走的收获</h2>
+<ul>
+<li>接触式里程计 = FK + IMU + "锚定最低脚底点",无轮机器人照样有位置。</li>
+<li>任何"换状态"的决定都可加 N 帧确认,成本低到不该省。</li>
+<li>"站着不动必须原地不动"是一条防积分漂移的关键测试。</li>
+<li>占位常量要写明占位状态与出处,否则会活成永久事实。</li>
+</ul>
+<h2 id="延伸">延伸</h2>
+<ul>
+<li><a href="/learn/deep-13">解读 13</a>、<a href="/learn/deep-15">解读 15</a>:<code>Model::site_pose</code> 的来处。</li>
+<li>第一辑《解读 06》:IMU 四元数如何产生。</li>
+<li>源码:<code>odometry/src/lib.rs</code>、<code>kinematics/src/lib.rs</code>。</li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

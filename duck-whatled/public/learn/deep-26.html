@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>解读 26 · mdp.py(下):reward 与事件函数库 · 什么鸭 WhatDuck</title>
+<meta name="description" content="microduck-replica/upstream/microduck_rl/src/mjlab_microduck/tasks/mdp.py(7188 行),抽读 reward">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="解读 26 · mdp.py(下):reward 与事件函数库">
+<meta property="og:description" content="microduck-replica/upstream/microduck_rl/src/mjlab_microduck/tasks/mdp.py(7188 行),抽读 reward">
+<meta property="og:url" content="https://duck.whatled.com/learn/deep-26">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/deep-26">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">DEEP 26 · 第三辑 · 训练代码 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="解读-26-mdppy下reward-与事件函数库">解读 26 · mdp.py(下):reward 与事件函数库</h1>
+<blockquote>
+<p><strong>解读对象</strong>:<code>microduck-replica/upstream/microduck_rl/src/mjlab_microduck/tasks/mdp.py</code>(7188 行),抽读 reward / event / curriculum 相关<br />
+<strong>需要的前置</strong>:<a href="/learn/deep-24">解读 24</a>(这些函数在配置里被谁引用);event term = reset/interval 时机执行的事件项</p>
+</blockquote>
+<h2 id="模块级补丁给-rewardmanager-打-nan-疫苗">模块级补丁:给 RewardManager 打 NaN 疫苗</h2>
+<p>mdp.py 开头就干了件大事:32–40 行把 <code>RewardManager.compute</code> 整体替换为<br />
+<code>_nan_safe_reward_compute</code>——mjlab 在重置<strong>之前</strong>算奖励,物理爆炸那一步的奖励是 NaN,<br />
+会沿"奖励→优势→损失→梯度→std 变负→torch.normal 崩溃"传播;补丁对结果和 <code>_episode_sums</code><br />
+就地 <code>nan_to_num_</code>。50 行起对 <code>PPO.compute_returns</code> 做第二层补丁:课程跳变时优势归一化<br />
+可能爆掉,先清 NaN/Inf 再归一化。猴子补丁(monkeypatch = 运行时替换库函数)写在模块顶部,<br />
+import 即生效,所有任务共享。</p>
+<h2 id="终止与重置事件">终止与重置事件</h2>
+<p><code>robot_state_is_nan</code>(963–1014 行):检查 <code>joint_pos/joint_vel</code> 加根体四个状态量是否有限,<br />
+再按 <code>sensor_names</code> 检查接触力——注释里写明这是 2026-08-21 一次真实崩溃的修复(接触力先于<br />
+关节状态爆炸,而 critic 的 <code>foot_contact_forces</code> 观测吃到了它)。<code>reset_action_history</code><br />
+(229–313 行)是 reset 模式事件,把 <code>_prev_leg_actions</code>、<code>_prev_neck_actions</code> 及加速度用的<br />
+两级缓存重置为当前动作——不重置的话,回合开头的 action_rate 惩罚会凭空出现尖峰。</p>
+<h2 id="面向-bam-执行器的域随机化">面向 BAM 执行器的域随机化</h2>
+<p><code>randomize_delayed_actuator_gains</code>(3146–3194 行)不碰 MuJoCo 模型,而是调执行器自己的<br />
+<code>reset_gains</code>/<code>set_gains</code>,每关节采样后<strong>按环境平均成单标量</strong>(执行器只接受全局缩放);<br />
+<code>randomize_bam_friction</code>(3212–3240 行)对 <code>FrictionDRBamActuator</code> 先复位再采样<br />
+<code>friction_scale</code>——两者都遵守"先恢复标称、再采新值"防累积。<code>expand_bam_friction_fields</code><br />
+(3197–3209 行)是个<strong>带装饰器的空函数</strong>:<code>@requires_model_fields("dof_frictionloss",
+"dof_damping")</code> 的唯一作用是让 mjlab 把这两个模型字段按世界展开,BAM 每步要写它们。</p>
+<h2 id="两个明星奖励函数">两个明星奖励函数</h2>
+<p><code>head_pose_tracking</code>(5128–5192 行):<code>mean(exp(-(err/std)²))</code> 对 4 个颈/头关节取均值——<br />
+均值而非平方和,单关节误差大时其余关节仍有梯度;可选 <code>fine_std</code> 混入窄高斯定价小误差;<br />
+测量角在齿隙模型上读输出侧(<code>+ qpos[backlash]</code>),与编码器观测一致。它还会把关节 id 缓存到<br />
+<code>env._head_pose_neck_ids</code> 等属性,与 <code>head_pose_bias_penalty</code>(5229–5317 行)共享。<br />
+后者是 2026-08-20"头部下垂修复":对 <strong>1 s EMA 后的误差</strong>取 L1(<code>-mean(|EMA(err)|)</code>),<br />
+让走路不可避免的振荡在平均中抵消,只罚可逃逸的直流偏垂;可选的 smoothstep 门控<br />
+(<code>gate_height_low</code>/<code>gate_tilt_full_deg=20.0</code>/<code>gate_tilt_zero_deg=45.0</code>)让摔倒/起身阶段<br />
+不预充误差,5309–5310 行还在回合头两步清零 EMA。</p>
+<h2 id="课程函数改活着的cfg不是-envcfg">课程函数:改"活着的"cfg,不是 env.cfg</h2>
+<p><code>reward_weight</code>(3442–3461 行)按 <code>weight_stages</code> 分档改奖励权重;<code>com_range_curriculum</code><br />
+(3464–3501 行)改事件范围;<code>standing_envs_curriculum</code>(3295–3332 行)改站立环境比例。<br />
+三者的注释是同一课:<code>EventManager</code>/<code>RewardManager</code> 初始化时 deepcopy 了配置,改<br />
+<code>env.cfg.events</code> 是无效操作,必须通过 <code>get_term_cfg</code> 拿<strong>经理持有的活配置</strong>。<br />
+<code>VelocityCommandCommandOnly._resample_command</code>(4508–4533 行)则展示命令类怎么当奖励<br />
+基础设施用:按 <code>rel_turn_in_place_envs</code> 抽签,把这些环境的线速度清零、偏航强制<br />
+<code>[0.4·max, max]</code>,并从站立集合里摘除。</p>
+<h2 id="你带走的收获">你带走的收获</h2>
+<ul>
+<li>NaN 防护要<strong>成体系</strong>:奖励补丁 + 终止检查 + 观测消毒三层,单点防护挡不住传播链。</li>
+<li>随机化函数统一"先复位再采样",累积污染是 DR 最常见的暗坑。</li>
+<li>好的奖励塑形常是"换基"而非"加码":瞬时误差改 EMA 误差,问题从"不可逃逸税"变成"可逃逸偏置"。</li>
+<li>课程函数写法固定:分档 dict + <code>common_step_counter</code> 比较 + 改活配置,五分钟就能照抄一门新课。</li>
+</ul>
+<h2 id="延伸">延伸</h2>
+<ul>
+<li>这些函数被引用的位置:<a href="/learn/deep-22">解读 22</a>、<a href="/learn/deep-24">解读 24</a>;</li>
+<li>观测侧同类函数:<a href="/learn/deep-25">解读 25</a>;</li>
+<li>本地路径:<code>microduck-replica/upstream/microduck_rl/src/mjlab_microduck/tasks/mdp.py</code></li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

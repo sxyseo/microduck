@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>解读 28 · sitstand 配置:坐下与站立的对称性 · 什么鸭 WhatDuck</title>
+<meta name="description" content="microduck-replica/upstream/microduck_rl/src/mjlab_microduck/tasks/microduck_sitstand_env_c">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="解读 28 · sitstand 配置:坐下与站立的对称性">
+<meta property="og:description" content="microduck-replica/upstream/microduck_rl/src/mjlab_microduck/tasks/microduck_sitstand_env_c">
+<meta property="og:url" content="https://duck.whatled.com/learn/deep-28">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/deep-28">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">DEEP 28 · 第三辑 · 训练代码 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="解读-28-sitstand-配置坐下与站立的对称性">解读 28 · sitstand 配置:坐下与站立的对称性</h1>
+<blockquote>
+<p><strong>解读对象</strong>:<code>microduck-replica/upstream/microduck_rl/src/mjlab_microduck/tasks/microduck_sitstand_env_cfg.py</code>(929 行)<br />
+<strong>需要的前置</strong>:<a href="/learn/deep-27">解读 27</a>(standup 的单方向课程)、<a href="README.md">总纲</a></p>
+</blockquote>
+<h2 id="在做什么">在做什么</h2>
+<p>27 篇的 standup 只会站起来;这个文件把坐与站合成<strong>一个策略、两个方向</strong>:命令槽 twist 的第一维被征用为姿势标志——<code>cmd = [sit_flag, 0, 0]</code>,0=站、1=坐,全零即部署时的怠速态(microduck_sitstand_env_cfg.py:1-8)。命令由 <code>SitStandCommandCfg</code>(:576)以停留时间 <code>POSTURE_DWELL_S = (3.5, 6.5)</code> 秒(:87)为周期重采样翻转,12 秒的一集(<code>EPISODE_LENGTH_S = 12.0</code>,:83)至少含一次完整「坐→歇→起→歇」循环。reset 状态(50% 站 / 50% 坐)与命令独立,四个组合(坐下、站起、保持坐、保持站)都被等概率训练(:619)。</p>
+<h2 id="真实符号">真实符号</h2>
+<p>对称性体现在每个任务 reward 都是 <code>posture_*</code> 家族:它们读当前命令,<strong>逐环境</strong>选择目标——坐是 <code>SIT_Z = 0.060</code> + <code>SITTING_TARGET_OVERRIDES</code>(膝 ±1.35、髋俯仰 ∓0.4079,:101),站是 <code>STAND_Z = 0.115</code> + HOME。于是 <code>posture_height_gaussian</code>(std 0.04 宽层 :285 / std 0.015 尖层 :295)、<code>posture_height_l1</code>(权重 6.0,取 sit 的 5.0 与 standup 的 7.5 之间,:308)在两个方向上共用同一套形状。</p>
+<p>防摔的对称同样成对:<code>MAX_DESCENT_SPEED = 0.05</code> 与 <code>MAX_RISE_SPEED = 0.08</code>(:144-145),下降封顶 <code>descent_speed</code> 从 0 步就是正权重 10(函数自返回负值,:352),上升封顶 <code>rise_speed</code> 权重 0 起步、1500 迭代才 ramp 到 5(:862)——又是 27 篇那条「发现期不上税」的铁律,注释还记录了推后的原因:起身需要几步 <code>vz &gt; 0.08</code> 的蹬地爆发,过早封顶会把半成品的起身卡死在头朝前的折叠姿态里(:855-861)。</p>
+<p>最巧妙的机制是 <code>POSTURE_RAMP_S = 2.0</code>(:137):命令项内部把目标在坐/站之间以 2 秒斜坡滑动,posture 奖励追踪的是<strong>移动目标</strong>。这是防摔的主装置——二值目标下,提前到站可以白吃每步约 7 的目标奖励,摔坐一次只亏约 50 的有限代价,「摔」比「稳」赚 7 倍;有了斜坡,冲到目标前面意味着斜坡剩余时间里高度/合成分全为零,跟踪慢设定点才是 argmax(:128-137)。</p>
+<h2 id="设计取舍">设计取舍</h2>
+<p>另一个隐蔽工程点在物理层:全身碰撞模型的坐姿让躯干、折叠的腿和头同时贴地,默认 <code>nconmax=35</code>、solver 10 次迭代会在坐下的瞬间撑爆接触求解器产生 NaN,而 <code>nan_state</code> 终止等于惩罚「坐下」这个动作本身——策略刚学会又忘掉。修复是 <code>cfg.sim.nconmax = 200</code>、<code>iterations = 30</code>、<code>ls_iterations = 50</code>(:643-645)。这是「训练信号被物理引擎 bug 污染」的典型案例:先确认 NaN 不是任务失败,再去调 reward 就是白费劲。头撞地在这里不罚(sit 环境罚):过渡动作用头当第三支点被显式允许,靠 <code>posture_composite</code> 的 <code>head_std = 0.40</code> 因子(:434)只禁止「歇着时头耷拉到地」。</p>
+<h2 id="你带走的收获">你带走的收获</h2>
+<ul>
+<li>互逆动作可以共享一套参数化 reward:把「目标」变成读命令的函数,一个策略学双向。</li>
+<li>二值命令 + 密集目标奖励会鼓励冲撞;让目标内部斜坡滑动,把「提前到站」的收益清零。</li>
+<li>接触求解器容量不足会伪装成任务失败(NaN 终止),重任务先查物理引擎日志。</li>
+<li>惩罚函数自返回负值时权重写正——<code>run 7ev90yd9</code> 的双负号把三个罚项变成了暴力奖励(:344-351)。</li>
+</ul>
+<h2 id="延伸">延伸</h2>
+<ul>
+<li>单方向版本:<a href="/learn/deep-27">解读 27</a>;同款相位命令的特技:<a href="/learn/deep-29">解读 29</a></li>
+<li>本文件:<code>microduck-replica/upstream/microduck_rl/src/mjlab_microduck/tasks/microduck_sitstand_env_cfg.py</code></li>
+<li>回放时 Y 键如何翻转姿势标志:<a href="/learn/deep-32">解读 32</a></li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

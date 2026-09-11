@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>第 12 课 · 采购与预算:把钱花在刀刃上 · 什么鸭 WhatDuck</title>
+<meta name="description" content="阶段 C 收尾算总账——这只鸭子花了多少钱、按什么顺序下单、采购单怎么写才不会买错。所有数字都来自项目实付记录,不是估的。">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="第 12 课 · 采购与预算:把钱花在刀刃上">
+<meta property="og:description" content="阶段 C 收尾算总账——这只鸭子花了多少钱、按什么顺序下单、采购单怎么写才不会买错。所有数字都来自项目实付记录,不是估的。">
+<meta property="og:url" content="https://duck.whatled.com/learn/course-12">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/course-12">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">LESSON 12 · 阶段 C · 硬件入门 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="第-12-课-采购与预算把钱花在刀刃上">第 12 课 · 采购与预算:把钱花在刀刃上</h1>
+<blockquote>
+<p><strong>这一课解决什么问题</strong>:阶段 C 收尾算总账——这只鸭子花了多少钱、按什么顺序下单、采购单怎么写才不会买错。所有数字都来自项目实付记录,不是估的。</p>
+<p><strong>前置</strong>:<a href="/learn/course-09">第 09 课</a>、<a href="/learn/course-10">第 10 课</a>。</p>
+</blockquote>
+<hr />
+<h2 id="1-这只鸭子多少钱先看真账">1. 这只鸭子多少钱:先看真账</h2>
+<p><a href="https://duck.whatled.com">项目主页</a>晒的实付账单:</p>
+<table>
+<thead>
+<tr>
+<th>已实付三笔</th>
+<th style="text-align: right;">金额</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>舵机 飞特 HL-1910-C001 ×15</td>
+<td style="text-align: right;">¥1,500</td>
+</tr>
+<tr>
+<td>主控 Radxa ZERO 3W</td>
+<td style="text-align: right;">¥299</td>
+</tr>
+<tr>
+<td>外壳打印(代打,PLA 41 件)</td>
+<td style="text-align: right;">¥99</td>
+</tr>
+<tr>
+<td><strong>合计已付</strong></td>
+<td style="text-align: right;"><strong>¥1,898</strong></td>
+</tr>
+</tbody>
+</table>
+<p>总预估降到 <strong>≈¥2,460</strong>(原估 ¥3,500–4,500,舵机实价拉低下调)——对照官方整机 $399 ≈ ¥2,900,照这个节奏,自制有机会比官方还便宜。注意:这个数<strong>不含已有的 3D 打印机与工具</strong>。一眼可见的规律:<strong>舵机占大头</strong>。所以最大的省钱决策发生在舵机上:主控缺货期以 ¥100/只 购入飞特 HL-1910,替代 XL330 方案(报价 ≈¥2580+),<strong>省约 ¥1100</strong>——换对舵机省的钱,比砍任何小件都多。</p>
+<h2 id="2-下单顺序长货期先买拿不准的等一等">2. 下单顺序:长货期先买,拿不准的等一等</h2>
+<p>项目记录的真实顺序,值得照抄:</p>
+<ol>
+<li><strong>大头先落地</strong>:舵机 ¥1500 先付——它最贵、货期最不确定;主控缺货,到货窗口一开就付 ¥299;</li>
+<li><strong>测试片先行,不急着批量打印</strong>:外壳 41 件是否开打,由测试片的孔径补偿决定(第 09 课)——先打一张 60×40×4mm 的片子;</li>
+<li><strong>拿不准的等一等</strong>:连接线要等舵机到货、确认出线插头(5264 还是 XH/PH)再下单,不然买回来插不上;</li>
+<li>剩余清单分三批:①本周 ≈¥180(调试板/线材/轴承/螺丝/热熔螺母/TPU 件)→ ②电子 ≈¥280(电池+扣板/转接板/摄像头/ToF)→ ③自制板 ≈¥100(第 11 课那块板的打样+元件)。</li>
+</ol>
+<p><strong>所以呢</strong>:下单顺序本身就是风险管理——把钱花在卡脖子件上,把等待留给便宜件。</p>
+<h2 id="3-采购单要规格导向不是价格导向">3. 采购单要规格导向,不是价格导向</h2>
+<p>真实教训(构建日志 2026-09-08):此前的采购单以"链接 + 快照价"为主,电商价格天天漂移对不上,更要命的是部分条目没写验收规格,看单的人"不知道买哪个"——用户反馈原话:<strong>"价格不对、规格没写"</strong>。</p>
+<p>改版后的正确格式,每一条 = <strong>搜索词 + 验收规格 + 数量 + 约价区间</strong>,链接降级为参考:</p>
+<pre><code class="language-text">示例条目
+舵机连接线:10/15/20cm 各 5 条,30cm+ 不要(按鸭子几何定量)
+轴承:16×22×4 薄壁深沟球,带防尘盖(注意不是常见的 608 规格,防买成推力轴承/法兰)
+电池:2S 锂电,外形尺寸 ≤___mm(排除 F970 相机电池)
+电源扣板:输出须 7.4V 直出(防买成只出 5V 的)
+转接板:确认支持 1Mbps
+</code></pre>
+<p>一句话总结这条教训:<strong>采购单的生命是规格,不是链接。</strong> 有规格,任何店铺都能比对;只有链接,店铺一改价你就瞎了。</p>
+<h2 id="4-实付记账估价和实付要分两栏">4. 实付记账:估价和实付要分两栏</h2>
+<p>项目从 2026-09-06 起养成实付记账习惯:已付三笔单独列,其余仍标"估价",互不冒充。好处:总账真实(¥1,898 是花了的,≈¥2,460 是估的,一目了然);退款换货有凭证;复盘能看出哪些东西比估价贵了(如 Radxa ¥299,略高于 BOM 估价)。你也照做:一张表四列——日期、条目、实付金额、订单号或截图。</p>
+<h2 id="5-哪些东西可以不买后买">5. 哪些东西可以不买/后买</h2>
+<ul>
+<li><strong>3D 打印机</strong>:不买。代打 ¥99 解决 41 件——"没打印机就代打,别为一只鸭子专门买 ¥2,500 的打印机";</li>
+<li><strong>TPU 软件两件</strong>:后买。被 PLA 代打店拒收后单独补打,约 ¥30–50,不在关键路径(第 3 周才装头部);</li>
+<li><strong>手头已有的器材先榨干</strong>:SG90×6 + Pi 2 组成 ¥0 入门台架(第 10 课),ESP32/扩展板封存备用;</li>
+<li><strong>GPU</strong>:阶段 D 之前不存在的开销,本机 CPU 已能跑冒烟实验(构建日志:单组 4 分钟)。</li>
+</ul>
+<h2 id="动手练习30-分钟0">动手练习(30 分钟,¥0)</h2>
+<p>给你自己的复刻排一张采购单:任挑 3 项,每项按"搜索词 + 验收规格 + 数量 + 约价区间"四件套写;再建一张实付记账表,把你能确认的第一笔(哪怕 ¥0)记进去。</p>
+<h2 id="自查清单">自查清单</h2>
+<ul>
+<li>[ ] 我能报出已实付三笔的金额与合计(¥1,500/¥299/¥99 = ¥1,898)</li>
+<li>[ ] 我能解释为什么采购单的生命是规格,不是链接</li>
+<li>[ ] 我能说出下单四顺序:大头先付、测试片先行、拿不准的等、其余分三批</li>
+<li>[ ] 我列出了至少两件"可以不买/后买"的东西和理由</li>
+</ul>
+<h2 id="下一课预告">下一课预告</h2>
+<p>阶段 C 完结,进入阶段 D:第 13 课《参数地图》——想改鸭子的行为时,去哪个文件改哪个参数,一张地图帮你定位。</p>
+<h2 id="延伸资源">延伸资源</h2>
+<ul>
+<li>构建日志(采购决策与教训的原始记录):<code>microduck-replica/构建日志.md</code></li>
+<li>物料清单进度快照(三批采购明细):<code>microduck-replica/docs/物料清单-进度快照.md</code></li>
+<li>整机 BOM(官方从未公布,全部反推,价格只作量级参考):<code>microduck-replica/BOM.md</code></li>
+<li><a href="https://duck.whatled.com">项目主页预算板块</a>(实付数据实时更新)</li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

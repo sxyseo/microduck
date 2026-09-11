@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>解读 06 · imu.rs:从 IMU 原始数据到姿态 · 什么鸭 WhatDuck</title>
+<meta name="description" content="duck-control/src/imu.rs(355 行)">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="解读 06 · imu.rs:从 IMU 原始数据到姿态">
+<meta property="og:description" content="duck-control/src/imu.rs(355 行)">
+<meta property="og:url" content="https://duck.whatled.com/learn/deep-06">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/deep-06">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">DEEP 06 · 第一辑 · 运动控制核心 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="解读-06-imurs从-imu-原始数据到姿态">解读 06 · imu.rs:从 IMU 原始数据到姿态</h1>
+<blockquote>
+<p><strong>解读对象</strong>:<code>duck-control/src/imu.rs</code>(355 行)<br />
+<strong>需要的前置</strong>:《什么鸭公开课》第 04 课(61→14 契约)+ <a href="/learn/deep-02">解读 02</a></p>
+</blockquote>
+<p>这一篇回答:61 维观测里最前面的 6 个数(陀螺仪 + 投影重力)从哪来。答案的反直觉之处在于:<strong>主机上没有任何姿态融合</strong>。IMU 板(imu_to_dxl,主芯片 LSM6DSV16X)挂在 Dynamixel 总线上,芯片自己的 SFLP 硬件融合块直接输出游戏旋转四元数,还自己估计陀螺零偏(imu.rs:1-7)。控制循环拿到的 12 字节块 <code>IMU_BLOCK_LEN = 12</code>(imu.rs:22),和 15 个舵机共用 <a href="/learn/deep-01">解读 01</a> 里那次批量读;板子的完整诊断块其实有 20 字节,只取前 12 是为了塞进同一笔事务(imu.rs:15-17)。</p>
+<h2 id="1-解码有符号计数半精度缺位的-w">1. 解码:有符号计数、半精度、缺位的 w</h2>
+<p><code>SflpDecoder::decode</code>(imu.rs:103)分两半。前 6 字节是三轴陀螺仪原始计数:有符号 <code>i16</code> 小端,乘 <code>GYRO_RAD_PER_LSB = 0.0175 × π/180</code>(imu.rs:48)换成 rad/s——量程 ±500 dps,每计数 17.5 mdps。测试提醒读成无符号的后果:所有负角速度变成大正数,"看起来像机器人在打转"(imu.rs:339-341)。</p>
+<p>后 6 字节是四元数的 x/y/z,IEEE 754 半精度(binary16)打包;w 不传,用 <code>w = √(1 − x² − y² − z²)</code> 补回(imu.rs:13)。半精度解码 <code>half</code>(imu.rs:171)是手写的,所以有专门测试钉住 0x3C00=1.0、0xBC00=−1.0 这类已知值——指数偏置错一点,机器人就朝错误的方向看地平线(imu.rs:249-252)。</p>
+<h2 id="2-未知不等于直立全零块的处理">2. 未知不等于直立:全零块的处理</h2>
+<p>芯片刚上电、SFLP 还没写完查找表时,四元数字节是全零。直接解释成单位四元数意味着"报告完美直立"——注释称之为"能对摔倒检测撒的最坏的谎"(imu.rs:59-62)。所以 <code>decode</code> 遇到全零就<strong>保留上一个好四元数</strong> <code>last_quat</code>(imu.rs:118-137),全零块也不计入 <code>quat_samples</code>。合法性检查有两道:x/y/z 有限且 <code>norm_sq ≤ 1.02</code>(容忍半精度舍入,imu.rs:123),合成并做挂载校正后四元数范数要大于 0.5 才更新(imu.rs:133-135)。</p>
+<p>坐标系同样在这里处理:板子装的方向和躯干不一致,<code>DEFAULT_MOUNT</code>(imu.rs:78)是一个绕 Y 轴 +90° 的旋转,把传感器系转到躯干系——"trunk = [+raw_z, +raw_y, −raw_x]"。陀螺仪用 <code>rotate</code>(q·v·q⁻¹)正变换,投影重力用 <code>rotate_inverse</code>(q⁻¹·v·q)把世界系的 <code>[0, 0, −1]</code> 变到躯干系(imu.rs:146):直立时它就是 <code>[0,0,−1]</code>,倾斜时 z 往 0 爬,这正是 <a href="/learn/deep-04">解读 04</a> 的阈值和 <a href="/learn/deep-05">解读 05</a> 的速率所消费的那个量。</p>
+<h2 id="3-两道便宜的防御ready-门与三点中值">3. 两道便宜的防御:ready 门与三点中值</h2>
+<p><code>ready()</code>(imu.rs:99)要求 <code>quat_samples ≥ 25</code>——约 100 Hz 下的 0.25 秒——才承认"芯片确实产出过融合结果"。在此之前姿态是默认值而非测量值,摔倒检测必须闭嘴。</p>
+<p><code>median3_each</code>(imu.rs:161)对陀螺仪和重力各做一个三点逐分量中值:丢块或坏块表现为单个野值,中值恰好把它扔掉,又不像平均那样引入滞后。一个诚实的注脚(imu.rs:140-145):归一化在中值<strong>之前</strong>做,于是瞬态期间三个单位向量的逐分量中值本身不再是单位向量,策略会看到略短的向量——这是刻意的,为的是和参考实现行为一致,并用测试 <code>gravity_stays_close_to_unit_through_a_transient</code> 把边界钉在 0.5 到 1.0 之间(imu.rs:324-334)。</p>
+<h2 id="你带走的收获">你带走的收获</h2>
+<ul>
+<li>融合下放到传感器芯片(SFLP),主机只剩解码与防御——省 CPU,也少一个要调的滤波器。</li>
+<li>"数据缺失"绝不能用无害默认值顶替:全零四元数补成直立,是给下游安全逻辑喂最坏谎言。</li>
+<li>硬件量程换算(<code>i16</code> 有符号性、mdps/LSB、半精度指数偏置)每一项都值得一个已知值测试。</li>
+<li>三点中值是单点野值剔除的标准答案:无滞后,常数开销,适合 50 Hz 热路径。</li>
+<li>与参考实现"保持同样的小毛病"有时比修掉它更重要——sim2real 的行为一致性优先。</li>
+</ul>
+<h2 id="延伸">延伸</h2>
+<ul>
+<li>这 6 个数在观测里的位置: <a href="/learn/deep-02">解读 02</a></li>
+<li>同一笔总线事务怎么调度: <a href="/learn/deep-01">解读 01</a></li>
+<li>消费 gravity 的两个检测器: <a href="/learn/deep-04">解读 04</a>、<a href="/learn/deep-05">解读 05</a></li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

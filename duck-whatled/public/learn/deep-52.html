@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>解读 52 · XL330-M288 vs HL-1910:参数逐项对比 · 什么鸭 WhatDuck</title>
+<meta name="description" content="microduck-replica/docs/执行器选型.md + microduck-replica/docs/硬件方案逆向.md §「替代型号:飞特 HD-1910-C001」">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="解读 52 · XL330-M288 vs HL-1910:参数逐项对比">
+<meta property="og:description" content="microduck-replica/docs/执行器选型.md + microduck-replica/docs/硬件方案逆向.md §「替代型号:飞特 HD-1910-C001」">
+<meta property="og:url" content="https://duck.whatled.com/learn/deep-52">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/deep-52">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">DEEP 52 · 第六辑 · 舵机与执行器 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="解读-52-xl330-m288-vs-hl-1910参数逐项对比">解读 52 · XL330-M288 vs HL-1910:参数逐项对比</h1>
+<blockquote>
+<p><strong>解读对象</strong>:<code>microduck-replica/docs/执行器选型.md</code> + <code>microduck-replica/docs/硬件方案逆向.md</code> §「替代型号:飞特 HD-1910-C001」(规格书《HD-1910-C001 串型规格书》A/0)+ 构建日志 2026-09-07<br />
+<strong>需要的前置</strong>:<a href="/learn/deep-51">解读 51</a> · <a href="/learn/deep-53">解读 53</a></p>
+</blockquote>
+<p>官方件和替代件到底差多少?这篇只引用仓库文档里真实存在的数字,把两张表拼成一张。注意:HD-1910 数据出自厂家规格书,实购型号是 HL-1910-C001(¥100/只 ×15 = ¥1500,构建日志 09-07),两者参数是否逐项一致<strong>待验证</strong>。</p>
+<h2 id="核心参数对照">核心参数对照</h2>
+<p>飞特按 4.8/6/7.4 V 三档给参数,本方案 2S 母线带载 6.6–8.2 V,最接近 7.4 V 档(下表 @7.4V,数据源:<code>硬件方案逆向.md</code> 对照表):</p>
+<table>
+<thead>
+<tr>
+<th>项</th>
+<th>XL330-M288-T</th>
+<th>HD-1910-C001</th>
+<th>判断</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>电压</td>
+<td>3.7–6.0 V(推荐 5.0)</td>
+<td>4 – 8.4 V</td>
+<td>HD 额定匹配,XL330 超压约 37%</td>
+</tr>
+<tr>
+<td>重量</td>
+<td>18 g</td>
+<td>21 ± 2 g</td>
+<td>15 只 +45 g</td>
+</tr>
+<tr>
+<td>堵转力矩</td>
+<td>0.52 N·m @5V / 0.60 @6V</td>
+<td>15 kg·cm = 1.47 N·m @7.4V</td>
+<td>约 2.5 倍</td>
+</tr>
+<tr>
+<td>额定负载</td>
+<td>—</td>
+<td>3.7 kg·cm = 0.363 N·m @7.4V</td>
+<td>堵转≠额定,别混</td>
+</tr>
+<tr>
+<td>空载转速</td>
+<td>~103 RPM @5V</td>
+<td>113 RPM(0.088 s/60°)</td>
+<td>相当</td>
+</tr>
+<tr>
+<td>堵转电流</td>
+<td>~1.5 A @5V</td>
+<td>2.0 A @7.4V</td>
+<td>供电预算要重核</td>
+</tr>
+<tr>
+<td>减速比</td>
+<td>288.4 : 1</td>
+<td>1/320,齿轮虚位 ≤0.5°</td>
+<td>同一量级</td>
+</tr>
+<tr>
+<td>编码器</td>
+<td>12-bit</td>
+<td>12 bit 磁编码(0.088°/step)</td>
+<td>同级</td>
+</tr>
+</tbody>
+</table>
+<p>两个口径陷阱,文档都专门勘误过:<br />
+1. MJCF 里的 <code>forcerange = ±0.96</code> 是 <strong>MuJoCo 仿真力限,不是厂商标称值</strong>,不能拿去和别家堵转力矩并排比(<code>执行器选型.md</code> 表下说明)。<br />
+2. XL330 那个 0.52 N·m 是 5 V 官方值;Microduck 实跑 6.6–8.2 V 超压,力矩更高但发热寿命是代价(推断,官方无公开数据)。</p>
+<h2 id="账面之外的三件事">账面之外的三件事</h2>
+<p><strong>电子保护</strong>:HD-1910 固件自带三道保护——过流(&gt;0.5 A 持续 2 s 断输出)、过压(&lt;4 V 或 &gt;10 V)、过热(&gt;80 ℃ 断扭矩)。出厂状态:过流、过压<strong>默认关闭</strong>,过热默认开启 → 装机前要自己把前两道打开(规格书 7-11,经 <code>硬件方案逆向.md</code> 转述)。</p>
+<p><strong>控制模式</strong>:HD-1910 出厂默认模式 4「纯位置 PD(Sim2Real)」——正是强化学习落地要用的;另有模式 0 角度伺服 / 1 恒速 / 2 恒流 / 3 PWM 开环。XL330 无对应模式。</p>
+<p><strong>钱</strong>:XL330 国内约 ¥299/只、15 只约 ¥4500(超过整机 $399 售价);HL-1910 ¥100/只、15 只 ¥1500,较 XL330 方案(¥2580+)省约 ¥1100,整机预计 ≈¥2460(构建日志 09-07、物料快照)。</p>
+<h2 id="代价写在第④层">代价写在第④层</h2>
+<p>参数表是②电气③通信的事;真正的代价在<strong>④动力学</strong>:官方 BAM 标定、9 个 ONNX、回差模型全部作废,必须重训——这是 <a href="/learn/deep-58">解读 58</a> 的主题。硬件方案逆向还列了规格书缺的四项(力矩测自几伏、减速比细节、编码器分辨率书面确认、回差实测),都直接影响重训的输入数据。</p>
+<h2 id="你带走的收获">你带走的收获</h2>
+<ul>
+<li><strong>对比表怎么读</strong>:先对齐电压口径(同电压才能比力矩),再分清堵转/额定、厂商标称/仿真力限。</li>
+<li>便宜的舵机省的钱 ≠ 净赚:¥1500 vs ¥4500 的差价,要用重训算力和数周工作量去换。</li>
+<li>额定匹配 vs 超压运行:HD-1910 落在 4–8.4 V 内更规范,但满电 8.4 V 恰好是上限,<strong>零余量</strong>。</li>
+<li>出厂默认值是给通用场景的:保护开关、运行模式都要按机器人场景重新配置。</li>
+<li>规格书没写的参数(回差、力矩测试电压)恰恰是 sim2real 最需要的,列为待验证项。</li>
+</ul>
+<h2 id="延伸">延伸</h2>
+<ul>
+<li><a href="/learn/deep-51">解读 51</a>:尺寸链核对 · <a href="/learn/deep-58">解读 58</a>:重训的必然性</li>
+<li><a href="/learn/deep-54">解读 54</a>:执行器模型为什么要重做</li>
+<li><code>microduck-replica/docs/执行器选型.md</code>(XL330 官方规格与超压证据链)</li>
+<li><code>microduck-replica/docs/硬件方案逆向.md</code>(HD-1910 规格书对照与电流核算)</li>
+<li><code>microduck-replica/构建日志.md</code>(2026-09-07 采购决策)</li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

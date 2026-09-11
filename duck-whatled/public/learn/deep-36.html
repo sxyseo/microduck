@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>解读 36 · 大腿与小腿:连杆设计 · 什么鸭 WhatDuck</title>
+<meta name="description" content="microduck-replica-cad/组件图/04-左大腿.png + 05-左小腿.png + microduck-replica/BOM.md(打印件表)">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="解读 36 · 大腿与小腿:连杆设计">
+<meta property="og:description" content="microduck-replica-cad/组件图/04-左大腿.png + 05-左小腿.png + microduck-replica/BOM.md(打印件表)">
+<meta property="og:url" content="https://duck.whatled.com/learn/deep-36">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/deep-36">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">DEEP 36 · 第四辑 · 结构 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="解读-36-大腿与小腿连杆设计">解读 36 · 大腿与小腿:连杆设计</h1>
+<blockquote>
+<p><strong>解读对象</strong>:<code>microduck-replica-cad/组件图/04-左大腿.png</code> + <code>05-左小腿.png</code> + <code>microduck-replica/BOM.md</code>(打印件表)<br />
+<strong>需要的前置</strong>:<a href="/learn/deep-35">解读 35</a>;知道"刚度"=结构抵抗变形的能力。</p>
+</blockquote>
+<h2 id="图上看到的两段连杆">图上看到的两段连杆</h2>
+<p>04 号组件图(左大腿):一块浅蓝灰色的板状零件占满画面,左下方的轮毂外圈能看到一圈滚珠——特征树里对应那颗 16×22×4 轴承,位置在大腿远端(膝侧);右上方还有一个深色圆形轮毂,周围排着螺丝孔。树里这个总成有<strong>两颗</strong> XL330、<code>01-upper_leg_rigidity_plate</code>(上腿加固板)、<code>left_upper_leg_左上腿</code> 和一个轴承——典型的"平板+加固板"三明治:薄板夹出结构,抗弯刚度主要靠"隔开距离的两片板",不靠板厚。</p>
+<p>05 号组件图(左小腿):特征树只有两样——固定的 <code>xl330-m288-t1</code> 和 <code>leg_腿部</code>。图上一颗蓝色方块(该 CAD 里舵机本体着蓝色)伸出一条灰色长连杆:杆身开着一串长条形减重开槽和几个圆孔,末端收成带孔的圆柱凸台(踝关节座)。</p>
+<p>把第四辑几张组件图的特征树连起来数:躯干 1 颗 + 左髋 1 颗 + 大腿 2 颗 + 小腿 1 颗 = 5 颗,正好每条腿 5 个自由度。大腿里两颗各驱动哪个关节,以 <code>microduck-replica-cad/安装说明书</code> 的装配步骤为准。</p>
+<h2 id="数字里的设计">数字里的设计</h2>
+<ul>
+<li><code>upper_leg</code> 质量 0.0482067kg ≈ 48g,左右镜像件质心 X = ±6.77mm(BOM 镜像说明)——与 README 装配结构"左大腿 48g"对上;</li>
+<li>加固板只有 1.0mm 薄、颈部件 2.0mm(打印工艺调整表),薄壁件打印要风扇全开+减速,建议立印;</li>
+<li><code>leg_腿部</code> 一个网格要打 <strong>4 份</strong>(BOM 打印件表)——同一网格多处复用,打印前先数清楚份数。</li>
+</ul>
+<h2 id="为什么连杆上全是洞">为什么连杆上全是"洞"</h2>
+<p>摆动腿的能量消耗与质量到转轴距离的平方成正比(转动惯量 ∝ m·r²)。大小腿处在运动链(关节串成的链)最远端,每一克都在被髋关节反复加减速。所以图上能开槽处全开槽,截面是"空心盒"不是实心杆——去掉的是受弯最小的中性层附近材料,留下的都在上下表面受力。这是从发动机连杆到机械臂共用的招:<strong>刚度靠几何,不靠堆料</strong>。</p>
+<p>还有一个复刻特有约束:舵机线要穿过这些关节。开槽与内腔同时就是走线空间——《新手学习文档》把"走线空间"列入结构十词,并标注"复刻件最大的坑就是没走线空间"。打印前想好线从哪个孔过,比事后钻孔体面得多。</p>
+<h2 id="你带走的收获">你带走的收获</h2>
+<ul>
+<li>薄板三明治(两片板隔开固定)是打印件实现高刚度的标准手法。</li>
+<li>减重开槽切中性层附近材料:刚度靠截面几何,不靠材料总量。</li>
+<li>远端质量按 r² 放大进转动惯量,连杆减重比躯干减重收益更高。</li>
+<li>镜像件(质心 ±6.77mm 那类)必须成对打印,别拿一件翻面凑合。</li>
+<li>设计连杆先画走线路径,再补强筋。</li>
+</ul>
+<h2 id="延伸">延伸</h2>
+<ul>
+<li><a href="/learn/deep-37">解读 37</a>:连杆末端的落地点(<code>docs/deep-dive/37-踝脚落地点.md</code>)</li>
+<li><a href="/learn/deep-40">解读 40</a>:薄壁件与孔位的打印补偿(<code>docs/deep-dive/40-轴承与公差.md</code>)</li>
+<li>图纸:github.com/fanhao375/microduck-replica-cad(「机械行者Robo」);右腿对应 13/14 号组件。</li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

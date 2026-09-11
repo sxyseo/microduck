@@ -1,0 +1,68 @@
+(session "autoroute-test"
+  (base_design "autoroute-test")
+  (placement
+    (resolution um 10)
+    (component "Resistor_SMD:R_0603_1608Metric"
+      (place R1 300000 -400000 front 0)
+      (place R2 800000 -400000 front 0)
+    )
+  )
+  (was_is
+  )
+  (routes 
+    (resolution um 10)
+    (parser
+      (host_cad "KiCad's Pcbnew")
+      (host_version "10.0.5")
+    )
+    (library_out 
+      (padstack "Via[0-1]_600:300_um"
+        (shape
+          (circle F.Cu 6000 0 0)
+        )
+        (shape
+          (circle B.Cu 6000 0 0)
+        )
+        (attach off)
+      )
+    )
+    (network_out 
+      (net N1
+        (wire
+          (path F.Cu 2000
+            791750 -400000
+            317667 -400000
+          )
+        )
+        (wire
+          (path B.Cu 2000
+            298217 -408507
+            306724 -400000
+            317667 -400000
+          )
+        )
+        (wire
+          (path F.Cu 2000
+            298217 -408507
+            291750 -402040
+            291750 -400000
+          )
+        )
+        (via "Via[0-1]_600:300_um" 298217 -408507
+        )
+        (via "Via[0-1]_600:300_um" 317667 -400000
+        )
+      )
+      (net N2
+        (wire
+          (path F.Cu 2000
+            308250 -400000
+            316153 -407903
+            800347 -407903
+            808250 -400000
+          )
+        )
+      )
+    )
+  )
+)

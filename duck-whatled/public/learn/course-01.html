@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>第 01 课 · 先让它动起来:浏览器里开鸭子 · 什么鸭 WhatDuck</title>
+<meta name="description" content="零安装建立两个核心直觉:运行不等于训练;你发目标、策略管过程。">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="第 01 课 · 先让它动起来:浏览器里开鸭子">
+<meta property="og:description" content="零安装建立两个核心直觉:运行不等于训练;你发目标、策略管过程。">
+<meta property="og:url" content="https://duck.whatled.com/learn/course-01">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/course-01">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">LESSON 01 · 阶段 A · 认识它 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="第-01-课-先让它动起来浏览器里开鸭子">第 01 课 · 先让它动起来:浏览器里开鸭子</h1>
+<blockquote>
+<p><strong>这一课解决什么问题</strong>:在学任何理论之前,先用 10 分钟建立两个最重要的直觉——"运行一个策略"和"训练一个策略"是两回事;策略是"你发目标,它管过程"。这两个直觉贯穿整门课。</p>
+<p><strong>前置</strong>:<a href="/learn/course-00">第 00 课</a>。仍然不需要装任何软件。</p>
+</blockquote>
+<hr />
+<h2 id="1-官方-sandbox零安装的完整体验">1. 官方 Sandbox:零安装的完整体验</h2>
+<p>打开 <a href="https://huggingface.co/spaces/pollen-robotics/microduck-simulator"><strong>Microduck Sandbox</strong>(Hugging Face Spaces)</a>。</p>
+<p>这是 Pollen Robotics 官方放的在线仿真器:你的浏览器里跑着一个 MuJoCo 物理引擎,加载的是官方训练好的 ONNX 策略文件——<strong>和将来部署到真机鸭子身上的大脑是同一种文件</strong>。</p>
+<p>操作方法(WASD 开动之后自己再试试别的):</p>
+<table>
+<thead>
+<tr>
+<th>按键</th>
+<th>动作</th>
+<th>背后发生了什么</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>方向键 / WASD</td>
+<td>走动</td>
+<td>修改<strong>速度指令</strong>,策略自己决定怎么迈腿</td>
+</tr>
+<tr>
+<td><code>R</code></td>
+<td>翻滚</td>
+<td>切换到预训练的另一套技能策略</td>
+</tr>
+<tr>
+<td><code>Q</code> / <code>E</code></td>
+<td>踢球</td>
+<td>同上——鸭子其实"会多种运动"</td>
+</tr>
+<tr>
+<td><code>M</code></td>
+<td>切换腿/轮滑模式</td>
+<td>换了一套身体动力学,策略照样能控</td>
+</tr>
+<tr>
+<td><code>Space</code></td>
+<td>重置</td>
+<td>把仿真状态回到初始姿态</td>
+</tr>
+</tbody>
+</table>
+<p>第一次玩,建议花 5 分钟专门试一件事:<strong>把它推倒,或者让它自己摔</strong>,看它怎么爬起来。没有任何动画师参与——它是自己在训练里"试"出来的:凡是能翻回身并站起来的动作组合,得到高分;躺平的,得零分。千万次试错之后,爬起来就成了它的本能。这就是强化学习的全部思想。</p>
+<h2 id="2-核心概念运行训练">2. 核心概念:「运行」≠「训练」</h2>
+<p>这是整门课最重要的概念区分,90% 的初学者混淆都发生在这里:</p>
+<pre><code class="language-text">运行现成策略( inference / 推理)
+  官方已经训练好 → 你加载 ONNX 文件 → 机器人动起来
+  需要的计算量:一台普通电脑甚至手机都行
+
+训练一个策略( training )
+  设计任务和评分规则 → GPU 上千万次试错 → 得到 checkpoint → 导出 ONNX
+  需要的计算量:通常要 NVIDIA GPU,一次像样的训练几小时起步
+</code></pre>
+<p>Sandbox 里你做的是前者。课程阶段 B 会带你本地做前者,阶段 D 才开始后者。</p>
+<p>为什么要分清?因为它决定了你要准备什么:</p>
+<table>
+<thead>
+<tr>
+<th>你想做</th>
+<th>需要什么</th>
+<th>对应课程</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>看看鸭子怎么动</td>
+<td>一个浏览器</td>
+<td>第 00–01 课(就是现在)</td>
+</tr>
+<tr>
+<td>在自己电脑上运行策略</td>
+<td>Mac/PC + 命令行,不要 GPU</td>
+<td>第 03 课</td>
+</tr>
+<tr>
+<td>训练/修改动作</td>
+<td>NVIDIA GPU 或云 GPU</td>
+<td>第 05 课起,第 11 课深入</td>
+</tr>
+<tr>
+<td>上真机</td>
+<td>上面的 + 硬件</td>
+<td>阶段 C、E</td>
+</tr>
+</tbody>
+</table>
+<h2 id="3-你发目标它管过程指令与策略的分工">3. 「你发目标,它管过程」:指令与策略的分工</h2>
+<p>再回到 Sandbox 做第二个观察。你按 ↑ 时,你并没有在控制任何一条腿——</p>
+<ul>
+<li><strong>你</strong>只发出一个高层目标:"以这个速度往前走";</li>
+<li><strong>策略</strong>(那个 61 → 14 的神经网络)决定每 20 毫秒每个关节转多少度。</li>
+</ul>
+<p>这个分层是现代机器人控制的通用范式,不只鸭子在用:</p>
+<pre><code class="language-text">    你 / 上层程序        策略网络            关节
+   ─────目标──────▶  ──14 个角度──▶  ──转动──▶  物理世界
+   ◀────────────── 15 个关节的状态 + 姿态(61 个数)─────────
+</code></pre>
+<p>注意下面的回传箭头:<strong>策略的输入来自传感器</strong>。关节角度、角速度、身体姿态每 20 毫秒喂回去一次。感知 → 决策 → 执行 → 再感知,这个闭环就是"具身智能"里"具身"两个字的含义——智能离不开和物理世界的循环交互。</p>
+<p>阶段 D 训练鸭子跑步时你会重新遇到这张图:改的就是"目标怎么给、分数怎么打";阶段 F 你会看到同样的结构怎么套到机械臂、无人机和任何机器人上。</p>
+<h2 id="4-动手练习10-分钟">4. 动手练习(10 分钟)</h2>
+<ol>
+<li>打开 Sandbox,用 WASD 走一个"8 字"。</li>
+<li>让它摔倒,观察它自己爬起来的全过程,数一数用了几步(有没有中间失败又重来)。</li>
+<li>按 <code>M</code> 切换轮滑模式再走一圈,体会"同一套大脑控制不同身体"是什么意思(这也是为什么阶段 D 的 sim2real 课如此重要——身体参数变了,策略就得重训)。</li>
+<li>把观察结论写 2–3 句在笔记里。以后每课都有这个"笔记动作",它是你 30 天后还在进步的原因。</li>
+</ol>
+<h2 id="自查清单">自查清单</h2>
+<ul>
+<li>[ ] 我能说清"运行"和"训练"的区别,以及各需要什么设备</li>
+<li>[ ] 我能解释为什么鸭子摔倒后能爬起来(不是动画,是奖励试错)</li>
+<li>[ ] 我能画出"目标 → 策略 → 关节 → 传感器 → 策略"这个闭环的示意</li>
+<li>[ ] 我知道 ONNX 是策略的"部署格式",浏览器版和真机版用的是同一种文件</li>
+</ul>
+<h2 id="下一课预告">下一课预告</h2>
+<p>第 02 课把零散的直觉收敛成十个精确概念(舵机、总线、策略、奖励塑形、域随机化、sim2real……),每个三分钟。之后阶段 B 开始动手装环境——第一课要花 45 分钟,也是全课程最难安装的一课,会给你完整的踩坑清单。</p>
+<h2 id="延伸资源">延伸资源</h2>
+<ul>
+<li>OpenMicroDuck《先做仿真》完整教程(本地):<code>open-microduck/docs/zh-CN/getting-started/simulation-first.md</code></li>
+<li>官方训练仓库(阶段 B 的主角):<a href="https://github.com/pollen-robotics/microduck_rl">pollen-robotics/microduck_rl</a></li>
+<li>想提前了解强化学习是什么:<a href="https://huggingface.co/learn/deep-rl-course/unit0/introduction">Hugging Face 深度强化学习课</a> 第 0 章(有<a href="https://github.com/sun1638650145/deep-rl-class-zh">中文版</a>),或者等阶段 D 再系统学</li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

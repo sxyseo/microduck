@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>解读 42 · Robot HAT C1:官方开源板怎么读 · 什么鸭 WhatDuck</title>
+<meta name="description" content="pollen-robotics/elec_RPI_Robot_HAT(本仓引用,Apache-2.0)+ microduck-replica/docs/硬件方案逆向.md §四">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="解读 42 · Robot HAT C1:官方开源板怎么读">
+<meta property="og:description" content="pollen-robotics/elec_RPI_Robot_HAT(本仓引用,Apache-2.0)+ microduck-replica/docs/硬件方案逆向.md §四">
+<meta property="og:url" content="https://duck.whatled.com/learn/deep-42">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/deep-42">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">DEEP 42 · 第五辑 · 电路 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="解读-42-robot-hat-c1官方开源板怎么读">解读 42 · Robot HAT C1:官方开源板怎么读</h1>
+<blockquote>
+<p><strong>解读对象</strong>:pollen-robotics/elec_RPI_Robot_HAT(本仓引用,Apache-2.0)+ <code>microduck-replica/docs/硬件方案逆向.md</code> §四<br />
+<strong>需要的前置</strong>:<a href="/learn/deep-41">解读 41</a>。第一次打开 KiCad 工程的话,读图五步法见[第 08 课../course/08-看懂电路图.md。</p>
+</blockquote>
+<h2 id="先讲一个勘误它其实开源了">先讲一个勘误:它其实开源了</h2>
+<p>本仓 2026-09-03 之前的记录写的是"这块板未开源、需逆向"。<strong>这是错的</strong>:板子在 <code>pollen-robotics/elec_RPI_Robot_HAT</code> 有完整开源工程——KiCad 9 原理图与 PCB、Gerber、BOM、贴片坐标、STEP。漏掉的原因很典型:只检索了 <code>microduck</code> 主仓,没查同组织下 <code>elec_</code> 前缀的硬件仓库(<code>microduck-replica/PROGRESS.md</code> 勘误记录原文:"判断某项目有没有开源某部分时,必须检索整个组织")。</p>
+<p><strong>结论:这块板不用画,直接用 <code>production/</code> 目录的 Gerber 打样。</strong> 逆向文档 §四保留为"逆向 vs 实物"的对照记录——两相比较也很有价值:逆向推出的 I2C 地址 0x18、上拉位号 R12/R13,与官方 BOM 逐项命中。</p>
+<h2 id="kicad-工程里有什么">KiCad 工程里有什么</h2>
+<p>主图纸 <code>main.kicad_sch</code> 只实例化四张子图:<code>audio / dynamixel / power / sensors</code>。逐张能读到:</p>
+<ul>
+<li><strong>dynamixel 页</strong>:TTL 三针座 J13/J14(JST EH 2.5mm,串 TH1 100Ω 热敏)+ RS-485 四针座 J3/J11(U8 SIT3088E 驱动)——一块板双制式,原理图旁注 <strong>"3A max"</strong>。</li>
+<li><strong>power 页</strong>:U9 AP63205 降压 + L4 6.8µH → +5V;U10 LM5050-1 理想二极管。注意 LM5050-1 在 buck <strong>之后</strong>的 +5V 一路,不在电池输入端(2026-09-04 勘误,按符号 X 坐标排序核实)。</li>
+<li><strong>audio/sensors 页</strong>:TLV320AIC3104 codec、LGA-16 的 BMI088(焊了但软件不用)、J5–J8 四个 Qwiic 座。</li>
+</ul>
+<p>板子物理规格(取自官方 KiCad 与 Gerber,见 <code>microduck-replica/docs/硬件规格速查.md</code>):<strong>65.0 × 30.9 mm、板厚 1.0 mm、4 层</strong>(F.Cu/In1.Cu/In2.Cu/B.Cu),BOM <strong>47 行 123 颗</strong>。贴片位数两处文档口径不一:逆向文档记 118 个贴片位,电控采购清单记实际贴装 113 个位置(DNP 9 颗之差,待按官方 BOM 复核)——无论哪个数,结论一致:<strong>必须走 SMT 贴片</strong>。</p>
+<h2 id="打样前必读的四条警告">打样前必读的四条警告</h2>
+<ol>
+<li><strong>板上没有充电电路。</strong> 仓库里的 <code>pwr_supply_charge.kicad_sch</code> 是<strong>孤儿图纸</strong>——<code>main.kicad_sch</code> 没实例化它,标题栏写的还是别的项目(Chromapi)。BOM 里搜不到充电 IC、USB-C 母座。<strong>电池必须外部充电。</strong></li>
+<li><strong>打开工程要另装库。</strong> 原理图引用 <code>Library_Pollen</code> 等符号库,在 <code>pollen-robotics/lib_KiCAD</code> 仓库;只打样则不需要,直接用 Gerber。</li>
+<li><strong>四层板 + VQFN/LGA 封装,必须走 SMT 贴片</strong>,手焊不现实。</li>
+<li><strong>U4(CAT24C32 EEPROM)是 DNP 不贴</strong> → 这不是自识别 HAT,设备树 overlay 要手动配。</li>
+</ol>
+<h2 id="你带走的收获">你带走的收获</h2>
+<ol>
+<li><strong>开源 ≠ 买得到</strong>:有完整 Gerber 仍需自己送厂制造(Rhoban/microban 的 BOM 原话),但"能打样"和"要设计"是两个难度级别。</li>
+<li><strong>孤儿图纸的识别方法</strong>:看顶层图纸实例化了哪些子图;再对 BOM 核对图纸上的器件是否真的在单。</li>
+<li><strong>DNP 是刻意的省略</strong>:不贴 EEPROM = 放弃 HAT 规范的自动识别,换取省料——读 BOM 时 DNP 行要单独过一遍。</li>
+<li><strong>逆向与官方资料对照是双向校验</strong>:代码推出来的位号能命中,说明方法可信;官方图里多出来的器件(功放、麦克风)则是纯代码看不出来的部分。</li>
+</ol>
+<h2 id="延伸">延伸</h2>
+<ul>
+<li><a href="/learn/deep-41">解读 41</a>:HAT 在整机架构中的位置</li>
+<li><a href="/learn/deep-45">解读 45</a>:HAT 上那颗 buck 的来龙去脉</li>
+<li><a href="/learn/deep-49">解读 49</a>:拿到 Gerber 之后怎么下单</li>
+<li>本地:<code>microduck-replica/docs/硬件方案逆向.md</code> §四、<code>microduck-replica/PROGRESS.md</code>(勘误记录)</li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

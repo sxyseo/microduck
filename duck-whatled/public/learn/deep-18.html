@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>解读 18 · updater(上):manifest 与验证 · 什么鸭 WhatDuck</title>
+<meta name="description" content="updater/src/manifest.rs(275 行)+ updater/src/verify.rs(634 行)+ updater/src/preflight.rs(474">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="解读 18 · updater(上):manifest 与验证">
+<meta property="og:description" content="updater/src/manifest.rs(275 行)+ updater/src/verify.rs(634 行)+ updater/src/preflight.rs(474">
+<meta property="og:url" content="https://duck.whatled.com/learn/deep-18">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/deep-18">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">DEEP 18 · 第二辑 · 感知与系统服务 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="解读-18-updater上manifest-与验证">解读 18 · updater(上):manifest 与验证</h1>
+<blockquote>
+<p><strong>解读对象</strong>:<code>updater/src/manifest.rs</code>(275 行)+ <code>updater/src/verify.rs</code>(634 行)+ <code>updater/src/preflight.rs</code>(474 行)<br />
+<strong>需要的前置</strong>:无。这一篇是通用的 OTA 工程教材。</p>
+</blockquote>
+<h2 id="为什么-ota-必须这么谨慎">为什么 OTA 必须这么谨慎</h2>
+<p>手机刷坏可以连电脑救;板子砖在够不到的地方,只能上门。所以这个更新器把每层防线都当唯一防线来写:<strong>签名</strong>(东西是谁发的)、<strong>哈希</strong>(东西完好吗)、<strong>预检</strong>(此刻能装吗)、<strong>回滚</strong>(装坏了怎么办,见<a href="/learn/deep-19">解读 19</a>)。三个文件各管一段。</p>
+<h2 id="manifestrs字段即策略">manifest.rs:字段即策略</h2>
+<p><code>Manifest</code>(manifest.rs:11)的第一课是<strong>首版就要带上暂时用不上的字段</strong>——没学会读 <code>min_supported</code> 的机器人,日后无法被强制升级(manifest.rs:3-6)。清单格式是"无法回改"的契约:</p>
+<ul>
+<li><code>channel</code> 与配置交叉核对,配错的 URL 不能把模型静默装成守护进程(manifest.rs:13-15)。</li>
+<li><code>schema_version</code> <strong>故意不是兼容门</strong>(manifest.rs:37-44):评估清单的永远是上一个版本的引擎,拒绝 <code>schema_version &gt; supported</code> 会让每次 schema 升级都无法交付——包括带来那个能理解它的引擎的版本。它只是交给 post-install 钩子做迁移的上下文。</li>
+<li><code>compatibility</code>(manifest.rs:92)返回三态 <code>Ok / Refused / Unknown</code>(manifest.rs:142):robotd 不可达时 model_api 未知,是 <code>Unknown</code> 而非 <code>Refused</code>——守护进程通道照样装(那正是修活 robotd 的途径),模型通道则等。合并两态要么堵死恢复、要么装上加载不了的模型(manifest.rs:109-118)。</li>
+</ul>
+<h2 id="verifyrs一条顺序不变量">verify.rs:一条顺序不变量</h2>
+<p>模块注释一行顶一万句(verify.rs:7-9):<strong>未经签名的字节,永远不会落到活动路径或被执行</strong>——清单签名 → 工件哈希 → 工件签名,全部通过才解压。要点:</p>
+<ul>
+<li>信任锚是磁盘上的一<strong>组</strong> minisign 公钥而非单枚内置钥匙(丢钥、泄钥可存活);空钥匙环是错误而非空允许列表(verify.rs:128-133)——静默信任零个东西与配错路径无法区分,哪个方向都致命。依赖 <code>minisign-verify</code> 是仅验证实现:这个进程没有签名的业务,就不该链接能签名的代码(verify.rs:11-13)。</li>
+<li><code>.dev.pub</code> 后缀的钥匙只在显式允许时可用(verify.rs:52):量产机器人装不进同事的本地构建。</li>
+<li><code>extract_artifact</code>(verify.rs:287):路径穿越交给 <code>tar</code> 自带的 <code>unpack_in</code> 拒绝,其上再补总解压 2 GiB、5 万条目的上限(verify.rs:36-48),防 zip 炸弹填满 eMMC。穿越条目按<strong>篡改</strong>处理而非跳过(verify.rs:347-355):签名都验过了,敌意条目意味着我们自己的钥匙签了它,必须大声炸出来。</li>
+</ul>
+<h2 id="preflightrs副作用之前一遍报完">preflight.rs:副作用之前,一遍报完</h2>
+<p>所有检查跑在下载之前,失败零副作用;每次 apply 跑两遍——拿到清单前查时钟/机器人停稳/无远程会话,拿到 <code>size</code> 后再查磁盘(preflight.rs:11-15)。顺序即诊断:时钟不对时,HTTPS 会以费解的 TLS 证书错误失败,而不是时钟检查想给的那句话。</p>
+<ul>
+<li><code>CLOCK_FLOOR_UNIX = 1_735_689_600</code>(2025-01-01,preflight.rs:94):无电池 RTC 的板子开机即错钟,先抓"还没同步 NTP"。</li>
+<li><strong>故意不短路</strong>(preflight.rs:99-101):一次报完"时钟错 AND 磁盘满",好过让用户修一个、重试、再撞下一个。</li>
+<li><code>check_robot_stopped</code>(preflight.rs:185-209)藏着最精细的判断:robotd <strong>不可达 = 安全</strong>(控制循环没在跑就没东西在动,这正是需要更新的场合);<strong>回答了但读不懂 = 拒绝</strong>(循环在跑,只是协议错位),错误信息给出出路 <code>systemctl stop robotd</code>。测试注释(preflight.rs:382-387)记录了这个决定曾做反:读不懂曾被映射成"可达",于是一台正在走路的机器人被放行了。</li>
+<li><code>SideloadDir</code>(preflight.rs:151)为 systemd 的 <code>PrivateTmp=yes</code> 生成一句人话:你的 <code>/var/tmp</code> 不是本进程的 <code>/var/tmp</code>,清单 <code>ls</code> 得见却"不存在"。</li>
+</ul>
+<h2 id="你带走的收获">你带走的收获</h2>
+<ul>
+<li>OTA 四层防线:签名(来源)、哈希(完整)、预检(时机)、回滚(后路);一层不能少,顺序不能换。</li>
+<li>兼容性要三态:<code>Refused</code> 与 <code>Unknown</code> 混用会同时堵死恢复、放进坏安装。</li>
+<li>"schema_version 为什么不能当门"是向后兼容的最清晰教案。</li>
+<li>错误信息必须带出路(具体命令),否则是在用户够不到的设备上砌墙。</li>
+</ul>
+<h2 id="延伸">延伸</h2>
+<ul>
+<li><a href="/learn/deep-19">解读 19</a>:装坏之后的另一半。</li>
+<li><a href="/learn/deep-20">解读 20</a>:<code>update.*</code> 的线上契约。</li>
+<li>源码:<code>updater/src/manifest.rs</code>、<code>updater/src/verify.rs</code>、<code>updater/src/preflight.rs</code>;设计文档 <code>docs/design/updater-design.md</code>。</li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

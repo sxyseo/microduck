@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>第 07 课 · 排错方法论:卡住了怎么办 · 什么鸭 WhatDuck</title>
+<meta name="description" content="报错不可避免,但慌乱可以避免。这一课给你一套固定的五步排错流程,并用本项目三个真实踩坑案例走一遍。学完它,任何报错都变成"有流程可走的事"。">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="第 07 课 · 排错方法论:卡住了怎么办">
+<meta property="og:description" content="报错不可避免,但慌乱可以避免。这一课给你一套固定的五步排错流程,并用本项目三个真实踩坑案例走一遍。学完它,任何报错都变成"有流程可走的事"。">
+<meta property="og:url" content="https://duck.whatled.com/learn/course-07">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/course-07">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">LESSON 07 · 阶段 B · 软件与仿真 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="第-07-课-排错方法论卡住了怎么办">第 07 课 · 排错方法论:卡住了怎么办</h1>
+<blockquote>
+<p><strong>这一课解决什么问题</strong>:报错不可避免,但慌乱可以避免。这一课给你一套固定的五步排错流程,并用本项目三个真实踩坑案例走一遍。学完它,任何报错都变成"有流程可走的事"。</p>
+<p><strong>前置</strong>:<a href="/learn/course-03">第 03 课</a> 起的任意一课。你最近被哪个报错卡过,带着它来最好。</p>
+</blockquote>
+<hr />
+<h2 id="1-通用五步流程">1. 通用五步流程</h2>
+<ol>
+<li><strong>把报错从头读到尾。</strong>新手最大的毛病是只看最后一行就开猜。先读第一行(在跑什么)和最后一行(死于什么)。</li>
+<li><strong>最小复现。</strong>把命令删到最简,只留能触发报错的部分——复现越短,排除的干扰越多。</li>
+<li><strong>一次只改一件事。</strong>改前记下当前状态,改完立刻验证——同时改三处,好了不知道是谁的功劳,坏了查不回来。</li>
+<li><strong>按层查文档,不越层乱改。</strong>OpenMicroDuck 排错文档给了一条"先查哪层"的顺序:当前目录和 commit → uv/依赖环境 → 任务注册表 → MJCF 能否加载 → ONNX 路径与 61 → 14 接口 → 模型变体/关节顺序/归一化 → <strong>最后</strong>才轮到训练或控制效果。原话提醒:前几步没通过,就不要改 Reward、BAM、摩擦、质量。</li>
+<li><strong>记录进踩坑日志。</strong>按"现象 → 原因 → 解决"三段写,没解决就老实写"未解决"。下一个踩同一坑的人是你自己。</li>
+</ol>
+<p>提问或提 issue 前,先保存四项信息:<code>git rev-parse HEAD</code>、<code>uv --version</code>、<code>uv run list-envs</code>、<code>uv run scripts/infer_policy.py --help</code>。训练阶段的报错,再补完整命令和完整错误文本。</p>
+<h2 id="2-案例一无-gpu-的-mac-一训练就崩">2. 案例一:无 GPU 的 Mac 一训练就崩</h2>
+<p><strong>现象</strong>:<code>uv run train</code> 直接崩,<code>IndexError: list index out of range</code>,崩在 mjlab 的 <code>gpu.py select_gpus</code>。<br />
+<strong>走流程</strong>:①读完报错——死在"选 GPU"的函数里,不是模型、不是数据;②最小复现——任何 train 命令都崩,与参数无关;③查根因——训练器默认 <code>gpu_ids=[0]</code>,无 CUDA 的机器上 GPU 列表为空,按索引取值越界;④查到 mjlab 官方约定:<code>CUDA_VISIBLE_DEVICES=""</code>(设为空)就是显式 CPU 模式(gpu.py 文档字符串写明);⑤解决并记入构建日志。<br />
+<strong>反面教材</strong>:若跳过第①步,把它猜成"数据问题"去乱改奖励参数——完全跑偏,而且修不好。</p>
+<h2 id="3-案例二wandb-没-api-key-直接报错">3. 案例二:wandb 没 API key 直接报错</h2>
+<p><strong>现象</strong>:同一天第二个坑:默认日志器是 wandb(联网上传实验数据的服务),机器上没配 API key,直接报错。<br />
+<strong>走流程</strong>:读报错定位到日志上传环节 → 最小复现确认与训练无关 → 换本地日志器 <code>--agent.logger tensorboard</code>(与官方冒烟参数一致)→ 记录。<br />
+<strong>这一课的道理</strong>:两个坑叠加时,"一次只改一件事"才救得了你——若当时同时加上 CPU 环境变量和 tensorboard 参数,好了也不知道哪副药治哪个坑,下次少带一副就翻车。</p>
+<h2 id="4-案例三相对路径找错文件">4. 案例三:相对路径找错文件</h2>
+<p><strong>现象</strong>:exp001b 扰动测试,评估脚本里写了 <code>../rl-series/...</code> 相对路径,换个目录运行就找错了位置——构建日志原话:"本会话第二次栽在相对路径上"。<br />
+<strong>走流程</strong>:现象是"文件不存在",但文件明明在,而且时好时坏——取决于从哪个目录运行命令 → 根因:相对路径随工作目录流动 → 解决并固化成规矩:<strong>脚本内一律基于 <code>__file__</code>(脚本自身位置)定位仓库相对路径</strong>。<br />
+<strong>这一课的道理</strong>:时好时坏的 bug,几乎都是"某个隐含前提在变"——工作目录、环境变量、默认参数。钉死成显式配置,bug 就消失。</p>
+<h2 id="5-建你自己的踩坑笔记">5. 建你自己的"踩坑笔记"</h2>
+<p>构建日志"踩过的坑"一节开头写着:<strong>这一节是整份日志最有价值的部分——别人可以不重复踩。</strong>现在轮到你建自己的了:一个 <code>踩坑笔记.md</code>,每条按"现象 → 原因 → 解决"写。开张第一页可以抄 <code>docs/新手学习文档.md</code> 第 9 节的"必踩的坑"(12 条),本课三个案例作第 2–4 条。每次凭流程修好一个报错就多一条——三十天后它是最值钱的文件。</p>
+<h2 id="动手练习15-分钟">动手练习(15 分钟)</h2>
+<p>把第 03 课以来最烦你的一个报错,按"现象 → 原因 → 解决"写进新开的踩坑笔记。没遇到过的,复述案例一,重点写"跳过第①步,我会往哪个错误方向猜"。</p>
+<h2 id="自查清单">自查清单</h2>
+<ul>
+<li>[ ] 我能默写五步流程,并说出每一步防的是什么错</li>
+<li>[ ] 我能说出提问前要保存的四项信息</li>
+<li>[ ] 我能复述至少两个真实踩坑案例的"现象 → 原因 → 解决"</li>
+<li>[ ] 我已建了自己的踩坑笔记,里面至少有一条</li>
+</ul>
+<p>全部打勾,进入<a href="/learn/course-08">第 08 课:看懂电路图</a>。</p>
+<h2 id="下一课预告">下一课预告</h2>
+<p>阶段 B 完结,下一阶段进入硬件:第 08 课开始碰真实世界,先学把 <code>imu_to_dxl</code> 原理图读成一句人话。</p>
+<h2 id="延伸资源">延伸资源</h2>
+<ul>
+<li>OpenMicroDuck 新手排错(按症状查层的对照表):<code>open-microduck/docs/zh-CN/getting-started/troubleshooting.md</code></li>
+<li>构建日志"踩过的坑"章节(三个案例的原始记录):<code>microduck-replica/构建日志.md</code></li>
+<li>新手学习文档第 9 节"必踩的坑":<code>docs/新手学习文档.md</code></li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

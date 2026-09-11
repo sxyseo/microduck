@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>解读 05 · fall.rs:摔倒检测与起身 · 什么鸭 WhatDuck</title>
+<meta name="description" content="duck-control/src/fall.rs(272 行)">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="解读 05 · fall.rs:摔倒检测与起身">
+<meta property="og:description" content="duck-control/src/fall.rs(272 行)">
+<meta property="og:url" content="https://duck.whatled.com/learn/deep-05">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/deep-05">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">DEEP 05 · 第一辑 · 运动控制核心 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="解读-05-fallrs摔倒检测与起身">解读 05 · fall.rs:摔倒检测与起身</h1>
+<blockquote>
+<p><strong>解读对象</strong>:<code>duck-control/src/fall.rs</code>(272 行)<br />
+<strong>需要的前置</strong>:《什么鸭公开课》第 04 课(61→14 契约)+ <a href="/learn/deep-04">解读 04</a></p>
+</blockquote>
+<p>先说清题目边界:<code>fall.rs</code> 里没有起身。它只做一件事——<strong>看见摔倒正在开始</strong>,而不是确认一桩已经结束的摔倒。至于"摔了怎么办"(软倒、起身),是 <code>robotd</code> 的控制决策,起身本身是一个训练出来的技能。这个文件的价值全在一个窗口里:安全层的判定(投影重力 z 过 -0.5 持续 200 ms)触发时,机器人已经在地上或再过几十毫秒落地;而软倒的全部价值,都花在落地之前那段时间(fall.rs:3-8)。</p>
+<h2 id="1-用物理恒等式免掉滤波器">1. 用物理恒等式免掉滤波器</h2>
+<p>预测靠一个导数。投影重力随躯干旋转,体坐标系下恰好满足 <code>ġ = −ω × g</code>,只取 z 分量就是一次乘减:</p>
+<pre><code class="language-text">ġz = −(ωx·gy − ωy·gx)
+</code></pre>
+<p>这就是 <code>FallPredictor::gravity_z_rate(imu)</code> 的全部(fall.rs:110-112)。测试钉的是解析值:从 30° 前倾、以 1 rad/s 倾转,重力 z 应以每秒 0.5 上升,容差 1e-12(fall.rs:170-172)。</p>
+<p>注释特意说明了<strong>不做什么</strong>:不对 SFLP 四元数做数值微分。陀螺仪是同一 12 字节块里的直接测量,而微分四元数会把滤波器自身的滞后加进这个"全靠早"的量里(fall.rs:25-27)。</p>
+<h2 id="2-三个条件缺一不可">2. 三个条件,缺一不可</h2>
+<p><code>observe</code>(fall.rs:120)每 tick 检查,当前重力 z 加上 <code>gravity_z_rate</code> 乘以 <code>lookahead</code>(默认 300 ms,fall.rs:75)得到 <code>predicted_z</code>(fall.rs:115),三条件同时满足才算"正在摔":</p>
+<ol>
+<li><strong>已经倾斜</strong>:<code>gravity[2] &gt; tilt_z</code>(默认 -0.90,约离直立 26°,fall.rs:73)。直立机器人上的陀螺仪尖峰是落脚、是推搡、是被人拎起来——没有位置闸的预测器会把这三种都叫成摔。</li>
+<li><strong>还在倒下去</strong>:<code>rate &gt; 0</code>(重力 z 从 -1 往 0 爬)。从倾斜中恢复的负速率,再大也不算。</li>
+<li><strong>预测越线</strong>:lookahead 之后的 z 超过 <code>predicted_z</code>(默认 -0.5,与安全层同值,语义是"它将在 0.3 s 后成为安全层眼中的摔倒",fall.rs:63-65)。</li>
+</ol>
+<p>条件 2 和测试 <code>a_static_tilt_is_not_a_fall</code>(fall.rs:220)共同划清了与安全层的分工:被手扶在半倾姿势的机器人,位置判据会报警,预测器不会。</p>
+<h2 id="3-边沿触发迟侧调参">3. 边沿触发,迟侧调参</h2>
+<p>通过三条件后还要去抖:<code>debounce = 60 ms</code>,50 Hz 下三个 tick(fall.rs:76、47-48)。触发是边沿而非电平——<code>fired</code> 标志保证每次摔倒只返回一次 <code>true</code>(fall.rs:136-138),轮询的调用方得到的是一个时刻,不是一路脉冲。复 位是双向的:只有机器人"不再像在摔"时才重新武装(fall.rs:128-131),免得第一跤还没落地又触发第二跤;调用方接管(开始软倒)时可调 <code>reset()</code>(fall.rs:145)把进行中的计数清零。</p>
+<p>默认值刻意放在迟侧(fall.rs:44-49),因为<strong>误报的代价不对称</strong>:过早软倒,机器人会在本来能走过去的倾斜上自己趴下——每一例假阳性都是机器人<strong>自己造成</strong>的摔跤;过迟,硬着陆,模式白买。测试 <code>a_slow_lean_waits</code>(fall.rs:231)钉住了这条边界:26°、0.3 rad/s 的慢倾,预测 z 约 -0.86,够不着 -0.5,正确答案是等站立策略去救,而不是抢先躺下。</p>
+<h2 id="4-起身去哪了">4. 起身去哪了</h2>
+<p>仓库里与"起身"对应的是训练侧的 standup 任务与对应的 ONNX 策略(经 <code>policy.rs</code> 的 <code>Net::SitStand</code> 一类会话调度加载);<code>fall.rs</code> 只负责递出"该行动了"的那一个边沿。检测与响应分层,正是 <a href="/learn/deep-04">解读 04</a> 那条"安全层只报告、上层做决策"设计的另一半。</p>
+<h2 id="你带走的收获">你带走的收获</h2>
+<ul>
+<li>位置判据确认"已发生",速率判据预测"进行中"——两者阈值语义要对齐(预测终点 = 安全层阈值)。</li>
+<li>有现成物理恒等式时,直接测量永远好过对滤波输出做数值微分:微分放大滞后与噪声。</li>
+<li>多条件触发器要按"哪类假阳性更贵"排序设计闸门;误报会改变系统行为的检测器,默认值应放迟侧。</li>
+<li>长动作的触发用边沿(one-shot)而非电平,调用方才不会重复响应同一事件。</li>
+<li>去抖窗口用 tick 数表达(60 ms = 3 tick @ 50 Hz),与控制频率的耦合一目了然。</li>
+</ul>
+<h2 id="延伸">延伸</h2>
+<ul>
+<li>摔倒"确认"版判据与 gain_limp: <a href="/learn/deep-04">解读 04</a></li>
+<li>gyro 与 gravity 的来路: <a href="/learn/deep-06">解读 06</a></li>
+<li>这些量最终进观测的哪几维: <a href="/learn/deep-02">解读 02</a></li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

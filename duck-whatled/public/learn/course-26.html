@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>第 26 课 · 毕业设计:选你自己的下一个项目 · 什么鸭 WhatDuck</title>
+<meta name="description" content="鸭子不是终点,是练手项目。这一课给你一套选型方法论(反馈速度 × 成本 × 独特优势)、一份个人版 8 周模板和三个具体候选,帮你选出并启动下一个项目。">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="第 26 课 · 毕业设计:选你自己的下一个项目">
+<meta property="og:description" content="鸭子不是终点,是练手项目。这一课给你一套选型方法论(反馈速度 × 成本 × 独特优势)、一份个人版 8 周模板和三个具体候选,帮你选出并启动下一个项目。">
+<meta property="og:url" content="https://duck.whatled.com/learn/course-26">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/course-26">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">LESSON 26 · 阶段 F · 迁移与扩展 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="第-26-课-毕业设计选你自己的下一个项目">第 26 课 · 毕业设计:选你自己的下一个项目</h1>
+<blockquote>
+<p><strong>这一课解决什么问题</strong>:鸭子不是终点,是练手项目。这一课给你一套选型方法论(反馈速度 × 成本 × 独特优势)、一份个人版 8 周模板和三个具体候选,帮你选出并启动下一个项目。</p>
+<p><strong>前置</strong>:<a href="/learn/course-25">第 25 课</a>。素材来自调研报告 <code>docs/research/physical-ai-robot-startup-research-2026-09-04.md</code>。</p>
+</blockquote>
+<hr />
+<h2 id="1-先校准一个词什么叫反馈">1. 先校准一个词:什么叫"反馈"</h2>
+<p>调研报告第 1 节对"反馈"的定义不是发布会惊叹,而是五种<strong>可观测行为</strong>:</p>
+<ol>
+<li>没人提醒,第 7 天仍然主动使用;</li>
+<li>第一次改出自己的行为,而不是只运行官方 Demo;</li>
+<li>愿意留订金、买测试版或参加付费试点;</li>
+<li>主动分享新动作、应用、外壳或教程;</li>
+<li>一个月后愿意继续购买内容、配件或扩展模块。</li>
+</ol>
+<p><strong>所以呢</strong>:选项目前先回答——你的项目里,"第 7 天还在用"长什么样?说不出来,就先别开工。</p>
+<h2 id="2-选型方法论三维打分">2. 选型方法论:三维打分</h2>
+<p>调研报告用 1–5 分给路线打了六列分数(报告声明是工作假设,不是市场统计)。给个人项目,压成三维:</p>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>问自己的问题</th>
+<th>依据</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>反馈速度</td>
+<td>多快能拿到上面五种可观测行为?</td>
+<td>报告"3 个月拿到反馈"列</td>
+</tr>
+<tr>
+<td>成本</td>
+<td>钱、时间、合规售后压力扛得住吗?</td>
+<td>报告"初始投入友好度""合规/售后"列</td>
+</tr>
+<tr>
+<td>独特优势</td>
+<td>这件事为什么该你做,而不是别人做?</td>
+<td>你的技能与第 25 课的位置图</td>
+</tr>
+</tbody>
+</table>
+<p>四条路线的评分结论(1 分最弱、5 分最强):表达型桌面 AI 生物(投入 5 / 出 Demo 5 / 拿反馈 5,<strong>首选</strong>);AI 宠物(消费潜力最高,但要解决留存);亲子 STEM(付款人明确,但不是单纯硬件生意);双足 Physical AI(技术壁垒 5 分、拿反馈只有 2 分——报告点破的原因是:每次反馈都被硬件问题污染,舵机回差、机械间隙、地面摩擦混在一起)。</p>
+<p>注意这个讽刺:你花 30 天复刻的,恰好是"反馈最慢"的路线——<strong>作为学习它极好,作为第一个产品它很难</strong>。</p>
+<h2 id="3-一个核心多个身体">3. 一个核心,多个身体</h2>
+<p>报告第 5 节推荐:第一版做桌面核心(20–30 cm、4–6 个表达自由度、摄像头麦克风扬声器),验证后再以可插拔模块扩展身体——轮式、四足、双足、夹爪;同一软件生态拥有不同身体,但报告提醒:不能承诺"任何机器训练一次就会走路",跨形态迁移是开放难题。对你的启发:<strong>第一个项目先做"核心",别一上来做"全身"</strong>。</p>
+<h2 id="4-个人版-8-周模板写进你的笔记">4. 个人版 8 周模板(写进你的笔记)</h2>
+<p>把报告第 7 节的团队方案(1–2 周原型、3–4 周 10 台封闭测试、5–8 周 20 台付费试点)压成个人版:</p>
+<pre><code class="language-text">第 1–2 周  可动原型:最小功能跑通;访谈 5–20 个潜在用户,
+          问&quot;愿意为哪个功能留联系方式&quot;,别问&quot;你喜欢吗&quot;
+第 3–4 周  封闭测试:找 3–10 个真实用户独立上手;观察&quot;通电到
+          第一次觉得有趣要多久&quot;&quot;没提醒会不会再用&quot;
+第 5–8 周  付费试点:用订金或真实付款测意愿(哪怕个位数);
+          至少一组用户出现主动使用 + 主动创作,才值得加投入
+</code></pre>
+<p>报告还给了一套内部淘汰线:TTFX(开箱到第一次觉得有趣)≤ 5 分钟、D7 主动使用率 ≥ 40%、付费试点接受率 ≥ 20%——报告声明这是启动期的内部淘汰线,不是行业基准。</p>
+<h2 id="5-三个具体候选">5. 三个具体候选</h2>
+<ol>
+<li><strong>给鸭子加语音</strong>:用第 23 课的小智 + MCP 给鸭子接语音控制,测试"第 7 天后用户还在跟鸭子说话吗"。反馈快,成本约一块 ESP32 开发板。</li>
+<li><strong>做一只轮式版</strong>:借"一个核心、多个身体"的思路,把鸭子的大脑装上轮式底盘——你已经会的一切几乎全部复用。</li>
+<li><strong>把 A/B 方法用于自己的博客</strong>(零硬件):把第 14 课的预注册实验搬去做内容——两个标题、两种结构,用数据选,30 天后写复盘(第 28 课模板现成)。</li>
+</ol>
+<h2 id="6-毕业标准">6. 毕业标准</h2>
+<p>对照报告的反馈定义,定三条硬线:有可运行的原型;有至少 3 个真实用户的使用证据(截图、记录均可);有一份按第 28 课格式写的实验记录。三者齐了,你就从"学完一门课"变成"做成过一件事"。</p>
+<h2 id="动手练习20-分钟">动手练习(20 分钟)</h2>
+<p>写一页毕业设计提案:项目一句话 + 三维打分表(各 1–5 分,附理由)+ 8 周计划第一行(本周就能动手的第一件事)。</p>
+<h2 id="自查清单">自查清单</h2>
+<ul>
+<li>[ ] 我能背出"反馈"的五种可观测行为</li>
+<li>[ ] 我能说清四条路线各自的优势与短板</li>
+<li>[ ] 我的提案里有三维打分和 8 周计划,且第一件事本周就能做</li>
+</ul>
+<h2 id="下一课预告">下一课预告</h2>
+<p>第 27 课讲输出:把你的学习写成有证据的文章——六段结构、选题从哪来、发到哪里。</p>
+<h2 id="延伸资源">延伸资源</h2>
+<ul>
+<li>调研报告(反馈定义、路线对比、8 周方案):<code>docs/research/physical-ai-robot-startup-research-2026-09-04.md</code></li>
+<li><a href="https://github.com/TianxingChen/Embodied-AI-Guide">Embodied-AI-Guide</a></li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

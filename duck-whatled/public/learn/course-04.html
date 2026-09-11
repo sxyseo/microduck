@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>第 04 课 · 61 → 14:一只鸭子的神经回路 · 什么鸭 WhatDuck</title>
+<meta name="description" content="读懂你第 03 课跑起来的那个"大脑"——它每 20 毫秒吃什么(61 个数)、吐什么(14 个数)、这套契约为什么一个都不能乱动。这是全课程最重要的数字。">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="第 04 课 · 61 → 14:一只鸭子的神经回路">
+<meta property="og:description" content="读懂你第 03 课跑起来的那个"大脑"——它每 20 毫秒吃什么(61 个数)、吐什么(14 个数)、这套契约为什么一个都不能乱动。这是全课程最重要的数字。">
+<meta property="og:url" content="https://duck.whatled.com/learn/course-04">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/course-04">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">LESSON 04 · 阶段 B · 软件与仿真 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="第-04-课-61-14一只鸭子的神经回路">第 04 课 · 61 → 14:一只鸭子的神经回路</h1>
+<blockquote>
+<p><strong>这一课解决什么问题</strong>:读懂你第 03 课跑起来的那个"大脑"——它每 20 毫秒吃什么(61 个数)、吐什么(14 个数)、这套契约为什么一个都不能乱动。这是全课程最重要的数字。</p>
+<p><strong>前置</strong>:<a href="/learn/course-03">第 03 课</a>。手头有一个已经能跑的本地环境,边读边对照。</p>
+</blockquote>
+<hr />
+<h2 id="1-每-20-毫秒一次读-算-发">1. 每 20 毫秒,一次"读 → 算 → 发"</h2>
+<p>整只鸭子就是一个跑在 <strong>50 Hz</strong> 上的循环,每 20 毫秒重复三步:读全部关节状态和身体姿态 → 喂给神经网络 → 把 14 个输出下发给舵机。</p>
+<pre><code class="language-text">            每 20 ms 重复一次(50 Hz)
+
+  传感器                策略网络(ONNX)             执行
+ ┌───────────┐  61 个数  ┌───────────────┐  14 个数  ┌──────────┐
+ │ IMU(200号)│ ────────▶ │  神经网络      │ ────────▶ │ 14 个关节 │
+ │ 14 关节    │           │  61 → 14      │           │ 转到目标  │
+ └───────────┘           └───────────────┘           └──────────┘
+      ▲                          ▲
+      └──── 传感数据回流 ─────────┘└── 命令:往哪走、多快、头什么姿态(你给)
+</code></pre>
+<p><strong>类比</strong>:你走路时没人逐条指挥每块肌肉——身体自动决定下一步怎么迈。你(按方向键的人)只发目标,策略管过程。</p>
+<h2 id="2-61-个数策略能看到的一切">2. 61 个数:策略能看到的一切</h2>
+<p>全部 alpha 策略共用同一张观测表(记不住没关系,先知道"分七段"):</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: right;">索引</th>
+<th style="text-align: right;">宽度</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: right;">0–2</td>
+<td style="text-align: right;">3</td>
+<td>躯干角速度(转多快)</td>
+</tr>
+<tr>
+<td style="text-align: right;">3–5</td>
+<td style="text-align: right;">3</td>
+<td>投影重力(歪没歪)</td>
+</tr>
+<tr>
+<td style="text-align: right;">6–19</td>
+<td style="text-align: right;">14</td>
+<td>相对 HOME 的关节角(嘴除外)</td>
+</tr>
+<tr>
+<td style="text-align: right;">20–33</td>
+<td style="text-align: right;">14</td>
+<td>关节速度</td>
+</tr>
+<tr>
+<td style="text-align: right;">34–47</td>
+<td style="text-align: right;">14</td>
+<td>上一次策略输出的动作</td>
+</tr>
+<tr>
+<td style="text-align: right;">48–50</td>
+<td style="text-align: right;">3</td>
+<td>速度指令 <code>vx, vy, yaw_rate</code></td>
+</tr>
+<tr>
+<td style="text-align: right;">51–54</td>
+<td style="text-align: right;">4</td>
+<td>头颈命令 <code>neck_pitch, head_pitch, head_yaw, head_roll</code></td>
+</tr>
+<tr>
+<td style="text-align: right;">55–60</td>
+<td style="text-align: right;">6</td>
+<td>身体位姿命令槽 <code>x, y, z, roll, pitch, yaw</code></td>
+</tr>
+</tbody>
+</table>
+<p>加一下:3+3+14+14+14+3+4+6 = 61,正好。前 48 个数是"身体的自我感觉"(姿态、关节、上次动作),后 13 个是"你下的命令"。另:训练时网络背后还有个 76 维的 critic("教练视角"),真机只跑 61 维的 actor。</p>
+<h2 id="3-14-个数每个关节往哪转">3. 14 个数:每个关节往哪转</h2>
+<p>输出不是"转多少度"的绝对值,而是<strong>相对 HOME 姿态的关节位置偏移</strong>,顺序固定:</p>
+<pre><code class="language-text">0..4   左腿:hip_yaw, hip_roll, hip_pitch, knee, ankle
+5..8   颈头:neck_pitch, head_pitch, head_yaw, head_roll
+9..13  右腿:hip_yaw, hip_roll, hip_pitch, knee, ankle
+</code></pre>
+<p>顺序是<strong>左腿 → 头颈 → 右腿</strong>,不对称。真机有 15 只舵机,第 10 个物理槽位是嘴巴——策略不输出它,运行时负责把 14 个数映射回 15 个槽位(<code>duck-control/src/obs.rs</code> 用同一张表完成读取和回填)。</p>
+<h2 id="4-为什么这套契约不能随便动">4. 为什么这套契约不能随便动</h2>
+<p>三个理由,一个比一个硬:</p>
+<ol>
+<li><strong>训练和部署是两拨代码,靠这张表对齐。</strong>训练仓按这个顺序生成观测,真机按同一顺序读取回填——悄悄改了顺序,ONNX 照样"能跑",但鸭子立刻倒下(位置 6 的数被当成位置 0 的意思)。</li>
+<li><strong>新策略要与旧运行时热切换。</strong>官方约定:新技能用不到的命令槽要保留并填零,<strong>不许删</strong>——删了,新 ONNX 就装不进现有运行时。</li>
+<li><strong>出问题时没法归因。</strong><code>docs/microduck-30day/source-map.md</code> 的推荐阅读顺序就是沿这条链排的:任务注册 → 环境配置 → 观测/奖励 → 真机的 <code>obs.rs</code>。契约稳定,你才能顺链找问题。</li>
+</ol>
+<p>所以呢:<strong>想改行为,先改奖励和参数,永远别先动 61/14 的布局</strong>——这是阶段 D 的纪律。</p>
+<h2 id="动手练习15-分钟">动手练习(15 分钟)</h2>
+<p>对照 <code>microduck-replica/docs/训练参数调整与新动作开发指南.md</code> 第 4 节核查本文表格,合上资料手画一遍数据流图。再答一题:动作 0–4 是左腿、9–13 是右腿,头颈夹中间——这是推导出来的吗?(不是,是全链路共用的约定。)</p>
+<h2 id="自查清单">自查清单</h2>
+<ul>
+<li>[ ] 我能不看资料画出 50 Hz"读 → 算 → 发"的数据流图</li>
+<li>[ ] 我能说出 61 维观测大致分几段、各自是什么</li>
+<li>[ ] 我知道 14 维动作的顺序是左腿 → 头颈 → 右腿,且是相对 HOME 的偏移</li>
+<li>[ ] 我能解释为什么观测布局不能随便改(至少说出两个理由)</li>
+</ul>
+<p>全部打勾,进入<a href="/learn/course-05">第 05 课:第一次训练</a>。</p>
+<h2 id="下一课预告">下一课预告</h2>
+<p>第 05 课真正开训:训练 → 回放 → 导出 → 验证四步全流程,加上 Mac 无 GPU 机器的两个必踩坑(都是构建日志里的真实事故)。</p>
+<h2 id="延伸资源">延伸资源</h2>
+<ul>
+<li>训练参数调整指南第 3–4 节(术语表与 61/14 契约的原始出处):<code>microduck-replica/docs/训练参数调整与新动作开发指南.md</code></li>
+<li>源码地图(沿契约读代码的顺序表):<code>docs/microduck-30day/source-map.md</code></li>
+<li>真机侧实现(61 维如何构造):<code>duck-control/src/obs.rs</code></li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>
