@@ -1,0 +1,24 @@
+[submodule "KiCAD-MCP-Server"]
+	path = KiCAD-MCP-Server
+	url = https://github.com/mixelpixx/KiCAD-MCP-Server.git
+[submodule "Microduck-build-tutorial"]
+	path = Microduck-build-tutorial
+	url = https://github.com/sxyseo/Microduck-build-tutorial.git
+[submodule "OpenMicroDuck"]
+	path = OpenMicroDuck
+	url = https://github.com/JoyandAI/OpenMicroDuck.git
+[submodule "bam"]
+	path = bam
+	url = https://github.com/Rhoban/bam.git
+[submodule "microduck-replica-cad"]
+	path = microduck-replica-cad
+	url = https://github.com/fanhao375/microduck-replica-cad
+[submodule "microduck-replica"]
+	path = microduck-replica
+	url = https://github.com/sxyseo/microduck-replica.git
+[submodule "open-microduck"]
+	path = open-microduck
+	url = https://github.com/SaberOnGo/open-microduck.git
+[submodule "xiaozhi-esp32"]
+	path = xiaozhi-esp32
+	url = https://github.com/78/xiaozhi-esp32
