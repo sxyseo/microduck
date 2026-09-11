@@ -61,6 +61,32 @@ pwsh -File tools/microduck_learning/setup_simulation.ps1 `
 策略不会由本仓库下载，也不会提交到本仓库。推理成功信号是 MuJoCo viewer 启动并运行；
 smoke test 成功信号是进程以退出码 `0` 结束，且日志中没有 `NaN` 或 observation/action shape 错误。
 
+注意：上游 `scripts/infer_policy.py` 当前导入 POSIX 专用的 `termios`。因此原生 Windows
+只能把 `-DryRun` 当作路径检查；实际 `Inference` 和 `Smoke` 运行必须在 Linux、macOS
+或 WSL2 中完成。不要为了让 Windows 命令“变绿”而修改上游训练代码。WSL 中使用
+同样的 `uv run ...` 命令，继续使用上面的退出码、NaN 和 `obs[1,61] → actions[1,14]`
+形状作为验收标准。
+
+WSL 请把训练 checkout 放在 Linux 文件系统（例如 `/home/<user>/microduck_rl`），不要
+放在 `/mnt/f/...`；后者在同步大型 CUDA/PyTorch 依赖时可能卡住。以下命令会执行上游
+`uv sync`、CLI 探针和同一组 5 次迭代 CPU smoke 参数；当前主机未宣称已完成这些检查：
+
+```bash
+git clone https://github.com/pollen-robotics/microduck_rl "$HOME/microduck_rl"
+cd "$HOME/microduck_rl"
+git checkout --detach 29e887ecfbf5d37144759e5a9f8a176dfb83d547
+uv sync
+uv run scripts/infer_policy.py --help
+uv run train Mjlab-Velocity-Flat-MicroDuck \
+  --gpu-ids None \
+  --env.scene.num-envs 8 \
+  --agent.num-steps-per-env 24 \
+  --agent.max-iterations 5 \
+  --agent.logger tensorboard \
+  --agent.upload-model False \
+  --agent.run-name lesson-01-repro
+```
+
 ## 重跑第一个 smoke test（macOS/Linux）
 
 脚本会优先使用环境变量 `MICRODUCK_RL_DIR`；如果不设置，则依次尝试
