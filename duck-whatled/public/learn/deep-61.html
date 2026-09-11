@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>解读 61 · HL-2915-C001:它是什么,为什么值得一条专门路线 · 什么鸭 WhatDuck</title>
+<meta name="description" content="docs/HL-2915路线全流程教程.md(380 行)+ microduck-replica/rl-series/scripts/hl2915_bench.py(744 行)头">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="解读 61 · HL-2915-C001:它是什么,为什么值得一条专门路线">
+<meta property="og:description" content="docs/HL-2915路线全流程教程.md(380 行)+ microduck-replica/rl-series/scripts/hl2915_bench.py(744 行)头">
+<meta property="og:url" content="https://duck.whatled.com/learn/deep-61">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/deep-61">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">DEEP 61 · 第七辑 · 换装 HL-2915 全流程 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="解读-61-hl-2915-c001它是什么为什么值得一条专门路线">解读 61 · HL-2915-C001:它是什么,为什么值得一条专门路线</h1>
+<blockquote>
+<p><strong>解读对象</strong>:<code>docs/HL-2915路线全流程教程.md</code>(380 行)+ <code>microduck-replica/rl-series/scripts/hl2915_bench.py</code>(744 行)头部"硬件前提"注释<br />
+<strong>需要的前置</strong>:<a href="/learn/deep-52">解读 52</a>(XL330 vs HL-1910 逐项对比)· <a href="/learn/deep-53">解读 53</a>(两家协议怎么映射)</p>
+</blockquote>
+<p>2026-09-12,项目里多了两只新舵机:飞特 HL-2915-C001(12V TTL 磁编码总线舵机)。它不进整机,却值得一条从台架到整机的专门路线——这一篇先回答"它是什么"。</p>
+<h2 id="1-三只舵机三个定位">1. 三只舵机,三个定位</h2>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>XL330-M288(官方)</th>
+<th>HL-1910-C001(已购装机替代)</th>
+<th>HL-2915-C001(本专辑主角)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>电压窗</td>
+<td>3.7–6.0 V</td>
+<td>4–8.4 V</td>
+<td><strong>9–14 V(典型 12 V)</strong></td>
+</tr>
+<tr>
+<td>堵转扭矩</td>
+<td>~0.52 N·m</td>
+<td>1.47 N·m @7.4V</td>
+<td><strong>1.39 N·m(14.2 kg·cm)@12V,待到货实测</strong></td>
+</tr>
+<tr>
+<td>堵转电流</td>
+<td>~1.5 A</td>
+<td>2.0 A @7.4V</td>
+<td>1.5 A</td>
+</tr>
+<tr>
+<td>重量</td>
+<td>18 g</td>
+<td>21 g</td>
+<td><strong>27.8±2 g</strong></td>
+</tr>
+<tr>
+<td>插头</td>
+<td>JST EH 2.5mm</td>
+<td>5264 2.5mm</td>
+<td><strong>PH1.25-3P(1.25mm)</strong></td>
+</tr>
+</tbody>
+</table>
+<p>数据出自 <code>docs/新手学习文档.md</code> §12.1(逐项核对过《HL-2915-C001 产品规格书》A/0 等三份官方文档)。三个定位写在教程 §9.2:XL330 是官方 $399 整机的原装件;HL-1910 是 2026-09-07 实购的装机候选(×15 ¥1500,见构建日志);<strong>HL-2915 是"跑通全链路的开发单元"</strong>——先买 2 只,把协议、供电、辨识、重训全部走通,再决定量产型号。</p>
+<h2 id="2-关键规格三条硬约束">2. 关键规格:三条硬约束</h2>
+<p><strong>电压 9–14V</strong>:bench 脚本头注释原话——"HL-2915-C001 是 9-14V,接 5V/2S 都不动"。这一条直接决定电池节数(3S,见<a href="/learn/deep-66">解读 66</a>)和台架电源(12V 限流 0.5A),是整条路线"最刚性的约束"。</p>
+<p><strong>磁编码 12bit</strong>:0.088°/步,中位 2048,全行程 0..4095(360°),方向顺时针——这是 <code>lesson1()</code> 打印的出厂速查原文。方向与 XL330 相反,装配后要靠 31 号"位置校正"统一。</p>
+<p><strong>插头 PH1.25-3P</strong>:1.25mm 间距,bench 注释明说"与 5264/JST-EH 不通用";脚序 1=GND / 2=Vcc / 3=Signal。仓库早期按《HL-2915-C002 规格书》记过"AMP-3/5264 惯例",<code>microduck-replica/docs/硬件方案逆向.md</code> 专门警告"别拿 C002 当参考"——对 C001 不适用。另注意 HD-1910 脚序与 HL 相反(1=Signal / 2=Vcc / 3=GND,教程 §9.2)。</p>
+<h2 id="3-设计取舍为什么值得一条专门路线">3. 设计取舍:为什么值得一条专门路线</h2>
+<p>它<strong>不能直接装进现有鸭体</strong>:15 只按 27.8g 算 ≈417g,比 XL330 方案 +147g;外形、扭矩全变,等于换本体,策略必须重训。但它与 HD-1910、STS3215 同属飞特磁编码一族,协议同构——教程卷首语说得很准:"之后换任何更便宜的飞特磁编码舵机,只是换参数,不是重做"。所以路线的设计目标是<strong>把不可迁移的部分(电压窗、辨识参数、策略)和可迁移的部分(协议帧层、台架方法、辨识方法、部署流水线)分开验证</strong>:前者在 2 只舵机上量化,后者一次写成资产。</p>
+<h2 id="你带走的收获">你带走的收获</h2>
+<ul>
+<li>认识一颗新执行器,先看三样:电压窗、插头、编码分辨率——每一样都对应一次采购决策或返工风险。</li>
+<li>电压窗口决定电池节数:9–14V → 3S;这条比扭矩、重量更刚性。</li>
+<li>同厂同族的规格书不能互相套用:C001 的插头以 C001 规格书为准(PH1.25-3P)。</li>
+<li>协议同族 ≠ 机械可互换:软件链路可以提前验证,结构件必须等实物。</li>
+<li>开发单元与量产件分开:先用 2 只量化风险,整机验收前不囤货。</li>
+</ul>
+<h2 id="延伸">延伸</h2>
+<ul>
+<li><a href="/learn/deep-62">解读 62</a>:这条路线怎么分段走</li>
+<li><a href="/learn/deep-51">解读 51</a>:另一只飞特舵机的尺寸链</li>
+<li><code>docs/HL-2915路线全流程教程.md</code>(§1 全局架构、§9.2 候选与选型规则)</li>
+<li><code>microduck-replica/rl-series/scripts/hl2915_bench.py</code>(头部"硬件前提"注释)</li>
+<li><code>docs/新手学习文档.md</code> §12(规格对照表与三个坑)</li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

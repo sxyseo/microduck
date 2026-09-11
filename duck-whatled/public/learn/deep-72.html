@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>解读 72 · 一次性投入与下一次换舵机:降本路线+总验收 · 什么鸭 WhatDuck</title>
+<meta name="description" content="docs/HL-2915路线全流程教程.md(380 行)§9–§11(降本、速查、总验收)">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="解读 72 · 一次性投入与下一次换舵机:降本路线+总验收">
+<meta property="og:description" content="docs/HL-2915路线全流程教程.md(380 行)§9–§11(降本、速查、总验收)">
+<meta property="og:url" content="https://duck.whatled.com/learn/deep-72">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/deep-72">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">DEEP 72 · 第七辑 · 换装 HL-2915 全流程 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="解读-72-一次性投入与下一次换舵机降本路线总验收">解读 72 · 一次性投入与下一次换舵机:降本路线+总验收</h1>
+<blockquote>
+<p><strong>解读对象</strong>:<code>docs/HL-2915路线全流程教程.md</code>(380 行)§9–§11(降本、速查、总验收)<br />
+<strong>需要的前置</strong>:<a href="/learn/deep-58">解读 58</a>(为什么官方 ONNX 作废)、<a href="/learn/deep-52">解读 52</a>(选型对比方法)</p>
+</blockquote>
+<p>这是专辑的最后一篇。§9 回答贯穿全系列的问题:A–G 走完,哪些是沉没成本,哪些变成了资产?§10–§11 把踩过的坑和全部验收收拢成两张可复用的表。</p>
+<h2 id="1-什么是一次性的">1. 什么是一次性的</h2>
+<p>§9.1 点名:转接板、教程本身、<code>hl2915_bench.py</code>、<code>Feetech2915Io</code>、辨识方法、部署流水线<strong>全部复用</strong>。换一只更便宜的舵机,边际成本只剩三件事:</p>
+<table>
+<thead>
+<tr>
+<th>要动的</th>
+<th>工作量</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>电压窗与保护寄存器(14/15/28 号)</td>
+<td>一条写指令</td>
+</tr>
+<tr>
+<td>寄存器差异(以<strong>那只舵机的内存表</strong>为准,如经典 STS 系列)</td>
+<td>改两个常量 + 重跑课 1–5</td>
+</tr>
+<tr>
+<td>辨识五参数重测 + 重训</td>
+<td>阶段 A 的表 + 阶段 F 一轮</td>
+</tr>
+</tbody>
+</table>
+<p>这就是"换参数,不是重做"的准确含义:探索性的工作(协议猜谜、IMU 朝向、供电架构、Io 接缝)只付一次,之后付的都是确定性的执行——包括"以那只舵机的内存表为准"这条限定:经典 STS 系列协议同族,目标位置地址却不同。</p>
+<h2 id="2-候选规则与成本锚点">2. 候选、规则与成本锚点</h2>
+<p>教程 §9.2 的三行候选表:HL-2915-C001(9–14V,27.8g,本教程的开发单元);HD-1910-C001(4–8.4V,21g,2S 母线友好;⚠️ <strong>脚序与 HL 相反:1=Signal / 2=Vcc / 3=GND</strong>,HL 是 1=GND/2=Vcc/3=Signal,<code>hl2915_bench.py</code> 头注释的线序);STS3215 系列通用货(4.8–7.4V,~21g,lerobot 同款)。</p>
+<p>选型规则:<strong>整机验收前不要囤货</strong>;先用 2 只开发舵机把阶段 F 走通,G 阶段按"单只价格 × 15 + 辨识偏差风险"决定量产型号;同一批货<strong>全部同型号同固件批次</strong>——"混批是最隐蔽的坑"。成本锚点(§9.3):官方整机 $399,HAT 打样几百元起,对照转接板 ¥22 + UBEC。</p>
+<h2 id="3-故障排查速查表把症状映射到层">3. 故障排查速查表:把症状映射到层</h2>
+<p>§10 的九行速查表,每行"症状→原因→动作":总线(PING 无应答→量母线电压、核线序;全 0xFF→查共地);舵机配置(12V 一上就假死→14/15 号电压窗出厂值低于 12V 触发过压保护);部署(<code>policy load</code> 被拒→<code>inspect_onnx.py</code> 验 61/14);整机(吊装某关节狂抖→回阶段 A 标定记录核对方向位)。它是 §0"跳步的代价"的逆索引:出问题先问该查哪一层。</p>
+<h2 id="4-总验收清单与结语">4. 总验收清单与结语</h2>
+<p>§11 的清单可直接复制打勾(教程原文):</p>
+<pre><code class="language-text">阶段 A:[ ] 课1–4 两只各自 PASS   [ ] 课5 SYNC 闭环   [ ] 辨识四项数据入表   [ ] ID 分配贴标
+阶段 B:[ ] 零漂&lt;0.05rad/s  [ ] 翻转变号  [ ] 方向对  [ ] 四元数连续  [ ] 50Hz×10min 不 stale
+阶段 C:[ ] v4l2 出图  [ ] 720p30 流  [ ] 方向正确  [ ] duck-detect 框对
+阶段 D:[ ] 3S 母线 12.3–12.6V  [ ] 压降&lt;0.5V  [ ] 急停可靠  [ ] UBEC 5V 稳  [ ] 全部共地
+阶段 E:[ ] cargo test 绿  [ ] 50Hz 零丢读  [ ] 扭矩开关正常  [ ] 拔线报 ShortRead
+阶段 F:[ ] 冒烟无 NaN  [ ] 训练三信号  [ ] export.py 导出  [ ] inspect 61/14  [ ] 回放能走
+阶段 G:[ ] health 绿  [ ] L5 吊装  [ ] L6 软垫  [ ] L7 平地  [ ] 日志留档
+</code></pre>
+<p>全专辑收束于此。第一次走 A–G,按 §0 的预估约 5–8 周;下一次换舵机,固定动作收敛为"改常量、重测五参数、重训一轮"。换舵机成本从整月压到几天的方法论版本:<strong>没有一步需要重新发明</strong>。教程结语值得抄在台架边:"真正降本的不是便宜的舵机,是少走一遍弯路。"</p>
+<h2 id="你带走的收获">你带走的收获</h2>
+<ul>
+<li>沉淀资产的标准:下次换件还能原样用的才是资产——脚本、Io 层、辨识方法、部署流水线。</li>
+<li>选型先定流程再定型号:2 只先走通重训,15 只的订单等辨识偏差风险算清再下;批次一致性是隐性参数。</li>
+<li>故障排查表按"层"而非按"器件"组织,与教程 §0 的顺序约束互为正反面。</li>
+<li>验收清单的最小粒度是"可打勾的数字",不是"感觉对了"。</li>
+</ul>
+<h2 id="延伸">延伸</h2>
+<ul>
+<li>本专辑各阶段: <a href="/learn/deep-67">解读 67</a>、<a href="/learn/deep-68">解读 68</a>、<a href="/learn/deep-69">解读 69</a>、<a href="/learn/deep-70">解读 70</a>、<a href="/learn/deep-71">解读 71</a></li>
+<li>换舵机为什么必须重训: <a href="/learn/deep-58">解读 58</a></li>
+<li>本地:<code>docs/HL-2915路线全流程教程.md</code>(§9–§11)、<code>microduck-replica/docs/复刻总清单.md</code></li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

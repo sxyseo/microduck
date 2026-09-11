@@ -148,73 +148,73 @@
 <tbody>
 <tr>
 <td>01</td>
-<td>bus.rs:一条 1 Mbps 总线上的 15 个对话</td>
+<td><a href="/learn/deep-01">bus.rs:一条 1 Mbps 总线上的 15 个对话</a></td>
 <td><code>duck-control/src/bus.rs</code></td>
 <td>50 Hz 里怎么调度 15 个舵机的读写</td>
 </tr>
 <tr>
 <td>02</td>
-<td>obs.rs:61 维观测是怎么拼出来的</td>
+<td><a href="/learn/deep-02">obs.rs:61 维观测是怎么拼出来的</a></td>
 <td><code>duck-control/src/obs.rs</code></td>
 <td>真机观测与训练观测如何保持逐位一致</td>
 </tr>
 <tr>
 <td>03</td>
-<td>policy.rs:ONNX 策略的加载、预热与校验</td>
+<td><a href="/learn/deep-03">policy.rs:ONNX 策略的加载、预热与校验</a></td>
 <td><code>duck-control/src/policy.rs</code></td>
 <td>一个 .pt 变成可靠部署件要过几道门</td>
 </tr>
 <tr>
 <td>04</td>
-<td>safety.rs:安全层怎么写进代码</td>
+<td><a href="/learn/deep-04">safety.rs:安全层怎么写进代码</a></td>
 <td><code>duck-control/src/safety.rs</code></td>
 <td>超程/超温/失联时谁先踩刹车</td>
 </tr>
 <tr>
 <td>05</td>
-<td>fall.rs:摔倒检测与起身</td>
+<td><a href="/learn/deep-05">fall.rs:摔倒检测与起身</a></td>
 <td><code>duck-control/src/fall.rs</code></td>
 <td>姿态判据怎么区分摔倒与正常动作</td>
 </tr>
 <tr>
 <td>06</td>
-<td>imu.rs:从 IMU 原始数据到姿态</td>
+<td><a href="/learn/deep-06">imu.rs:从 IMU 原始数据到姿态</a></td>
 <td><code>duck-control/src/imu.rs</code></td>
 <td>加速度计+陀螺仪怎么变成 61 维里的那几个数</td>
 </tr>
 <tr>
 <td>07</td>
-<td>model.rs 与 io.rs:机器人描述与硬件 IO</td>
+<td><a href="/learn/deep-07">model.rs 与 io.rs:机器人描述与硬件 IO</a></td>
 <td><code>duck-control/src/model.rs</code>、<code>io.rs</code></td>
 <td>关节编号/方向/零位如何集中管理</td>
 </tr>
 <tr>
 <td>08</td>
-<td>lib.rs 与 crate 组织:控制库的分层</td>
+<td><a href="/learn/deep-08">lib.rs 与 crate 组织:控制库的分层</a></td>
 <td><code>duck-control/src/lib.rs</code></td>
 <td>一个控制库应该怎么分模块</td>
 </tr>
 <tr>
 <td>09</td>
-<td>robotd/main.rs + control.rs:守护进程的控制循环</td>
+<td><a href="/learn/deep-09">robotd/main.rs + control.rs:守护进程的控制循环</a></td>
 <td><code>robotd/src/main.rs</code>、<code>control.rs</code></td>
 <td>进程级怎么组织 50 Hz 主循环</td>
 </tr>
 <tr>
 <td>10</td>
-<td>robotd/intents.rs:意图层</td>
+<td><a href="/learn/deep-10">robotd/intents.rs:意图层</a></td>
 <td><code>robotd/src/intents.rs</code></td>
 <td>语音/手柄/程序怎么统一成"意图"</td>
 </tr>
 <tr>
 <td>11</td>
-<td>robotd/params.rs + robotd-params:参数系统</td>
+<td><a href="/learn/deep-11">robotd/params.rs + robotd-params:参数系统</a></td>
 <td><code>robotd/src/params.rs</code>、<code>robotd-params/</code></td>
 <td>参数怎么版本化、怎么下到板子</td>
 </tr>
 <tr>
 <td>12</td>
-<td>robotd/soc.rs + sound.rs + theremin.rs + chorale.rs:电池、声音与彩蛋</td>
+<td><a href="/learn/deep-12">robotd/soc.rs + sound.rs + theremin.rs + chorale.rs:电池、声音与彩蛋</a></td>
 <td><code>robotd/src/{soc,sound,theremin,chorale}.rs</code></td>
 <td>电量监测与声音系统的工程做法</td>
 </tr>
@@ -233,49 +233,49 @@
 <tbody>
 <tr>
 <td>13</td>
-<td>kinematics/math.rs:变换与向量工具</td>
+<td><a href="/learn/deep-13">kinematics/math.rs:变换与向量工具</a></td>
 <td><code>kinematics/src/math.rs</code></td>
 <td>机器人数学的最小集</td>
 </tr>
 <tr>
 <td>14</td>
-<td>kinematics/head.rs:头部 3 自由度运动学</td>
+<td><a href="/learn/deep-14">kinematics/head.rs:头部 3 自由度运动学</a></td>
 <td><code>kinematics/src/head.rs</code></td>
 <td>往哪看的问题怎么解</td>
 </tr>
 <tr>
 <td>15</td>
-<td>kinematics/hand.rs + mjcf.rs:手部与模型对齐</td>
+<td><a href="/learn/deep-15">kinematics/hand.rs + mjcf.rs:手部与模型对齐</a></td>
 <td><code>kinematics/src/hand.rs</code>、<code>mjcf.rs</code></td>
 <td>代码里的几何怎么和 MJCF 对上</td>
 </tr>
 <tr>
 <td>16</td>
-<td>odometry/lib.rs:里程估计</td>
+<td><a href="/learn/deep-16">odometry/lib.rs:里程估计</a></td>
 <td><code>odometry/src/lib.rs</code></td>
 <td>没有轮子怎么知道走了多远</td>
 </tr>
 <tr>
 <td>17</td>
-<td>tof/sensor.rs + status.rs:ToF 传感器驱动</td>
+<td><a href="/learn/deep-17">tof/sensor.rs + status.rs:ToF 传感器驱动</a></td>
 <td><code>tof/src/sensor.rs</code>、<code>status.rs</code></td>
 <td>8×8 ToF 点云的驱动写法</td>
 </tr>
 <tr>
 <td>18</td>
-<td>updater(上):manifest 与验证</td>
+<td><a href="/learn/deep-18">updater(上):manifest 与验证</a></td>
 <td><code>updater/src/{manifest,verify,preflight}.rs</code></td>
 <td>OTA 更新怎么保证不刷成砖</td>
 </tr>
 <tr>
 <td>19</td>
-<td>updater(下):reconcile 与回滚</td>
+<td><a href="/learn/deep-19">updater(下):reconcile 与回滚</a></td>
 <td><code>updater/src/{reconcile,orphan,faults}.rs</code></td>
 <td>出错回滚的状态机</td>
 </tr>
 <tr>
 <td>20</td>
-<td>configd + duckctl + duck-ipc-proto:配置、命令行与 IPC</td>
+<td><a href="/learn/deep-20">configd + duckctl + duck-ipc-proto:配置、命令行与 IPC</a></td>
 <td><code>configd/</code>、<code>duckctl/</code>、<code>duck-ipc-proto/</code></td>
 <td>板子上多个进程怎么协作</td>
 </tr>
@@ -294,73 +294,73 @@
 <tbody>
 <tr>
 <td>21</td>
-<td>tasks/<strong>init</strong>.py:任务注册表</td>
+<td><a href="/learn/deep-21">tasks/<strong>init</strong>.py:任务注册表</a></td>
 <td><code>microduck_rl/.../tasks/__init__.py</code>(278 行)</td>
 <td>任务名如何映射到配置类</td>
 </tr>
 <tr>
 <td>22</td>
-<td>velocity 配置(上):前 87 行的开关与范围</td>
+<td><a href="/learn/deep-22">velocity 配置(上):前 87 行的开关与范围</a></td>
 <td><code>.../microduck_velocity_env_cfg.py</code></td>
 <td>全局开关、随机化范围怎么读</td>
 </tr>
 <tr>
 <td>23</td>
-<td>velocity 配置(中):动作与观测</td>
+<td><a href="/learn/deep-23">velocity 配置(中):动作与观测</a></td>
 <td>同上 193–638 行</td>
 <td>14 动作、61/76 维观测的拼装</td>
 </tr>
 <tr>
 <td>24</td>
-<td>velocity 配置(下):reward 与终止</td>
+<td><a href="/learn/deep-24">velocity 配置(下):reward 与终止</a></td>
 <td>同上 639–950 行</td>
 <td>每一项 reward 在教什么</td>
 </tr>
 <tr>
 <td>25</td>
-<td>mdp.py(上):observation 函数库</td>
+<td><a href="/learn/deep-25">mdp.py(上):observation 函数库</a></td>
 <td><code>tasks/mdp.py</code>(7188 行)抽读</td>
 <td>观测函数的写法模式</td>
 </tr>
 <tr>
 <td>26</td>
-<td>mdp.py(下):reward 与事件函数库</td>
+<td><a href="/learn/deep-26">mdp.py(下):reward 与事件函数库</a></td>
 <td>同上抽读</td>
 <td>奖励塑形的工程实现</td>
 </tr>
 <tr>
 <td>27</td>
-<td>standup 配置:起身的课程设计</td>
+<td><a href="/learn/deep-27">standup 配置:起身的课程设计</a></td>
 <td><code>microduck_standup_env_cfg.py</code>(1159 行)</td>
 <td>摔倒起身怎么拆成课程</td>
 </tr>
 <tr>
 <td>28</td>
-<td>sitstand 配置:坐下与站立的对称性</td>
+<td><a href="/learn/deep-28">sitstand 配置:坐下与站立的对称性</a></td>
 <td><code>microduck_sitstand_env_cfg.py</code>(929 行)</td>
 <td>一对互逆动作怎么共用结构</td>
 </tr>
 <tr>
 <td>29</td>
-<td>spin 与 roulade:特技动作的任务设计</td>
+<td><a href="/learn/deep-29">spin 与 roulade:特技动作的任务设计</a></td>
 <td><code>microduck_spin_env_cfg.py</code>、<code>microduck_roulade_env_cfg.py</code></td>
 <td>特技的评价函数长什么样</td>
 </tr>
 <tr>
 <td>30</td>
-<td>ball_kick 与 ground_pick:带物体的任务</td>
+<td><a href="/learn/deep-30">ball_kick 与 ground_pick:带物体的任务</a></td>
 <td><code>microduck_ball_kick_env_cfg.py</code>、<code>microduck_ground_pick_env_cfg.py</code></td>
 <td>接触丰富任务的奖励设计</td>
 </tr>
 <tr>
 <td>31</td>
-<td>symmetry.py 与 backlash.py:对称与齿隙</td>
+<td><a href="/learn/deep-31">symmetry.py 与 backlash.py:对称与齿隙</a></td>
 <td><code>tasks/symmetry.py</code>、<code>backlash.py</code></td>
 <td>左右对称镜像与齿隙建模</td>
 </tr>
 <tr>
 <td>32</td>
-<td>export.py 与 infer_policy.py:导出与回放</td>
+<td><a href="/learn/deep-32">export.py 与 infer_policy.py:导出与回放</a></td>
 <td><code>scripts/export.py</code>、<code>scripts/infer_policy.py</code></td>
 <td>部署件的最后一公里</td>
 </tr>
@@ -379,49 +379,49 @@
 <tbody>
 <tr>
 <td>33</td>
-<td>47 个 STL 反推出装配体的方法</td>
+<td><a href="/learn/deep-33">47 个 STL 反推出装配体的方法</a></td>
 <td><code>microduck-replica/docs/硬件方案逆向.md</code>(选读)</td>
 <td>没有图纸怎么逆向装配关系</td>
 </tr>
 <tr>
 <td>34</td>
-<td>躯干主体:装配基准件</td>
+<td><a href="/learn/deep-34">躯干主体:装配基准件</a></td>
 <td><code>microduck-replica-cad/组件图/01-躯干主体*.png</code> + 逆向文档</td>
 <td>基准件上承载了什么</td>
 </tr>
 <tr>
 <td>35</td>
-<td>髋关节:pitch 与 roll 的轴线</td>
+<td><a href="/learn/deep-35">髋关节:pitch 与 roll 的轴线</a></td>
 <td><code>组件图/02/03-左髋*.png</code> + 关节参数</td>
 <td>两条轴线怎么布置</td>
 </tr>
 <tr>
 <td>36</td>
-<td>大腿与小腿:连杆设计</td>
+<td><a href="/learn/deep-36">大腿与小腿:连杆设计</a></td>
 <td><code>组件图/04/05-左*.png</code></td>
 <td>连杆的刚度与走线空间</td>
 </tr>
 <tr>
 <td>37</td>
-<td>踝脚:落地点的设计</td>
+<td><a href="/learn/deep-37">踝脚:落地点的设计</a></td>
 <td><code>组件图/06-左踝脚*.png</code></td>
 <td>脚底接触与摩擦的机械基础</td>
 </tr>
 <tr>
 <td>38</td>
-<td>头颈三自由度:191g 的配重艺术</td>
+<td><a href="/learn/deep-38">头颈三自由度:191g 的配重艺术</a></td>
 <td><code>组件图/07–10-头颈*.png</code></td>
 <td>头重为什么是走路大敌</td>
 </tr>
 <tr>
 <td>39</td>
-<td>M2 紧固件系统与热熔螺母</td>
+<td><a href="/learn/deep-39">M2 紧固件系统与热熔螺母</a></td>
 <td><code>microduck-replica/docs/紧固件反推.md</code></td>
 <td>孔特征反推出整套紧固件</td>
 </tr>
 <tr>
 <td>40</td>
-<td>轴承与公差:从仿真 STL 到工程件</td>
+<td><a href="/learn/deep-40">轴承与公差:从仿真 STL 到工程件</a></td>
 <td><code>docs/打印工艺调整表.md</code>、<code>硬件规格速查.md</code></td>
 <td>Ø22×16×4 / Ø15×10×3 用在哪</td>
 </tr>
@@ -440,61 +440,61 @@
 <tbody>
 <tr>
 <td>41</td>
-<td>硬件方案逆向总览</td>
+<td><a href="/learn/deep-41">硬件方案逆向总览</a></td>
 <td><code>microduck-replica/docs/硬件方案逆向.md</code></td>
 <td>整机电控架构一张图</td>
 </tr>
 <tr>
 <td>42</td>
-<td>Robot HAT C1:官方开源板怎么读</td>
+<td><a href="/learn/deep-42">Robot HAT C1:官方开源板怎么读</a></td>
 <td>pollen-robotics/elec_RPI_Robot_HAT(本仓引用)+ 逆向文档</td>
 <td>官方 KiCad 工程里有什么</td>
 </tr>
 <tr>
 <td>43</td>
-<td>imu_to_dxl:这块自绘板要解决什么</td>
+<td><a href="/learn/deep-43">imu_to_dxl:这块自绘板要解决什么</a></td>
 <td><code>microduck-replica/docs/imu_to_dxl-设计包/</code></td>
 <td>IMU 数据如何伪装成总线设备</td>
 </tr>
 <tr>
 <td>44</td>
-<td>LSM6DSV16X:IMU 芯片的读取路径</td>
+<td><a href="/learn/deep-44">LSM6DSV16X:IMU 芯片的读取路径</a></td>
 <td>设计包内芯片资料引用 + 连接表</td>
 <td>寄存器、SPI/I2C、CS 拉 3V3 的坑</td>
 </tr>
 <tr>
 <td>45</td>
-<td>电源树:8.4V 总线 / 5V 逻辑 / 舵机供电</td>
+<td><a href="/learn/deep-45">电源树:8.4V 总线 / 5V 逻辑 / 舵机供电</a></td>
 <td><code>docs/硬件规格速查.md</code> + 逆向文档</td>
 <td>一块电池怎么分三路</td>
 </tr>
 <tr>
 <td>46</td>
-<td>半双工总线电平与转接板</td>
+<td><a href="/learn/deep-46">半双工总线电平与转接板</a></td>
 <td>设计包连接表 + 电控采购清单</td>
 <td>TTL 电平/针序为什么必须核对</td>
 </tr>
 <tr>
 <td>47</td>
-<td>接线表逐行解读</td>
+<td><a href="/learn/deep-47">接线表逐行解读</a></td>
 <td><code>microduck-replica/hardware/imu_to_dxl/imu_to_dxl-接线表.md</code></td>
 <td>网络名+引脚名的连接表方法</td>
 </tr>
 <tr>
 <td>48</td>
-<td>LDO 与去耦:小芯片的大前提</td>
+<td><a href="/learn/deep-48">LDO 与去耦:小芯片的大前提</a></td>
 <td>设计包框图(HT75xx 一类)</td>
 <td>耐压 ≥25V 的由来</td>
 </tr>
 <tr>
 <td>49</td>
-<td>立创 EDA 打样流程实战</td>
+<td><a href="/learn/deep-49">立创 EDA 打样流程实战</a></td>
 <td><code>docs/电控采购清单.md</code> + 构建日志 09-06</td>
 <td>从连接表到下单的全流程</td>
 </tr>
 <tr>
 <td>50</td>
-<td>供电冲突:2S 直供 vs 6V 舵机</td>
+<td><a href="/learn/deep-50">供电冲突:2S 直供 vs 6V 舵机</a></td>
 <td><code>docs/硬件规格速查.md</code> + 站点风险台账</td>
 <td>上电前必须闭环的一号风险</td>
 </tr>
@@ -513,67 +513,152 @@
 <tbody>
 <tr>
 <td>51</td>
-<td>Feetech HL-1910-C001 尺寸图解读</td>
+<td><a href="/learn/deep-51">Feetech HL-1910-C001 尺寸图解读</a></td>
 <td>飞特尺寸图(HD-1910M-C001)+ <code>docs/执行器选型.md</code></td>
 <td>换舵机要核对哪些尺寸链</td>
 </tr>
 <tr>
 <td>52</td>
-<td>XL330-M288 vs HL-1910:参数逐项对比</td>
+<td><a href="/learn/deep-52">XL330-M288 vs HL-1910:参数逐项对比</a></td>
 <td><code>docs/执行器选型.md</code>、BOM</td>
 <td>官方件与替代件的真实差距</td>
 </tr>
 <tr>
 <td>53</td>
-<td>舵机协议:Dynamixel 与 Feetech 寄存器</td>
+<td><a href="/learn/deep-53">舵机协议:Dynamixel 与 Feetech 寄存器</a></td>
 <td><code>docs/硬件规格速查.md</code> + bus.rs 交叉引用</td>
 <td>两家协议怎么映射到同一套代码</td>
 </tr>
 <tr>
 <td>54</td>
-<td>BAM 是什么:执行器摩擦建模</td>
+<td><a href="/learn/deep-54">BAM 是什么:执行器摩擦建模</a></td>
 <td><code>bam/</code> 仓库结构 + <code>docs/换舵机重训全流程.md</code></td>
 <td>为什么要给执行器建数学模型</td>
 </tr>
 <tr>
 <td>55</td>
-<td>单摆台架:辨识实验的物理设计</td>
+<td><a href="/learn/deep-55">单摆台架:辨识实验的物理设计</a></td>
 <td><code>docs/换舵机重训全流程.md</code></td>
 <td>摆动数据里藏着动力学参数</td>
 </tr>
 <tr>
 <td>56</td>
-<td>M1–M6:从采集到拟合</td>
+<td><a href="/learn/deep-56">M1–M6:从采集到拟合</a></td>
 <td>同上</td>
 <td>六个参数各自代表什么物理量</td>
 </tr>
 <tr>
 <td>57</td>
-<td>辨识结果如何进入仿真</td>
+<td><a href="/learn/deep-57">辨识结果如何进入仿真</a></td>
 <td>同上 + MJCF 执行器段</td>
 <td>模型参数写回仿真的路径</td>
 </tr>
 <tr>
 <td>58</td>
-<td>换舵机为什么必须重训策略</td>
+<td><a href="/learn/deep-58">换舵机为什么必须重训策略</a></td>
 <td><code>docs/换舵机重训全流程.md</code> 全文逻辑</td>
 <td>官方 9 个 ONNX 降级为参考的原因</td>
 </tr>
 <tr>
 <td>59</td>
-<td>舵机 ID 分配与控制模式</td>
+<td><a href="/learn/deep-59">舵机 ID 分配与控制模式</a></td>
 <td><code>硬件规格速查.md</code> + macOS 舵机指南交叉引用</td>
 <td>15 个 ID 怎么排、位置/速度模式区别</td>
 </tr>
 <tr>
 <td>60</td>
-<td>testbench:仿真-实物对照台</td>
+<td><a href="/learn/deep-60">testbench:仿真-实物对照台</a></td>
 <td><code>scripts/testbench_sim2real.py</code>、<code>validate_bam_testbench.py</code></td>
 <td>辨识对不对,用什么验证</td>
 </tr>
 </tbody>
 </table>
 <hr />
+<h2 id="第七辑-换装-hl-2915-c001-全流程专辑">第七辑 · 换装 HL-2915-C001 全流程(专辑)</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>标题</th>
+<th>解读对象</th>
+<th>核心问题</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>61</td>
+<td><a href="/learn/deep-61">HL-2915-C001:它是什么,为什么值得一条专门路线</a></td>
+<td><code>docs/HL-2915路线全流程教程.md</code> §0–1 + bench 脚本注释</td>
+<td>三代舵机的定位对比与关键规格</td>
+</tr>
+<tr>
+<td>62</td>
+<td><a href="/learn/deep-62">从 2 只舵机到会走路的鸭子:七阶段路线</a></td>
+<td>教程 §0 路线图</td>
+<td>每阶段一个验收的工程意义</td>
+</tr>
+<tr>
+<td>63</td>
+<td><a href="/learn/deep-63">hl2915_bench.py:单舵机台架六课</a></td>
+<td><code>rl-series/scripts/hl2915_bench.py</code>(744 行)</td>
+<td>摸一颗新舵机的通用方法论</td>
+</tr>
+<tr>
+<td>64</td>
+<td><a href="/learn/deep-64">飞特磁编码协议:寄存器表逐段解读</a></td>
+<td>bench 脚本寄存器表 + 协议内存表 220328</td>
+<td>与 Dynamixel 的对照</td>
+</tr>
+<tr>
+<td>65</td>
+<td><a href="/learn/deep-65">设 ID、改波特率、校零位</a></td>
+<td>bench <code>set-id/set-baud/cal</code></td>
+<td>哪一步会动、哪一步可逆</td>
+</tr>
+<tr>
+<td>66</td>
+<td><a href="/learn/deep-66">9–14V 意味着什么:电池与电源选型</a></td>
+<td>教程 §5.1 + bench 硬件前提</td>
+<td>供电窗口倒逼架构重设计</td>
+</tr>
+<tr>
+<td>67</td>
+<td><a href="/learn/deep-67">全机电力拓扑:3S 电池怎么分三路</a></td>
+<td>教程 §5.2</td>
+<td>断电接线与蜂鸣档复查</td>
+</tr>
+<tr>
+<td>68</td>
+<td><a href="/learn/deep-68">阶段 B/C:IMU 接入两条路与摄像头</a></td>
+<td>教程 §3–4</td>
+<td>五步验证法</td>
+</tr>
+<tr>
+<td>69</td>
+<td><a href="/learn/deep-69">阶段 E:写 Feetech2915Io,改哪些文件</a></td>
+<td>教程 §6 代码地图 + <code>duck-control/src/io.rs</code></td>
+<td>新协议适配的最小改动面</td>
+</tr>
+<tr>
+<td>70</td>
+<td><a href="/learn/deep-70">阶段 F:从阶跃 CSV 到新策略</a></td>
+<td>教程 §7 + <code>scripts/export.py</code></td>
+<td>辨识→参数→冒烟→训练→导出</td>
+</tr>
+<tr>
+<td>71</td>
+<td><a href="/learn/deep-71">阶段 G:装配、部署与测试金字塔</a></td>
+<td>教程 §8</td>
+<td>上电顺序与逐级验收</td>
+</tr>
+<tr>
+<td>72</td>
+<td><a href="/learn/deep-72">一次性投入与下一次换舵机</a></td>
+<td>教程 §9–11</td>
+<td>降本路线、故障速查、总验收</td>
+</tr>
+</tbody>
+</table>
 <h2 id="写作与维护">写作与维护</h2>
 <ul>
 <li>文件命名:<code>docs/deep-dive/NN-slug.md</code>,构建脚本自动发现并生成 <code>/learn/deep-NN</code>。</li>

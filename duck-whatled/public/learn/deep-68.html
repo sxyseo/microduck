@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>解读 68 · 阶段 B/C:IMU 接入两条路与摄像头 · 什么鸭 WhatDuck</title>
+<meta name="description" content="docs/HL-2915路线全流程教程.md(380 行)§3–§4,交叉核对 duck-control/src/imu.rs(355 行)">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="解读 68 · 阶段 B/C:IMU 接入两条路与摄像头">
+<meta property="og:description" content="docs/HL-2915路线全流程教程.md(380 行)§3–§4,交叉核对 duck-control/src/imu.rs(355 行)">
+<meta property="og:url" content="https://duck.whatled.com/learn/deep-68">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/deep-68">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">DEEP 68 · 第七辑 · 换装 HL-2915 全流程 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="解读-68-阶段-bcimu-接入两条路与摄像头">解读 68 · 阶段 B/C:IMU 接入两条路与摄像头</h1>
+<blockquote>
+<p><strong>解读对象</strong>:<code>docs/HL-2915路线全流程教程.md</code>(380 行)§3–§4,交叉核对 <code>duck-control/src/imu.rs</code>(355 行)<br />
+<strong>需要的前置</strong>:<a href="/learn/deep-44">解读 44</a>(LSM6DSV16X 读取路径)、<a href="/learn/deep-06">解读 06</a>(ImuData 怎么被消费)</p>
+</blockquote>
+<p>61 维观测里有 6 维来自 IMU——机体角速度 3 + 重力投影 3——而且教程 §3 开门见山:<strong>摔倒检测就靠重力向量</strong>,没有 IMU,策略等于闭眼走路。阶段 B 是让这 6 维以和官方逐位相同的口径到达策略;阶段 C 的摄像头几乎不用写代码。</p>
+<h2 id="1-两条路i²c-直连还是挂总线">1. 两条路:I²C 直连,还是挂总线</h2>
+<p>教程 §3.1 给了两个选项:<strong>I²C 模块直连(推荐)</strong>——LSM6DSV16X 模块 4 根线接 Radxa 40-pin I²C,少一块自绘板、少一个总线故障点(原型机当年就是 BNO055 走 I²C);<strong>imu_to_dxl 自绘板挂总线</strong>——教程注明"板子固件本来就备了飞特协议分支",整机走通、想还原官方架构时再上(见<a href="/learn/deep-43">解读 43</a>)。</p>
+<p>接线是断电操作:<code>VCC→3.3V</code>、<code>GND→GND</code>、<code>SDA→SDA</code>、<code>SCL→SCL</code>(具体哪两个脚是 I²C 查 Radxa 文档),接好后 <code>i2cdetect -y &lt;总线号&gt;</code> 扫到 <strong>0x6A</strong>(或 0x6B)就是接对了。</p>
+<h2 id="2-朝向是硬约束融合交给芯片">2. 朝向是硬约束,融合交给芯片</h2>
+<p><code>duck-control/src/imu.rs</code> 把传感器→躯干的安装旋转写死为 <code>DEFAULT_MOUNT</code>:<code>trunk = [+raw_z, +raw_y, −raw_x]</code>(imu.rs:76 起,绕 Y 的 +90° 旋转)。贴装要让芯片 +Z 指向鸭子头顶、+Y 指向前;做不到就改代码里的 mount,但教程划了两条红线:<strong>改完必须和重训时的朝向一致</strong>并记进构建日志;方向不对"先查接线再查地址,<strong>不要</strong>靠软件里乘个 −1 糊弄过去"。</p>
+<p>阶段 E 写 <code>Feetech2915Io</code> 时要一并实现 IMU 读取,产出的 <code>ImuData</code> 三项与官方完全相同(imu.rs 真实结构):<code>gyro[3]</code> 机体角速度 rad/s(±500dps 量程 17.5 mdps/LSB,<code>GYRO_RAD_PER_LSB = 0.0175 × π/180</code>);<code>gravity[3]</code> 投影重力单位向量,<strong>正立 = [0, 0, −1]</strong>(<code>ImuData</code> 的默认值)——策略观测与摔倒判定共用的那个数;<code>quat[4]</code> 标量在前 [w,x,y,z],用芯片 SFLP 硬融合输出,别自己写融合。</p>
+<h2 id="3-五步验证法给传感器做体检">3. 五步验证法:给传感器做体检</h2>
+<p>§3.4 的验收,每步一个数:平放 30 秒,gyro 每轴 &lt;0.05 rad/s;正立 [0,0,−1] → 倒立 [0,0,+1],z 变号、模长 ≈1;低头时 gyro 的 Y 轴符号与训练约定一致(不对就改 mount,别改符号表);慢转 90° 四元数无跳变、模长 ≈1;50Hz 连读 10 分钟,"与上次完全相同"的 stale 读连续不超过 3 帧。</p>
+<p>最后一条在官方代码里有对应物:<code>io.rs</code> 的 <code>ImuStale</code> 计数器——总线版告警阈值是 <code>STALE_RUN_WARN = 25</code> 帧(半秒,bus.rs),台架验收的 3 帧更严:那是在给传感器定性。</p>
+<h2 id="4-阶段-c摄像头链路不用写驱动">4. 阶段 C:摄像头链路不用写驱动</h2>
+<p>§4 的定位很清楚:官方软件栈已备好——<code>mediad</code> 出 720p30 流,<code>duck-detect</code> 在帧上跑检测(Radxa 上走 NPU/RKNN,运行时由 <code>duck-detect</code> dlopen)。要做的只有三件事:</p>
+<ol>
+<li><strong>装对</strong>:IMX219(Pi Cam v2)FPC 排线接主控 MIPI CSI 座,排线 4–15cm 足够(主控和摄像头同在头部,不过脖子);壳内装配时摄像头<strong>转 90°</strong>——官方就是横着的,逆向出来的结论,不是错误。</li>
+<li><strong>在 Radxa 上验</strong>(Mac 没有 MIPI):<code>v4l2-ctl --list-devices</code> 认出 <code>/dev/video*</code>;<code>v4l2-ctl -d /dev/video0 --stream-mmap --stream-count=3</code> 连续 3 帧不报错;<code>robotctl health</code> 应全绿;<code>duckctl open</code> 开 :8080 控制台看画面。</li>
+<li><strong>看方向</strong>:横置 90° 的补偿已生效、检测框画在目标上。</li>
+</ol>
+<h2 id="你带走的收获">你带走的收获</h2>
+<ul>
+<li>传感器接入先选"数据路径最短"的:I²C 直连比"伪装成总线设备"少一个故障点,代价只是改一处 mount。</li>
+<li>安装朝向属于训练契约:硬件贴装、代码 mount、重训数据三者必须同源,改任何一处都要留档。</li>
+<li>姿态融合用芯片硬融合(SFLP),主机只做解码和朝向旋转——<code>imu.rs</code> 整个文件没有一个滤波器。</li>
+<li>验收要用数字定义"传感器是好的":零漂、变号、符号、连续性、新鲜度,五步各管一件事。</li>
+</ul>
+<h2 id="延伸">延伸</h2>
+<ul>
+<li>这些数进观测向量的路径: <a href="/learn/deep-02">解读 02</a></li>
+<li>IMU 怎么接进 <code>Feetech2915Io</code> 的 <code>read()</code>: <a href="/learn/deep-69">解读 69</a></li>
+<li>imu_to_dxl 板的来龙去脉: <a href="/learn/deep-43">解读 43</a></li>
+<li>本地:<code>docs/HL-2915路线全流程教程.md</code>(§3–§4)、<code>duck-control/src/imu.rs</code>、<code>docs/新手学习文档.md</code>(§12 寄存器表)</li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

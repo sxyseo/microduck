@@ -276,7 +276,9 @@ def deep_stage_tag(n: int) -> str:
         return "第四辑 · 结构"
     if n <= 50:
         return "第五辑 · 电路"
-    return "第六辑 · 舵机与执行器"
+    if n <= 60:
+        return "第六辑 · 舵机与执行器"
+    return "第七辑 · 换装 HL-2915 全流程"
 
 
 # 课程正文按文件名自动发现(00/01 已在上面手工登记,这里跳过)

@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>解读 64 · 飞特磁编码协议:寄存器表逐段解读 · 什么鸭 WhatDuck</title>
+<meta name="description" content="microduck-replica/rl-series/scripts/hl2915_bench.py(744 行)寄存器定义段——脚本头注释如实转引来源:飞特《舵机协议内存表-磁">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="解读 64 · 飞特磁编码协议:寄存器表逐段解读">
+<meta property="og:description" content="microduck-replica/rl-series/scripts/hl2915_bench.py(744 行)寄存器定义段——脚本头注释如实转引来源:飞特《舵机协议内存表-磁">
+<meta property="og:url" content="https://duck.whatled.com/learn/deep-64">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/deep-64">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">DEEP 64 · 第七辑 · 换装 HL-2915 全流程 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="解读-64-飞特磁编码协议寄存器表逐段解读">解读 64 · 飞特磁编码协议:寄存器表逐段解读</h1>
+<blockquote>
+<p><strong>解读对象</strong>:<code>microduck-replica/rl-series/scripts/hl2915_bench.py</code>(744 行)寄存器定义段——脚本头注释如实转引来源:飞特《舵机协议内存表-磁编码版本》220328、《HL-2915-C001 规格书》A/0<br />
+<strong>需要的前置</strong>:<a href="/learn/deep-53">解读 53</a>(Dynamixel 侧对照)· <a href="/learn/deep-01">解读 01</a>(读块设计的官方版)</p>
+</blockquote>
+<p>飞特磁编码这一族的内存表,读法是把三十多个寄存器分成三段:EPROM 配置、RAM 动作、遥测块。三段的写策略完全不同——这是这张表最值得学的地方。</p>
+<h2 id="1-包层ff-ff-取反和">1. 包层:FF FF + 取反和</h2>
+<p><code>packet()</code> 生成 <code>FF FF | ID | LEN | INSTR | PARAMS | ~sum</code>,<code>parse()</code> 校验不过就滑一个字节继续找。指令码:PING=01、READ=02、WRITE=03、SYNC_READ=82、SYNC_WRITE=83;广播 ID 254(0xFE),广播写不应答(<code>transact(rx_params=None)</code> 跳过收包)。对照 Dynamixel V2 的 <code>FF FF FD 00</code> + CRC16(<a href="/learn/deep-53">解读 53</a>):物理层同为 TTL 半双工 1 Mbps,变的只是包头与校验。</p>
+<h2 id="2-eprom-段掉电保存写前解锁">2. EPROM 段:掉电保存,写前解锁</h2>
+<p>0 固件版本、5 ID、6 波特率档位(0=1M、1=500k、2=250k、3=128k、4=115200、5=76800、6=57600、7=38400)、7 返回延时(×2µs;内存表注"STS 此地址无功能",HL 上是否生效<strong>待实测</strong>)、8 应答级别(1=全应答,0=仅 read/ping)、9/11 行程限制、13 温度上限、<strong>14/15 电压窗(0.1V)</strong>、16 最大扭矩(1000=100%)、<strong>21/22/23 位置环 P/D/I</strong>、31 位置校正(±2047 步,BIT11=方向)、33 运行模式(0=位置伺服)、55 锁(0=EPROM 可写)。</p>
+<p>两个坑:14 号出厂值若 &lt;140(=14.0V),12V 一上即过压保护,症状是"假死"——<code>lesson1()</code> 快照专门检查它。21/22/23 与 XL330 的增益生命周期完全不同:<code>bus.rs</code> 里 XL330 增益是 RAM,每次上电回出厂值;HL 的 21/22 是 EPROM,有擦写寿命,写前解锁 55,课 6 测完自动还原。</p>
+<h2 id="3-动作段与遥测块给-50hz-省事务">3. 动作段与遥测块:给 50Hz 省事务</h2>
+<p>动作段:40 扭矩开关(0=关、1=开、<strong>128=把当前位置校正为 2048</strong>)、41 加速度(×100 步/s²)、42 目标位置、44 运行时间(转引中另见"恒力输出的目标扭矩"一说的记载——口径冲突,先按内存表用,<strong>待实测</strong>)、46 目标速度(步/s)、48 扭矩限制(1000=100%)。</p>
+<p>遥测块 56..69 连续 14 字节:56 当前位置、58 当前速度(负速为两位补码)、60 负载(0.1% 占空比)、62 电压(0.1V)、63 温度(°C)、65 状态位(BIT0 电压/BIT1 磁编码/BIT2 温度/BIT3 电流/BIT5 负载)、66 移动标志、69 电流(×6.5mA)。一笔 READ 全拿回——对照 XL330 要两笔(<code>READ_ADDR=124/READ_LEN=12</code> + 慢速 <code>144/3</code>),飞特把电压温度并进了主块,50Hz 下省掉一整类事务。</p>
+<p><strong>12V 限流 0.5A 的原因</strong>:HL-2915 堵转电流 1.5A(规格书 A/0),而限流是保护参数不是工作点——第一次上电时,电压窗没放开、接线错误、意外堵转都可能发生,0.5A 把这些最坏情况的后果钳在安全范围;同时"顺便测出 0.5A 够不够撑住动作"(教程 §2)。新手文档红线:12V 限流 0.5A 起步,堵转异响立刻断电。</p>
+<h2 id="你带走的收获">你带走的收获</h2>
+<ul>
+<li>寄存器表按"EPROM/动作/遥测"三段读:锁、寿命、还原策略各不相同。</li>
+<li>遥测设计成连续块是给控制环省事务数:一笔 READ 拿六个量,对应 <code>bus.rs</code> 的一个读块。</li>
+<li>电压窗寄存器(14/15)是过压保护的动作值:换供电前先读它,出厂值低会"假死"。</li>
+<li>官方文档互相冲突时(44 号、7 号),以能读回的实测为准,并如实标"待实测"。</li>
+<li>限流是故障场景的预算,不是额定工作点:它保护的是第一次上电的你。</li>
+</ul>
+<h2 id="延伸">延伸</h2>
+<ul>
+<li><a href="/learn/deep-63">解读 63</a>:这些寄存器在六课里怎么被用</li>
+<li><a href="/learn/deep-65">解读 65</a>:5/6/31/40 号的写入命令</li>
+<li><a href="/learn/deep-53">解读 53</a>:Dynamixel/Feetech 全表对照</li>
+<li><code>microduck-replica/rl-series/scripts/hl2915_bench.py</code>(第 40–80 行寄存器定义)</li>
+<li><code>docs/新手学习文档.md</code> §12.2(寄存器速查与文档冲突)</li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

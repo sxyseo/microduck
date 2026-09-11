@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>解读 71 · 阶段 G:装配、部署与测试金字塔 · 什么鸭 WhatDuck</title>
+<meta name="description" content="docs/HL-2915路线全流程教程.md(380 行)§8,对照 microduck-replica/docs/换舵机重训全流程.md §6(完整七层金字塔)">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="解读 71 · 阶段 G:装配、部署与测试金字塔">
+<meta property="og:description" content="docs/HL-2915路线全流程教程.md(380 行)§8,对照 microduck-replica/docs/换舵机重训全流程.md §6(完整七层金字塔)">
+<meta property="og:url" content="https://duck.whatled.com/learn/deep-71">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/deep-71">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">DEEP 71 · 第七辑 · 换装 HL-2915 全流程 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="解读-71-阶段-g装配部署与测试金字塔">解读 71 · 阶段 G:装配、部署与测试金字塔</h1>
+<blockquote>
+<p><strong>解读对象</strong>:<code>docs/HL-2915路线全流程教程.md</code>(380 行)§8,对照 <code>microduck-replica/docs/换舵机重训全流程.md</code> §6(完整七层金字塔)<br />
+<strong>需要的前置</strong>:<a href="/learn/deep-09">解读 09</a>(robotd 主循环)、<a href="/learn/deep-18">解读 18</a>/<a href="/learn/deep-19">解读 19</a>(OTA 机制)</p>
+</blockquote>
+<p>阶段 G 是前六个阶段验收的叠加:15 只舵机(阶段 A 已分好 ID、贴好标签)+ 阶段 D 的电控 + 3S 电池 + 阶段 F 的策略。教程 §8 只有一页,但每一句都是一次"曾经摔过的跟头"。</p>
+<h2 id="1-装配与第一次上电">1. 装配与第一次上电</h2>
+<p>装配顺序里有个容易被略过的动作:每只舵机装完<strong>先手掰全行程听有没有碰壳</strong>——ID 和标定在台架阶段就做完了,此刻唯一还能免费发现的故障是机械干涉。第一次上电的姿势也有规定:<strong>只接总线不装腿(或吊装)</strong>,然后 <code>robotctl health</code> → <code>robotctl monitor</code>,确认 16 个读块全回(教程口径:15 舵机+各自遥测;注意官方路线里第 16 个读块来自挂在总线上的 imu_to_dxl,HL 路线 IMU 已走 I²C,总线上只剩 15 只——这一口径差验收时要心里有数)。<code>robotctl health</code> 真能当闸门用:robotctl 源码注明它在不健康或不可达时以非零码退出,"so it can gate a script"。</p>
+<h2 id="2-部署三条命令">2. 部署:三条命令</h2>
+<pre><code class="language-bash">scp alpha_walking.onnx radxa@&lt;IP&gt;:/home/radxa/
+sudo robotctl policy load walk /home/radxa/alpha_walking.onnx
+robotctl policy list
+</code></pre>
+<p><code>policy load</code> 是官方 CLI 的真实子命令(<code>docs/进阶学习文档-训练仿真与部署.md</code> §3 同款)。robotctl 源码里还有一条值得知道的语义:"a load that fails anyway leaves the policy that was running"——加载失败不会留下一个空转的机器人。维度不对的策略在这之前就会被拦:manifest 的 <code>incompatibility()</code> 只强制 obs/action/型号(见<a href="/learn/deep-69">解读 69</a>),教程 §10 速查表"policy load 被拒"一行给出的动作就是先跑 <code>inspect_onnx.py</code> 验 61/14,再对 manifest schema。</p>
+<h2 id="3-测试金字塔一层过了才准上一层">3. 测试金字塔:一层过了才准上一层</h2>
+<p>教程 §8 列的是整机三层(<code>换舵机重训全流程.md</code> §6 是完整七层:L1 单舵机台架/L2 旧策略仿真评估/L3 重训后仿真评估/L4 总线联调——15+1 台设备一次 sync_read 全回——是它的前置):</p>
+<table>
+<thead>
+<tr>
+<th>层</th>
+<th>环境</th>
+<th>通过标准</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>L5 吊装</td>
+<td>悬空跑策略</td>
+<td>14 关节按策略运动、无超温、电流正常</td>
+</tr>
+<tr>
+<td>L6 软垫</td>
+<td>低重心、软垫、手扶</td>
+<td>站立稳定、可从坐姿站起</td>
+</tr>
+<tr>
+<td>L7 平地</td>
+<td>开阔平地、低重心</td>
+<td>直线走 ≥2m、可停止可急停、连续 3 次成功</td>
+</tr>
+</tbody>
+</table>
+<p>两条铁律:<strong>第一次上电必须手扶</strong>;每层的视频、电流/温度曲线、失败回放全部进 <code>构建日志.md</code>——教程原话,"这是整个复刻项目最值钱的资产"。</p>
+<h2 id="4-ota-机制在新路线上的复用">4. OTA 机制在新路线上的复用</h2>
+<p>部署不是一次性的:9 个技能逐个训出来,每个新策略都要走到板上。这套流程官方已经建好——<code>updater</code> crate 的 <code>manifest</code>/<code>verify</code>/<code>preflight</code>(解读 18 的对象)与 <code>reconcile</code>/<code>orphan</code>/<code>faults</code>(解读 19 的对象)是仓库里真实存在的模块,<code>deploy/updater.toml</code> 是它的配置入口。<code>换舵机重训全流程.md</code> §4.3 一句话把两件事接上:"9 个文件命名对齐运行时清单,放进更新包结构即可被 <code>updaterd</code> 分发"。换句话说:换舵机改的是 <code>duck-control</code> 总线层与 ONNX 的参数,分发、验签、回滚机制原样复用——这正是接缝设计的红利。</p>
+<h2 id="你带走的收获">你带走的收获</h2>
+<ul>
+<li>整机阶段的验收是叠加式的:每层通过标准都能追溯到某个前期阶段的验收项;跳过任何一层,出问题时你就少了定位的坐标系。</li>
+<li>"加载失败保留原策略"与"健康检查可当脚本闸门"是部署安全的两颗定心丸,写自动化脚本时要主动利用。</li>
+<li>测试金字塔的本质是风险成本排序:吊装、软垫、平地,物理世界的 undo 一次比一次贵。</li>
+<li>OTA 管线(验签、门控、回滚)与策略内容解耦,换硬件平台时它是最应该原样保留的部分。</li>
+</ul>
+<h2 id="延伸">延伸</h2>
+<ul>
+<li>策略从训练到 ONNX 的上游: <a href="/learn/deep-70">解读 70</a></li>
+<li>manifest 强制了哪些字段: <a href="/learn/deep-18">解读 18</a></li>
+<li>板上多进程怎么协作: <a href="/learn/deep-20">解读 20</a></li>
+<li>本地:<code>docs/HL-2915路线全流程教程.md</code>(§8)、<code>microduck-replica/docs/换舵机重训全流程.md</code>(§5–§6)、<code>microduck-replica/构建日志.md</code></li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

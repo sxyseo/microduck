@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>解读 65 · 设 ID、改波特率、校零位:一次只接一只 · 什么鸭 WhatDuck</title>
+<meta name="description" content="microduck-replica/rl-series/scripts/hl2915_bench.py(744 行)cmd_set_id / cmd_set_baud / cmd_">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="解读 65 · 设 ID、改波特率、校零位:一次只接一只">
+<meta property="og:description" content="microduck-replica/rl-series/scripts/hl2915_bench.py(744 行)cmd_set_id / cmd_set_baud / cmd_">
+<meta property="og:url" content="https://duck.whatled.com/learn/deep-65">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/deep-65">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">DEEP 65 · 第七辑 · 换装 HL-2915 全流程 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="解读-65-设-id改波特率校零位一次只接一只">解读 65 · 设 ID、改波特率、校零位:一次只接一只</h1>
+<blockquote>
+<p><strong>解读对象</strong>:<code>microduck-replica/rl-series/scripts/hl2915_bench.py</code>(744 行)<code>cmd_set_id</code> / <code>cmd_set_baud</code> / <code>cmd_cal</code> 三组命令<br />
+<strong>需要的前置</strong>:<a href="/learn/deep-59">解读 59</a>(整机 15 个 ID 怎么排)· <a href="/learn/deep-63">解读 63</a>(六课之后做什么)</p>
+</blockquote>
+<p>散件期的三件事:给每只舵机一个身份、一个通信速度、一个零位。脚本用三组命令覆盖,三组命令里藏着同一条纪律——<strong>一次只接一只</strong>。</p>
+<h2 id="1-set-id为什么必须一次只接一只">1. set-id:为什么必须一次只接一只</h2>
+<p>原因写在出厂值里:<strong>所有 HL-2915 出厂都是 ID 1</strong>(<code>docs/新手学习文档.md</code> §12.1)。两只同接在总线上,<code>set-id --new-id 2</code> 的写指令两只都收到——双双改名,总线上出现两个 2,从此 PING 谁都是撞车。<code>cmd_set_id</code> 的流程是标准三步:<code>unlock()</code>(写 55=0 解锁 EPROM)→ 写 5 号寄存器 → <strong>用新 ID 发 PING 验证</strong>:"✔ 新 ID 有应答 / ✗ 新 ID 无应答,回旧 ID 重试"。范围 0–253(254 是广播,不可用)。命令打印的提示就是<a href="/learn/deep-59">解读 59</a>的伏笔:"装上整机前,把每只舵机按 model.rs 的关节 ID 表设好并贴标签"。</p>
+<h2 id="2-set-baud写的是档位验的是重连">2. set-baud:写的是档位,验的是重连</h2>
+<p><code>BAUD_INDEX = {1000000: 0, 500000: 1, 250000: 2, 128000: 3, 115200: 4, 76800: 5, 57600: 6, 38400: 7}</code>——寄存器 6 号存的是档位号,不是波特率数值,<code>--new-baud</code> 只接受这八档。写完命令只说了一半:"已写入档位 N。<strong>用 --baud &lt;新值&gt; 重连验证</strong>。"改通信参数的最后一步永远是用新参数再通一次——"写成功"和"能通信"是两回事。台架排障里还有对照用法:拷机丢包时,"把波特率降到 500k/115200 对照(set-baud)"。</p>
+<h2 id="3-cal两种标零的安全差别">3. cal:两种标零的安全差别</h2>
+<p><code>cal</code> 不带参数只读:打印当前位置和 31 号"位置校正"(±2047 步,BIT11=方向)。真正标零有两个选项,安全级别完全不同:</p>
+<ul>
+<li><strong><code>cal --set-zero-here</code>(推荐)</strong>:算 <code>新校正 = 旧校正 + (2048 − 当前位置)</code>,写 31 号。纯软件偏移——舵机<strong>不动</strong>、随时可逆。docstring 的"把当前物理位置标定为中位 2048"指它。</li>
+<li><strong><code>cal --rezero-2048</code>(危险)</strong>:写 40=128,固件把当前位置校正为 2048——docstring 里三个字加叹号:"<strong>会动!</strong>"扭矩会输出一次动作,且改的是固件侧基准。这类写入改变固件侧基准,只应在舵机空载、未装配或已知安全位姿下做。</li>
+</ul>
+<p>另有 <code>--volt-max 14.0</code>:写 14 号 = 140,12V 供电前放开过压保护。命令自己总结的时序也值得抄:"40 写 128 和 31 号校正都会改变零位,<strong>装配后再标,标完记录进构建日志</strong>。"还有一条容易忘:多圈圈数疑似掉电不保存(待实测)——上电前机器人要摆在已知姿态。</p>
+<h2 id="你带走的收获">你带走的收获</h2>
+<ul>
+<li>"一次只接一只"不是谨慎,是协议事实:出厂同 ID 的设备同总线,写指令无法定向。</li>
+<li>写完必须验证:set-id 用新 ID 发 PING,set-baud 用新波特率重连——"写成功"≠"能通信"。</li>
+<li>标零分两级:软件偏移(31 号,可逆)优先;固件重基准(40=128)是会动的危险操作。</li>
+<li>会动的命令要有位姿前置条件:空载、未装、已知安全位姿。</li>
+<li>ID 与零位是装配期资产:贴标签 + 构建日志;散件期不做,整机期两倍返工。</li>
+</ul>
+<h2 id="延伸">延伸</h2>
+<ul>
+<li><a href="/learn/deep-59">解读 59</a>:整机 15 只的 ID 表(10–14/20–24/30–34)</li>
+<li><a href="/learn/deep-64">解读 64</a>:5/6/31/40 号寄存器的完整语义</li>
+<li><a href="/learn/deep-07">解读 07</a>:model.rs 把关节编号/方向/零位集中管理</li>
+<li><code>microduck-replica/rl-series/scripts/hl2915_bench.py</code>(<code>cmd_set_id</code>/<code>cmd_set_baud</code>/<code>cmd_cal</code>)</li>
+<li><code>docs/新手学习文档.md</code> §12(标定命令与安全注意事项)</li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

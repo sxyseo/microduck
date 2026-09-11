@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>解读 69 · 阶段 E:舵机协议适配的代码地图 · 什么鸭 WhatDuck</title>
+<meta name="description" content="docs/HL-2915路线全流程教程.md(380 行)§6 代码地图,逐项核对 duck-control/、robotd/、updater/ 真实源码">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="解读 69 · 阶段 E:舵机协议适配的代码地图">
+<meta property="og:description" content="docs/HL-2915路线全流程教程.md(380 行)§6 代码地图,逐项核对 duck-control/、robotd/、updater/ 真实源码">
+<meta property="og:url" content="https://duck.whatled.com/learn/deep-69">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/deep-69">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">DEEP 69 · 第七辑 · 换装 HL-2915 全流程 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="解读-69-阶段-e舵机协议适配的代码地图">解读 69 · 阶段 E:舵机协议适配的代码地图</h1>
+<blockquote>
+<p><strong>解读对象</strong>:<code>docs/HL-2915路线全流程教程.md</code>(380 行)§6 代码地图,逐项核对 <code>duck-control/</code>、<code>robotd/</code>、<code>updater/</code> 真实源码<br />
+<strong>需要的前置</strong>:<a href="/learn/deep-01">解读 01</a>(官方总线怎么跑 50Hz)、<a href="/learn/deep-07">解读 07</a>(RobotIo 的接缝设计)</p>
+</blockquote>
+<p>阶段 E 是全教程唯一"纯代码"的阶段(¥0,预估 3–5 天)。教程 §6 预想的工作是:新写一个 <code>Feetech2915Io</code> 替掉 <code>DynamixelIo</code>,让官方 50Hz 控制环原样跑在飞特舵机上。本篇逐项把代码地图放到仓库里核对时发现了一个比教程更有价值的事实:<strong>适配已经落地</strong>——<code>duck-control/src/hl2915.rs</code>(620 行)的 <code>Hl2915RobotIo</code> 已实现 <code>RobotIo</code>,<code>robotd</code> 已按 <code>BusBackend::Hl2915</code> 选择后端。教程停在"待写",代码已先行。</p>
+<h2 id="1-接缝不动robotio-的真实接口">1. 接缝不动:<code>RobotIo</code> 的真实接口</h2>
+<p><code>duck-control/src/io.rs</code>(351 行)定义了控制循环与硬件的全部契约:<code>RobotIo</code> trait 六个必选方法——<code>read() -&gt; Sensors</code>(io.rs:115,关节+IMU 一次拿全)、<code>write(&amp;JointTargets)</code>(:116)、<code>set_gain(kp: u16)</code>(:124)、<code>set_torque(on: bool)</code>(:135)、<code>reboot(id: u8)</code>(:143)、<code>slow_sensors() -&gt; SlowSensors</code>(:151)——外加两个默认实现的自诊断 <code>imu_stale()</code>(:159)/<code>imu_ready()</code>(:164)。教程的批注:"<strong>不动</strong>——这是整条接缝"。</p>
+<p>这个"不动"是有内容的:<code>IoError::ShortRead { what, expected, got }</code> 规定"少读一个块"必须报错而不是静默用旧值;<code>set_torque</code> 的文档写着启动时没有任何人调用它——<code>robotd</code> 被更新重启时,站着的鸭子必须还站着。<code>hl2915.rs</code> 能干净接入,正是因为它继承的是这套语义。</p>
+<h2 id="2-代码地图逐项核对">2. 代码地图逐项核对</h2>
+<table>
+<thead>
+<tr>
+<th>教程 §6.1 说</th>
+<th>仓库核实</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>bus.rs</code> 现状:rustypot <code>Xl330Controller</code>,读块 124/12,慢速 144/3</td>
+<td>✅ <code>bus.rs</code>(708 行):<code>READ_ADDR=124</code>/<code>READ_LEN=12</code>,<code>SLOW_READ_ADDR=144</code>/<code>SLOW_READ_LEN=3</code></td>
+</tr>
+<tr>
+<td>新增 <code>Feetech2915Io</code>:读块 56 起 14 字节,写目标 42(+46 限速)</td>
+<td>✅ <strong>已落地</strong>:<code>duck-control/src/hl2915.rs</code>(620 行),<code>Hl2915RobotIo</code>(:200)在 :334 <code>impl RobotIo</code>;<code>Hl2915Bus</code>(:189)管半双工收发;ID 表 <code>DEFAULT_HL2915_IDS</code> 由 <code>robotd</code> 传入(main.rs:39)。寄存器号与 <code>hl2915_bench.py</code> 完全一致(<code>REG_POS=56</code> 起 14 字节遥测块,<code>REG_GOAL=42</code>,<code>REG_SPEED=46</code>)——台架脚本就是它的协议测试向量</td>
+</tr>
+<tr>
+<td><code>imu.rs</code> 换 I²C 读 LSM6DSV16X,<code>ImuData</code> 结构和朝向不变</td>
+<td>✅ 现文件从总线 12 字节块解码(<code>SflpDecoder</code>);<code>ImuData</code>/<code>DEFAULT_MOUNT</code> 正是"不变"的部分</td>
+</tr>
+<tr>
+<td><code>model.rs</code> 电池窗 6.6–8.2V → 9–14V(62 号遥测 0.1V);ID 表沿用</td>
+<td>✅ <code>BATTERY_FULL_V=8.2</code>/<code>BATTERY_EMPTY_V=6.6</code> 待随 3S 方案调整;<code>JOINT_IDS</code> 的 10–14/20–24/30–34 沿用</td>
+</tr>
+<tr>
+<td><code>robotd/src/main.rs</code> 的 <code>DynamixelIo::open</code> 按配置选 Io</td>
+<td>✅ 已有双后端:<code>BusIo</code> 枚举含 <code>Hl2915</code> 变体(:1160),<code>open_bus_for</code> 按 <code>BusBackend::Hl2915 =&gt; Hl2915RobotIo::open(port, &amp;DEFAULT_HL2915_IDS, model::IMU_DXL_ID, …)</code> 分支(main.rs:1301–1306)</td>
+</tr>
+<tr>
+<td>策略清单 <code>hw_rev=1</code>/<code>servos="xl330"</code> 是显示+门控字段,校验只强制 obs 61/action 14/型号</td>
+<td>✅ <code>updater/src/policy.rs:702</code> 的真实清单样例带这两个字段;<code>incompatibility()</code> 只查 <code>obs_len</code>/<code>action_len</code>/<code>model_api</code>/<code>robot.model</code>——换舵机不换型号字段,旧清单也不会被误拒</td>
+</tr>
+</tbody>
+</table>
+<h2 id="3-每步可回退的五步与真实落地的对照">3. 每步可回退的五步,与真实落地的对照</h2>
+<p>§6.2 预想的顺序本身就是风险控制:①把 <code>hl2915_bench.py</code> 的 <code>packet</code>/<code>parse</code>/<code>transact</code> 翻译成 Rust(<code>serialport</code> crate 开 1Mbps 8N1);②单测——用协议手册的示例帧当测试向量(PING/READ/WRITE/SYNC 各一条),<code>cargo test</code> 不需要硬件;③只接 2 只舵机,50Hz 跑 10 分钟零 <code>ShortRead</code>;④HOME 缓动——<code>robotd init</code> 同款插值到 <code>DEFAULT_POSITION</code>(参照 <code>DynamixelIo::interpolate_to</code>);⑤IMU 的 I²C 路径接进 <code>read()</code>,过阶段 B 的五步验证。读 <code>hl2915.rs</code> 可以逐条对出这五步的落点:帧层、单测、遥测块解码、ID 注入、<code>read()</code> 聚合——<strong>教程的方法论和代码是一一对应的</strong>,这正是"代码地图"的正确用法。</p>
+<p>一个要留神的真实差异:<code>set_gain</code> 签名是 <code>kp: u16</code>(XL330 的位置环 P 是 16 位),而 HL-2915 的 21 号 P 增益是<strong>一字节 0–255</strong>(<code>hl2915_bench.py</code> 课 6 明确拒绝超范围值)——映射要显式处理,不能隐式截断。</p>
+<p>验收(§6.3):<code>cargo test</code> 全绿;2 舵机+IMU 50Hz 跑 10 分钟丢读 0;<code>set_torque(false)</code> 立刻失力、<code>true</code> 恢复;拔掉一只舵机的线,得到明确的 <code>ShortRead</code> 而非静默旧值。</p>
+<h2 id="你带走的收获">你带走的收获</h2>
+<ul>
+<li>换硬件驱动先找"接缝":<code>RobotIo</code> 这类 trait 是现成的替换点;接缝不动,上游的控制循环、安全层全部复用——<code>hl2915.rs</code> 620 行就吃下了整条新舵机路线。</li>
+<li>代码地图先核实再动手:教程说"待写"、仓库里其实已经有了——文档滞后于代码是常态,<strong>以仓库为准</strong>是铁律。</li>
+<li>枚举即开关:<code>BusBackend::Hl2915</code>/<code>Dynamixel</code> 两个变体让两条舵机路线共存于同一个守护进程,配置切换而不是改代码。</li>
+<li>测试向量来自协议手册与台架脚本,不是想象:bench 的 <code>packet</code>/<code>parse</code> 就是 Rust 实现的单测向量。</li>
+<li>错误语义是接口的一部分:<code>ShortRead</code> 报错、启动不写扭矩——这些"看不见的行为"比方法签名更容易丢。</li>
+</ul>
+<h2 id="延伸">延伸</h2>
+<ul>
+<li>之后辨识与重训怎么走: <a href="/learn/deep-70">解读 70</a></li>
+<li>总线层快慢分离与 stale 计数: <a href="/learn/deep-01">解读 01</a></li>
+<li>帧收发参考实现: <code>microduck-replica/rl-series/scripts/hl2915_bench.py</code>(744 行)</li>
+<li>本地:<code>docs/HL-2915路线全流程教程.md</code>(§6)、<code>docs/新手学习文档.md</code>(§12.3 帧格式与寄存器表)</li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

@@ -122,775 +122,978 @@
     <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
   </header>
   <main class="doc-card doc-body">
-<h1 id="microduck-新手学习文档-硬件零基础怎么从零开始把这只鸭子做出来">Microduck 新手学习文档 —— 硬件零基础，怎么从零开始把这只鸭子做出来</h1>
-<blockquote>
-<p>写给：电路小白、结构小白、硬件小白（但会用电脑、会装软件）。<br />
-依据：你工作区里已经有的全部资料 + 你手头的器材（Radxa Zero 3W、打印外壳件、机器狗剩下的舵机、小智 ESP32、树莓派 Pi 2 Model B）。<br />
-本文是 <a href="../microduck-replica/docs/手头器材启动指南.md">手头器材启动指南</a> 的完整扩写版：那份回答"手头这些东西能不能开始"，这篇教你"整个项目怎么学、电路图怎么看、结构怎么懂"。</p>
-</blockquote>
-<hr />
-<h2 id="目录">目录</h2>
+<h1 id="microduck-新手上手指南">Microduck 新手上手指南</h1>
+<p>这是一份给<strong>硬件、电路、机械、机器人都刚入门的人</strong>的路线图。它按当前<br />
+<code>F:\microduck</code> 仓库写，不假定你已经买齐零件。</p>
+<h2 id="先给结论">先给结论</h2>
+<p>你现在最适合走这条顺序：</p>
+<pre><code class="language-text">先看懂软件和仿真
+  → 识别手里的舵机
+  → 用树莓派做一个安全的单舵机台架
+  → 让 Radxa 只跑软件，不接未知硬件
+  → 买/借一只与项目协议匹配的总线舵机做通信实验
+  → 最后再做整机、电源、IMU 和步态
+</code></pre>
+<p>当前仓库能直接教你的，是<strong>运行时、通信协议、控制闭环、仿真模型、部署脚本和排错方法</strong>。<br />
+仓库当前没有完整的鸭子原理图、PCB 工程、机械 CAD 装配包或 BOM；<code>kicad-mcp-test/</code><br />
+是 KiCad 路由测试夹具，不是鸭子的电子板。因此，不要把文档中提到的“官方 HAT”、<br />
+“imu_to_dxl”或外部复刻仓的图纸当成已经随本仓库提供的文件。</p>
+<p>你的第一个目标不是“马上走起来”，而是完成四个可验证的小目标：</p>
 <ol>
-<li><a href="#1-你在做什么一张项目地图">你在做什么：一张项目地图</a></li>
-<li><a href="#2-十个必须先懂的概念每个三分钟">十个必须先懂的概念</a></li>
-<li><a href="#3-盘点你的家底">盘点你的家底：每件器材能干什么、不能干什么</a></li>
-<li><a href="#4-学习总路线四站">学习总路线：四站</a></li>
-<li><a href="#5-怎么看懂电路图">怎么看懂电路图（用你仓库里的真图纸教）</a></li>
-<li><a href="#6-结构怎么看怎么设计">结构怎么看、怎么设计</a></li>
-<li><a href="#7-软件与强化学习纯电脑阶段">软件与强化学习：纯电脑阶段</a></li>
-<li><a href="#8-你的-30-天计划">你的 30 天计划（按手头器材定制）</a></li>
-<li><a href="#9-必踩的坑">必踩的坑（提前打疫苗）</a></li>
-<li><a href="#10-安全守则">安全守则</a></li>
-<li><a href="#11-文档地图">文档地图：什么时候读什么</a></li>
+<li>能画出控制数据流；</li>
+<li>能分清 PWM 舵机和总线舵机；</li>
+<li>能用万用表和限流电源安全点亮一只舵机；</li>
+<li>能在没有真机的情况下跑通本仓库的测试和 <code>robotd --fake</code>。</li>
 </ol>
 <hr />
-<h2 id="1-你在做什么一张项目地图">1. 你在做什么：一张项目地图</h2>
-<p><strong>Microduck</strong> 是 Pollen Robotics 出品的一只双足机器鸭：25 厘米高、约 0.74–0.8 公斤重，身上 15 个舵机，用<strong>强化学习</strong>（不是人类逐帧编程）学会走路、起身、踢球。它的<strong>软件完全开源</strong>（Apache-2.0），机械和部分电路只公开了一部分 —— 所以社区在做的事情叫<strong>复刻</strong>：用官方公开的仿真模型、源码和逆向出来的资料，自己把一只造出来。你工作区里的所有目录，都是围绕这一件事。</p>
-<h3 id="工作区目录地图谁是谁">工作区目录地图（谁是谁）</h3>
-<table>
-<thead>
-<tr>
-<th>目录</th>
-<th>是什么</th>
-<th>对你的价值</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>/Volumes/dev/dev/microduck/</code>（根目录本身）</td>
-<td><strong>官方主仓</strong>（pollen-robotics/microduck），Rust 写的"鸭子大脑"：控制循环、舵机总线、更新系统</td>
-<td>最终要跑在你 Radxa 上的东西</td>
-</tr>
-<tr>
-<td><code>microduck-replica/</code></td>
-<td><strong>复刻研究主仓</strong>（中文）：装配图、BOM、电路逆向、采购清单、构建日志</td>
-<td><strong>你的主教材</strong>，90% 的中文资料在这</td>
-</tr>
-<tr>
-<td><code>microduck-replica-cad/</code></td>
-<td><strong>SolidWorks 三维图纸</strong>：56 个零件源文件 + 21 页装配安装说明书</td>
-<td>学结构的教材</td>
-</tr>
-<tr>
-<td><code>open-microduck/</code></td>
-<td><strong>OpenMicroDuck 中文研究文档</strong>：小白术语表、难度分级学习路线、仿真优先教程</td>
-<td><strong>入门第一课在这里</strong></td>
-</tr>
-<tr>
-<td><code>OpenMicroDuck/</code></td>
-<td>同上的英文/早期副本</td>
-<td>可忽略</td>
-</tr>
-<tr>
-<td><code>Microduck-build-tutorial/</code></td>
-<td><strong>平价复刻路线</strong>：用树莓派 Zero 2 W + OpenRB-150 跑 Python 版本，有现成镜像</td>
-<td>参考路线，设备和你不同</td>
-</tr>
-<tr>
-<td><code>xiaozhi-esp32/</code></td>
-<td><strong>小智 ESP32</strong>：AI 语音聊天固件（你的 ESP32 硬件用的就是它）</td>
-<td>第二阶段的语音大脑</td>
-</tr>
-<tr>
-<td><code>bam/</code></td>
-<td>舵机摩擦建模库（训练仿真用）</td>
-<td>深入训练时才需要</td>
-</tr>
-<tr>
-<td><code>KiCAD-MCP-Server/</code>、<code>kicad-mcp-test/</code></td>
-<td>画电路板的 AI 辅助工具</td>
-<td>画 imu_to_dxl 板时用</td>
-</tr>
-<tr>
-<td><code>docs/microduck-30day/</code>、<code>docs/plans/</code>、<code>microduck-replica/rl-series/</code></td>
-<td><strong>你自己的</strong> 30 天学习包和 RL 文章系列</td>
-<td>你的进度记录</td>
-</tr>
-</tbody>
-</table>
-<h3 id="先记住-6-个数字">先记住 6 个数字</h3>
+<h2 id="1-这是什么项目">1. 这是什么项目</h2>
+<p>Microduck 是一只小型双足机器人。它不是用程序逐帧写死“左脚抬起、右脚落下”，而是把<br />
+姿态和关节状态输入神经网络，让网络每个控制周期给出关节目标。</p>
+<p>当前代码里的最重要数字：</p>
 <table>
 <thead>
 <tr>
 <th style="text-align: right;">数字</th>
-<th>含义</th>
+<th>在项目里的含义</th>
+<th>代码出处</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td style="text-align: right;"><strong>15</strong></td>
-<td>全机舵机数量（第 15 个驱动嘴巴，不参与走路）</td>
+<td style="text-align: right;">15</td>
+<td>5 个左腿关节 + 5 个颈/头/嘴关节 + 5 个右腿关节</td>
+<td><code>duck-control/src/model.rs</code></td>
 </tr>
 <tr>
-<td style="text-align: right;"><strong>14</strong></td>
-<td>走路策略实际控制的关节数</td>
+<td style="text-align: right;">14</td>
+<td>步态策略控制的关节数；嘴巴被排除</td>
+<td><code>MOUTH_INDEX = 9</code></td>
 </tr>
 <tr>
-<td style="text-align: right;"><strong>61 → 14</strong></td>
-<td>神经网络：每次吃进 61 个数（姿态+关节状态），吐出 14 个数（每个关节往哪转）</td>
+<td style="text-align: right;">61 → 14</td>
+<td>策略输入 61 个观测，输出 14 个动作</td>
+<td><code>docs/design/robotd-design.md</code></td>
 </tr>
 <tr>
-<td style="text-align: right;"><strong>50 Hz</strong></td>
-<td>每 20 毫秒重复一次"读全部关节 → 算 → 下发"的循环</td>
+<td style="text-align: right;">50 Hz</td>
+<td>每 20 ms 读传感器、推理、写目标</td>
+<td><code>robotd</code> 控制循环</td>
 </tr>
 <tr>
-<td style="text-align: right;"><strong>1 Mbps</strong></td>
-<td>舵机总线的通信速度</td>
+<td style="text-align: right;">1 Mbps</td>
+<td>Dynamixel 协议 V2 总线的波特率</td>
+<td><code>BAUD_RATE</code></td>
 </tr>
 <tr>
-<td style="text-align: right;"><strong>737 g</strong></td>
-<td>整机重量（其中头就占 189 g，接近 1/4 —— 这是它走路难训的根源）</td>
+<td style="text-align: right;">200</td>
+<td>IMU 转接板在总线上的设备 ID</td>
+<td><code>IMU_DXL_ID</code></td>
 </tr>
 </tbody>
 </table>
-<hr />
-<h2 id="2-十个必须先懂的概念每个三分钟">2. 十个必须先懂的概念（每个三分钟）</h2>
-<p>这十个词贯穿所有文档。更系统的版本见 <a href="../open-microduck/docs/zh-CN/getting-started/glossary.md">open-microduck 小白术语表</a>。</p>
-<p><strong>① 舵机（servo）</strong>：自带减速齿轮和位置控制的电机总成。你告诉它"转到 90°"，它自己发力到位并保持。机器鸭的每个关节 = 一个舵机。</p>
-<p><strong>② PWM 舵机 vs 总线舵机 —— 全项目最重要的一道分水岭。</strong><br />
-- <strong>PWM 舵机</strong>（如 SG90，约 9 克，玩具级）：一根信号线控制一只，靠脉冲宽度告诉它角度。<strong>它不知道自己在哪</strong>——被外力压偏了也不会告诉你。便宜、笨、没有反馈。<br />
-- <strong>总线舵机</strong>（如 Dynamixel XL330，18 克，本项目用它）：所有舵机像 USB 设备一样<strong>串在一根线上</strong>，各有编号（ID），主控点名问"2 号，你现在什么角度？"它答得上来，精度 12 位。<br />
-- 走路神经网络每 20ms 要读全部关节的真实位置和速度——<strong>没有反馈的 PWM 舵机直接让 61 维输入里一大半变成假数据</strong>。这就是"SG90 装不进这只鸭"的根本原因，不是嫌弃它便宜。</p>
-<p><strong>③ 菊花链（daisy chain）</strong>：总线舵机的接法——主板出来一根线进 1 号，1 号再出一线进 2 号，像串糖葫芦。一根总线挂 15 个。</p>
-<p><strong>④ UART / I²C</strong>：两种芯片间"说话的方式"（通信协议）。本项目里 <strong>UART 管舵机总线</strong>（1 Mbps，又快又简单），<strong>I²C 管音频芯片和ToF 传感器</strong>（400 kHz，两根线 SDA/SCL 挂多个设备）。记住：<strong>UART 是"对讲机"，I²C 是"一条线上插多个电话分机"</strong>。</p>
-<p><strong>⑤ 半双工（half-duplex）</strong>：一根线上既发又收，但同一时刻只能一个方向说。像对讲机"over"。舵机总线就是这样，需要一个"方向切换"小电路（一个缓冲芯片，原理图里的 U3）。</p>
-<p><strong>⑥ IMU</strong>：惯性测量单元，里面是陀螺仪+加速度计，输出"我现在是不是歪了、往哪边倒"。走路的神经网络<strong>每一步都靠它感知身体姿态</strong>。本项目的骚操作：IMU 板伪装成"200 号舵机"挂在总线上，姿态数据和关节数据一次全读回。</p>
-<p><strong>⑦ 强化学习 / 策略 / ONNX</strong>：不让人类写"先迈左脚再迈右脚"，而是让 AI 在物理仿真里摔几百万次，自己悟出平衡方法。悟出来的东西叫<strong>策略（policy）</strong>——本质就是一个数学函数：61 个数进，14 个数出。导出成 <strong>ONNX</strong> 文件（一种通用模型格式），机器人上的推理引擎直接加载它。</p>
-<p><strong>⑧ Sim-to-real</strong>：仿真里学会 → 真机上也能走。中间会丢真度，所以训练时要"域随机化"（故意加各种随机干扰，让策略皮实）。<strong>仿真会走 ≠ 真机会走</strong>，这句话所有文档反复强调。</p>
-<p><strong>⑨ MJCF / MuJoCo</strong>：MuJoCo 是物理仿真引擎（官方用来训练的"虚拟练跤场"）；MJCF 是它描述机器人身体的文件格式——里面精确记录了每个零件挂在谁身上、离多远、绕哪根轴转、多重。<strong>复刻仓的装配图就是从这个文件反推出来的</strong>。</p>
-<p><strong>⑩ 公差与配合</strong>：3D 打印的孔打出来会比图纸上小 0.1–0.3mm（材料收缩+挤料膨胀），所以画图时要<strong>提前把孔放大</strong>（补偿），或者打完用钻头修。装配能否顺利，80% 取决于这个细节。</p>
-<hr />
-<h2 id="3-盘点你的家底">3. 盘点你的家底</h2>
-<h3 id="总览表">总览表</h3>
-<table>
-<thead>
-<tr>
-<th>器材</th>
-<th>身份</th>
-<th>能干什么</th>
-<th>不能干什么</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><strong>Radxa Zero 3W</strong></td>
-<td>⭐ <strong>官方同款主控</strong>（官方就用这块板！）</td>
-<td>整个项目的"大脑"：刷 Armbian → 跑官方 Rust 运行时 → 加载 ONNX</td>
-<td>不能直接驱动 PWM 舵机</td>
-</tr>
-<tr>
-<td><strong>打印外壳件</strong></td>
-<td>机械结构件</td>
-<td>收货实测（孔位验证）→ 试装</td>
-<td>若打印时没做孔径补偿，孔可能偏紧</td>
-</tr>
-<tr>
-<td><strong>机器狗的舵机</strong></td>
-<td>待辨认（大概率 SG90 类 PWM 舵机）</td>
-<td><strong>完美的入门台架</strong>：学供电、接线、开环的宿命</td>
-<td>❌ <strong>不能装上鸭子</strong>（无反馈、力矩 1/3、孔位不同）</td>
-</tr>
-<tr>
-<td><strong>树莓派 Pi 2 Model B</strong></td>
-<td>地面调试台</td>
-<td>跑 SG90 台架脚本；以后接 USB 适配器测总线舵机；无 WiFi，插网线</td>
-<td>性能跑不动官方运行时的完整视觉栈（当台架够用）</td>
-</tr>
-<tr>
-<td><strong>小智 ESP32 硬件</strong></td>
-<td>AI 语音前端</td>
-<td>第二阶段：语音"坐下/握手"→ 控制鸭子；或当 PWM 协处理器</td>
-<td>❌ 现阶段与鸭子控制栈无关，<strong>别让它分心</strong></td>
-</tr>
-</tbody>
-</table>
-<h3 id="31-radxa-zero-3w-你手里最好的一张牌">3.1 Radxa Zero 3W —— 你手里最好的一张牌</h3>
-<p>官方的"鸭子大脑"就是跑在这块板上的（RK3566 四核）。这意味着<strong>软件零移植</strong>：官方 Rust 运行时、9 个官方 ONNX 技能，硬件相同就能直接用，不用重训模型。</p>
-<p>起步动作（第 2 周做，第 8 节有详细日程）：</p>
-<ol>
-<li>用 <strong>Armbian imager</strong> 刷 <code>Radxa Zero 3 / Armbian Minimal</code>，刷之前在界面里填好 WiFi 和账号密码（省掉串口线）；</li>
-<li><code>ssh</code> 进去，跑官方的 <code>./scripts/provision-board.sh</code> 一键装机（见 <a href="../docs/robot/install-dev.md">官方安装文档</a>）;</li>
-<li>三个必踩的坑提前背下来（第 9 节）：串口被登录控制台占用、I²C 与 USB-C 供电协商抢引脚、NPU 默认关闭。</li>
-</ol>
-<h3 id="32-打印外壳件-到手先当验收员">3.2 打印外壳件 —— 到手先当"验收员"</h3>
-<p>不要急着装。<strong>先用 30 分钟当一次质检员</strong>，这本身就是复刻项目的第一个正式实验（构建日志里叫 G1 验证）：</p>
-<ol>
-<li><strong>M2 螺丝试穿</strong>：拿 M2×6 螺丝逐件试穿腿部件的孔。能顺畅穿过 = 公差合格；穿不过的记下是哪件哪个孔（后面用 Ø2.5 钻头修，属正常操作）；</li>
-<li><strong>轴承座</strong>：Ø22mm 和 Ø15mm 轴承到手后试压入，"轻压不裂"= 合格；</li>
-<li><strong>目检</strong>：层纹方向、孔有没有变椭圆、明显缺料；</li>
-<li>全部记录进 <a href="../microduck-replica/构建日志.md">构建日志</a>。</li>
-</ol>
-<h3 id="33-机器狗的舵机-第一步辨认它是谁">3.3 机器狗的舵机 —— 第一步：辨认它是谁</h3>
-<p>之前的指南记录你手头是 <strong>SG90×6</strong>。如果"机器狗的舵机"是另一批货，先花 5 分钟辨认（这决定它们能干什么）：</p>
-<table>
-<thead>
-<tr>
-<th>看什么</th>
-<th>PWM 舵机（玩具级）</th>
-<th>总线舵机（机器人级）</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>型号印字</td>
-<td>SG90 / MG90S / MG996R / ES9051…</td>
-<td>STS3215 / SCS / XL330 / HL-1910 / DS3218(部分)…</td>
-</tr>
-<tr>
-<td>重量手感</td>
-<td>SG90 约 9g，塑料齿轮</td>
-<td>通常 40–60g，多有金属齿轮</td>
-</tr>
-<tr>
-<td>引脚定义丝印</td>
-<td><code>SIG + -</code> 或 <code>信号/红/棕</code></td>
-<td><code>DATA/DATA+</code>、<code>TX RX</code> 或 DYNAMIXEL/FEETECH 字样</td>
-</tr>
-<tr>
-<td>终极验证</td>
-<td>接 PWM 信号才动</td>
-<td>接串口后发"ping"命令有应答</td>
-</tr>
-</tbody>
-</table>
-<p><strong>辨认结果的处理：</strong></p>
-<ul>
-<li><strong>是 SG90/MG90S 类（最可能）</strong>：按第 4 节第 0 站，用 Pi 2 + <a href="../microduck-replica/rl-series/scripts/pi_sg90_bench.py">pi_sg90_bench.py</a> 搭 PWM 台架，一晚上学四件大事（脉宽控制、供电预算、开环的宿命、动作序列）。这四课是后面所有接线调试的手感基础。</li>
-<li><strong>竟然是 STS3215 类总线舵机</strong>：恭喜——它可以直接当第 1 站的"总线学习门票"（省下买第一只总线舵机的钱），但<strong>仍然装不进这只鸭子</strong>（尺寸大一圈、重 3 倍，强行换 = 换了一台机器人，详见 <a href="../microduck-replica/docs/执行器选型.md">执行器选型</a>）。复刻构建日志里作者最终选了飞特 HL-1910 走"换舵机+重训"路线，代价是官方 9 个 ONNX 全部作废、要自己重训——那是后话，见 <a href="../microduck-replica/docs/换舵机重训全流程.md">换舵机重训全流程</a>。</li>
-</ul>
-<h3 id="34-还缺什么不用现在买齐按第-4-节的门控节奏来">3.4 还缺什么（不用现在买齐，按第 4 节的门控节奏来）</h3>
-<ul>
-<li><strong>15 只鸭子级舵机</strong>（最大头，货期最长，第 3–4 周决策买什么）</li>
-<li>NP-F550 电池（注意是 <strong>F550 不是 F970</strong>，F970 装不进还超重 300g）</li>
-<li>IMX219 摄像头（就是树莓派 Camera v2）、VL53L5/8CX ToF、LSM6DSV16X IMU</li>
-<li>两块电路板：RPI Robot HAT（<strong>官方开源了全套制板文件，直接打样，不用画</strong>）和 imu_to_dxl（复刻仓已画好，等你打样）</li>
-<li>USB 转舵机总线调试板（如 FE-URT-1，约 ¥45）——你的<strong>第一张总线门票</strong></li>
-</ul>
-<hr />
-<h2 id="4-学习总路线四站">4. 学习总路线：四站</h2>
-<p>设计原则来自 <a href="../microduck-replica/docs/阶梯式采购与验证路线.md">阶梯式采购与验证路线</a>：<strong>每一笔大钱，都必须由上一站的验证结果来解锁</strong>。新手期只花小钱、甚至不花钱。</p>
-<pre><code>第 0 站 手上和电脑上（¥0，本周）
-   打印件实测(G1) + SG90 台架四课 + 仿真跑官方策略
-        │  验证了：结构可用、你懂了开环的痛、策略长什么样
-        ▼
-第 1 站 电的最小闭环（≈¥250）
-   USB调试板 + 1 只总线舵机 → ping、读写角度、50Hz 连读
-        │  验证了：总线协议你玩得转（G2 门票）
-        ▼
-第 2 站 机械与自制板（≈¥150）
-   腿部试装 + imu_to_dxl 打样贴片 → 总线 16 设备一次读回
-        │  验证了：装得上、自制板有活数据（G3）
-        ▼
-第 3 站 大单与整机（≈¥2500–3500，货期长，提前下单）
-   舵机×15 + 电池 + 传感器 → Radxa 起飞 → 整机 → 首走（G4）
+<p>把它想成一个闭环：</p>
+<pre><code class="language-text">身体姿态 + 关节反馈
+        ↓
+    61 个观测
+        ↓
+    ONNX 策略
+        ↓
+    14 个关节目标
+        ↓
+    舵机和机械结构
+        ↓
+    真实运动再次变成反馈
 </code></pre>
+<h3 id="当前仓库的目录地图">当前仓库的目录地图</h3>
 <table>
 <thead>
 <tr>
-<th>站</th>
-<th>花钱</th>
-<th>你要学会的</th>
-<th>验收标准</th>
+<th>目录</th>
+<th>新手先把它理解成什么</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>0</td>
-<td>¥0</td>
-<td>PWM 台架四课；跑通官方仿真策略</td>
-<td>6 只 SG90 做出序列动作；电脑上鸭子在仿真里走起来</td>
+<td><code>robotd/</code></td>
+<td>主控制进程：控制循环、状态机、JSON-RPC 服务</td>
 </tr>
 <tr>
+<td><code>duck-control/</code></td>
+<td>硬件抽象：总线、IMU、观测、策略、安全层</td>
+</tr>
+<tr>
+<td><code>kinematics/</code></td>
+<td>MJCF 模型、正向运动学、头部/手部几何</td>
+</tr>
+<tr>
+<td><code>odometry/</code></td>
+<td>根据脚和 IMU 估计机器人位移</td>
+</tr>
+<tr>
+<td><code>robotctl/</code>、<code>duckctl/</code></td>
+<td>命令行控制工具；先不急着改</td>
+</tr>
+<tr>
+<td><code>padd/</code></td>
+<td>手柄输入转换成机器人意图</td>
+</tr>
+<tr>
+<td><code>tof/</code>、<code>mediad/</code>、<code>sounds/</code></td>
+<td>深度、相机/媒体、声音；运动闭环前可暂缓</td>
+</tr>
+<tr>
+<td><code>configd/</code>、<code>btd/</code>、<code>updater/</code></td>
+<td>网络、蓝牙、升级；属于系统运维层</td>
+</tr>
+<tr>
+<td><code>docs/course/</code></td>
+<td>面向学习的课程草稿</td>
+</tr>
+<tr>
+<td><code>docs/deep-dive/</code></td>
+<td>对控制、电源、协议和结构的深入笔记</td>
+</tr>
+<tr>
+<td><code>scripts/</code></td>
+<td>在 Radxa 上配置系统、部署和测试的脚本</td>
+</tr>
+<tr>
+<td><code>kicad-mcp-test/</code></td>
+<td>KiCad 测试夹具，不是鸭子的真实电路板</td>
+</tr>
+</tbody>
+</table>
+<p>第一遍只读这四个文件：</p>
+<ul>
+<li><a href="../README.md">README</a></li>
+<li><a href="design/architecture.md">系统架构</a></li>
+<li><a href="design/robotd-design.md">robotd 设计</a></li>
+<li><a href="course/README.md">仓库课程目录</a></li>
+</ul>
+<hr />
+<h2 id="2-先认识你手里的东西">2. 先认识你手里的东西</h2>
+<h3 id="radxa-zero-3w">Radxa Zero 3W</h3>
+<p>它是 Linux 主控，适合运行本仓库的 Rust 守护进程。部署脚本针对 Radxa Zero 3 / RK3566<br />
+这一类板子，默认电机串口是 <code>/dev/ttyS2</code>。这块板<strong>不是舵机电源</strong>，也不是把舵机插进<br />
+USB 就能工作的“万能转接板”。</p>
+<p>没有电机和 IMU 时，Radxa 可以先做两件事：</p>
+<ol>
+<li>刷系统、SSH 登录、学习 Linux；</li>
+<li>运行假总线模式、编译和测试软件。</li>
+</ol>
+<p>真正接电机之前，先读 <a href="robot/install-dev.md">开发板安装</a>。不要在 Windows 终端里直接运行<br />
+<code>setup-board.sh</code>；这些脚本应在目标 Radxa 上执行，或由 <code>provision-board.sh</code> 通过 SSH<br />
+执行。</p>
+<h3 id="3d-打印外壳件">3D 打印外壳件</h3>
+<p>它们目前只是“待验收的机械零件”，不能因为外形像鸭子就假定与项目模型完全匹配。仓库里<br />
+可核对的机械来源是 <a href="../kinematics/assets/alpha/robot_walk.xml">MJCF 模型</a>，不是一套可直接<br />
+打印的 CAD 装配包。</p>
+<p>到手后的顺序：</p>
+<ol>
+<li>给每个零件编号并拍照；</li>
+<li>用游标卡尺量舵机腔、轴孔、螺丝孔和板卡空间；</li>
+<li>不装电机，先用螺丝和轴承做“干装配”；</li>
+<li>记录哪些孔过紧、哪些轴线不平行；</li>
+<li>只改一个尺寸，再打印一个小测试件。</li>
+</ol>
+<p>不要先把未知舵机硬塞进壳体。舵机的外形、安装孔、输出轴方向和重量都会改变结构。</p>
+<h3 id="机器狗舵机">机器狗舵机</h3>
+<p>先不要猜型号。拍清楚铭牌、插头和线色，量一只的重量，记录：</p>
+<table>
+<thead>
+<tr>
+<th>观察项</th>
+<th>可能是 PWM 舵机</th>
+<th>可能是总线舵机</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>接线</td>
+<td>3 线：信号、正极、地</td>
+<td>3 线总线或专用插头，常有 DATA 标识</td>
+</tr>
+<tr>
+<td>控制方式</td>
+<td>一只舵机占一个 PWM 信号脚</td>
+<td>多只舵机共用一条数据总线，每只用 ID 区分</td>
+</tr>
+<tr>
+<td>反馈</td>
+<td>通常不能读真实位置</td>
+<td>通常能读位置、电压、温度</td>
+</tr>
+<tr>
+<td>现在能否接本项目</td>
+<td>只能做 PWM 学习台架</td>
+<td>还要核对协议、电压、尺寸和控制模式</td>
+</tr>
+</tbody>
+</table>
+<p>如果不能确认型号和额定电压，就<strong>不要上电</strong>。项目的 <code>duck-control</code> 明确按 Dynamixel<br />
+XL330 协议、ID 和寄存器工作；“能转”不等于“能被本项目控制”。</p>
+<h3 id="小智-esp32-硬件">小智 ESP32 硬件</h3>
+<p>当前仓库没有 <code>xiaozhi-esp32/</code> 目录，也没有现成的小智协议适配器。因此它现在是一个<br />
+<strong>独立语音项目</strong>，不是 Microduck 的即插即用模块。</p>
+<p>正确的接入顺序是：先让鸭子本地动作稳定，再设计一条明确的接口，例如：</p>
+<pre><code class="language-text">ESP32 识别“坐下” → 串口/Wi‑Fi 发一个高层命令 → robotd → 安全层 → 动作
+</code></pre>
+<p>不要让 ESP32 直接抢占舵机总线；总线必须由 <code>robotd</code> 单一拥有。</p>
+<h3 id="树莓派-pi-2-model-b">树莓派 Pi 2 Model B</h3>
+<p>Pi 2 可以当作低成本的 PWM 实验台或 Linux 练习机。它没有本项目所需的官方控制栈，也<br />
+不能替代 Radxa 的 ARM 主控。它没有板载 Wi‑Fi，联网通常要插网线。</p>
+<p>Pi 2 做 PWM 实验时，只有在数据手册确认舵机额定为 5–6 V 后，才使用独立、限流的<br />
+5–6 V 电源；不能从 Pi 的 5 V 脚给多只舵机供电。总线舵机要按自己的数据手册供电，不能<br />
+套用这个电压。信号地必须共地。当前仓库没有 Pi PWM 台架脚本，所以不要把某个外部教程<br />
+里的脚本路径当成仓库文件。</p>
+<hr />
+<h2 id="3-十个必须先懂的概念">3. 十个必须先懂的概念</h2>
+<ol>
+<li><strong>舵机</strong>：带齿轮和控制器的电机总成。你给目标，它负责转到目标。</li>
+<li><strong>PWM 舵机</strong>：靠脉冲宽度控制，一只一根信号线，通常没有位置反馈。</li>
+<li><strong>总线舵机</strong>：多只设备共用数据线，靠 ID 寻址，可以读回位置等状态。</li>
+<li><strong>UART</strong>：串行通信接口；项目用它连接舵机总线。</li>
+<li><strong>半双工</strong>：同一根数据线既发送又接收，但同一时刻只能一个方向说话。</li>
+<li><strong>IMU</strong>：陀螺仪和加速度计，用来知道身体是否倾斜、正在怎样运动。</li>
+<li><strong>观测</strong>：网络看到的数字；本项目的 alpha 策略是 61 维。</li>
+<li><strong>动作</strong>：网络输出的关节目标；本项目的步态策略输出 14 个数。</li>
+<li><strong>推理</strong>：使用已经训练好的 ONNX；不等于重新训练神经网络。</li>
+<li><strong>sim2real</strong>：把仿真里的策略迁移到真机；仿真能走不代表真机一定能走。</li>
+</ol>
+<p>最重要的区分是：<strong>PWM 和总线不是“便宜版与贵版”的区别，而是系统接口不同</strong>。没有<br />
+反馈的 PWM 舵机不能直接满足当前 61→14 的闭环假设；它仍然非常适合拿来学供电、脉冲和<br />
+机械负载。</p>
+<hr />
+<h2 id="4-控制代码如何对应硬件">4. 控制代码如何对应硬件</h2>
+<p>打开 <code>duck-control/src/model.rs</code>，你会看到当前运行时的硬件契约：</p>
+<pre><code class="language-text">左腿：ID 20 21 22 23 24
+颈/头/嘴：ID 30 31 32 33 34
+右腿：ID 10 11 12 13 14
+IMU 转接板：ID 200
+</code></pre>
+<p>这不是建议值，而是代码查找设备时使用的地址。舵机顺序也不能随意交换，因为数组下标<br />
+同时决定了关节名字、观测位置和写入目标。</p>
+<p><code>duck-control/src/bus.rs</code> 展示了一次控制周期做什么：</p>
+<pre><code class="language-text">一次 sync_read：读 IMU + 15 只舵机
+一次策略推理：观测 → ONNX → 14 个动作
+一次 sync_write：写 15 个目标（嘴巴位置单独处理）
+每秒一次：读电压和温度
+</code></pre>
+<p><code>robotd</code> 还规定了三个很重要的安全行为：</p>
+<ul>
+<li>启动不会自动让机器人突然运动；</li>
+<li>只有安全层持有真正的电机写入句柄；</li>
+<li>NaN/无穷值会被拒绝，目标会被限制在执行器范围内。</li>
+</ul>
+<p>这就是为什么你的 ESP32、手柄、浏览器和语音程序都应该发<strong>高层意图</strong>，而不是自己向<br />
+串口写舵机包。阅读顺序建议是：</p>
+<ol>
+<li><code>duck-control/src/model.rs</code>：设备、ID、HOME 姿态；</li>
+<li><code>duck-control/src/bus.rs</code>：总线读写；</li>
+<li><code>robotd/src/control.rs</code>：观测、策略、目标；</li>
+<li><code>duck-control/src/safety.rs</code>：最后一道安全边界；</li>
+<li><code>docs/design/robotd-design.md</code>：把上述文件串成一张图。</li>
+</ol>
+<hr />
+<h2 id="5-小白如何看懂电路图">5. 小白如何看懂电路图</h2>
+<h3 id="51-先接受当前仓库的限制">5.1 先接受当前仓库的限制</h3>
+<p>当前仓库没有 Microduck 完整的原理图 PDF。你能可靠读取的是<strong>软件对硬件的接口假设</strong>：</p>
+<pre><code class="language-text">Radxa UART (/dev/ttyS2)
+        │ 1 Mbps，Dynamixel Protocol V2
+        ▼
+单线 TTL 半双工总线
+   ├─ IMU 板，ID 200
+   └─ 15 个总线舵机，ID 10–14 / 20–24 / 30–34
+</code></pre>
+<p>供电部分不能从 Rust 代码“脑补”出来。代码能读到舵机报告的总线电压，但电池、保险丝、<br />
+降压器、插座和 PCB 具体怎么连，必须以你手里真实的板卡和舵机数据手册为准。</p>
+<h3 id="52-原理图与-pcb-图的区别">5.2 原理图与 PCB 图的区别</h3>
+<ul>
+<li><strong>原理图</strong>回答“哪些引脚电气相连”；</li>
+<li><strong>PCB 布局图</strong>回答“这些器件在板上怎么摆、线怎么走”；</li>
+<li><strong>3D 图</strong>回答“装进去会不会碰撞”；</li>
+<li><strong>接线表</strong>回答“线从哪个连接器的哪个脚到哪个脚”。</li>
+</ul>
+<p>不要把原理图里的线条位置当成真实物理走线；同名网络（例如 <code>GND</code>、<code>SDA</code>、<code>SCL</code>、<br />
+<code>UART_TX</code>）才是电气连接的关键。</p>
+<h3 id="53-通用五步读图法">5.3 通用五步读图法</h3>
+<p>拿到任何一张图，按这个顺序：</p>
+<ol>
+<li><strong>找电源入口</strong>：输入电压是多少，正负极在哪里；</li>
+<li><strong>找 GND</strong>：所有模块是否有共同参考地；</li>
+<li><strong>找主控</strong>：哪颗 MCU/SoC，电源脚是否有去耦电容；</li>
+<li><strong>沿信号走</strong>：UART、I²C、SPI、PWM 分别连到谁；</li>
+<li><strong>看保护</strong>：保险丝、反接保护、TVS、限流和急停在哪里。</li>
+</ol>
+<p>对每个连接器写一张小卡片：</p>
+<pre><code class="language-text">连接器 J?
+1: GND
+2: 电源（多少伏，谁提供）
+3: DATA / TX / SDA（方向是什么）
+4: 未使用或保留
+</code></pre>
+<p>这样比一上来认电阻、电容的符号更有效。先知道“电从哪来、数据往哪走”，再研究元件值。</p>
+<h3 id="54-你第一次该画的草图">5.4 你第一次该画的草图</h3>
+<p>先不要画 PCB，只用纸画四个框：</p>
+<pre><code class="language-text">[电池/电源] ──&gt; [舵机供电总线] ──&gt; [15 个舵机]
+                       ▲
+                       │ DATA（半双工）
+[Radxa UART] ──────────┘
+      │
+      ├─ [IMU 总线设备 ID 200]
+      └─ [上层软件、网络、语音命令]
+</code></pre>
+<p>在图旁边标出三个“未知项”：舵机额定电压、总线转接/方向切换电路、Radxa 与电源的共地<br />
+方式。未知项没有数据手册前不要填数字；这正是工程记录的一部分。</p>
+<p>深入阅读顺序：</p>
+<ul>
+<li><a href="deep-dive/41-电控架构总览.md">电控架构总览</a></li>
+<li><a href="deep-dive/45-电源树.md">电源树</a></li>
+<li><a href="deep-dive/46-半双工总线.md">半双工总线</a></li>
+<li><a href="deep-dive/50-供电冲突.md">供电冲突</a></li>
+<li><a href="deep-dive/53-舵机协议.md">舵机协议</a></li>
+</ul>
+<p>这些是解释性笔记，不是你当前硬件的接线批准书。真正上电仍以实物手册和万用表测量为准。</p>
+<hr />
+<h2 id="6-小白如何看懂和设计结构">6. 小白如何看懂和设计结构</h2>
+<h3 id="61-先看运动链再看外壳">6.1 先看运动链，再看外壳</h3>
+<p>打开 <a href="../kinematics/assets/alpha/robot_walk.xml">robot_walk.xml</a>，先只找 <code>body</code>、<code>joint</code>、<br />
+<code>inertial</code> 三类标签：</p>
+<pre><code class="language-text">trunk_base
+├─ 左腿：left_hip_yaw → left_hip_roll → left_hip_pitch → left_knee → left_ankle
+├─ 颈头：neck_pitch → head_pitch → head_yaw → head_roll
+└─ 右腿：right_hip_yaw → right_hip_roll → right_hip_pitch → right_knee → right_ankle
+</code></pre>
+<ul>
+<li><code>body</code> 是刚体层级：谁挂在谁上面；</li>
+<li><code>joint</code> 是相对运动：绕哪根轴、允许转多少；</li>
+<li><code>inertial</code> 是质量和转动惯量：零件多重、重心在哪里；</li>
+<li><code>site</code> 是传感器或脚等参考点。</li>
+</ul>
+<p>这份 MJCF 是仿真模型，不是可直接打印的 CAD。它能告诉你运动链、坐标系、质量和关节<br />
+范围，不能告诉你螺丝怎么拧、打印件能否承受冲击。</p>
+<h3 id="62-结构设计的最小方法">6.2 结构设计的最小方法</h3>
+<p>每做一个零件，按这七问检查：</p>
+<ol>
+<li>它固定谁、允许谁动？</li>
+<li>旋转轴线在哪里？左右是否对称？</li>
+<li>舵机输出轴和外壳是否有硬限位？</li>
+<li>螺丝受的是拉力、剪切还是反复振动？</li>
+<li>轴承是否承担了侧向载荷，而不是让舵机输出轴硬扛？</li>
+<li>电线有没有弯折半径、夹线和可拆空间？</li>
+<li>维护时能不能只拆一层，而不是拆完整只鸭子？</li>
+</ol>
+<h3 id="63-你的打印件验收流程">6.3 你的打印件验收流程</h3>
+<p>不要直接打印或装完整机器。先做一个“最小闭环”：</p>
+<pre><code class="language-text">量舵机 → 量打印腔体 → 空装 → 单关节手动活动 → 单舵机低负载 → 再扩大
+</code></pre>
+<p>验收记录至少包括：</p>
+<table>
+<thead>
+<tr>
+<th>项目</th>
+<th>记录什么</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>外形</td>
+<td>长、宽、高，是否翘曲</td>
+</tr>
+<tr>
+<td>孔位</td>
+<td>螺丝能否顺利穿过，是否需要修孔</td>
+</tr>
+<tr>
+<td>轴线</td>
+<td>两个关节轴是否平行/垂直</td>
+</tr>
+<tr>
+<td>刚度</td>
+<td>手捏、轻推时是否明显变形</td>
+</tr>
+<tr>
+<td>走线</td>
+<td>线会不会碰转动件或被夹住</td>
+</tr>
+<tr>
+<td>维护</td>
+<td>能否取出舵机、电池和控制板</td>
+</tr>
+</tbody>
+</table>
+<p>打印公差没有一个对所有打印机都正确的数字。先打测试片，再根据测量结果调整；不要把<br />
+网上的“统一补偿 0.2 mm”直接套用。</p>
+<h3 id="64-换舵机为什么会牵动结构和训练">6.4 换舵机为什么会牵动结构和训练</h3>
+<p>舵机变化会同时影响：</p>
+<ul>
+<li>安装孔和外壳尺寸；</li>
+<li>质量、重心和腿部惯量；</li>
+<li>电压、电流、齿隙和控制增益；</li>
+<li>仿真的执行器模型和最终 ONNX 策略。</li>
+</ul>
+<p>所以机器狗舵机最多先用来学台架。不要期待“把同样数量的舵机塞进去”就能直接运行官方<br />
+步态策略。</p>
+<hr />
+<h2 id="7-现在就能做的学习路线">7. 现在就能做的学习路线</h2>
+<h3 id="第-0-阶段不通电建立地图">第 0 阶段：不通电，建立地图</h3>
+<p>按下面顺序读，每篇只写三句话笔记：它解决什么问题、输入是什么、输出是什么。</p>
+<ol>
+<li><a href="course/00-导学-这只鸭子是什么.md">第 00 课：这只鸭子是什么</a></li>
+<li><a href="course/01-先让它动起来-浏览器仿真.md">第 01 课：浏览器仿真</a></li>
+<li><a href="course/02-十个必懂概念.md">第 02 课：十个必懂概念</a></li>
+<li><a href="course/04-61到14-鸭子的神经回路.md">第 04 课：61 到 14</a></li>
+<li><a href="course/08-看懂电路图.md">第 08 课：看懂电路图</a></li>
+<li><a href="course/09-3D打印测试片先行.md">第 09 课：3D 打印测试片</a></li>
+</ol>
+<p>验收标准：你能不看文档解释“摇杆为什么不是直接控制某一只腿”。</p>
+<h3 id="第-1-阶段在电脑上验证软件">第 1 阶段：在电脑上验证软件</h3>
+<p>先确认 Rust 版本满足仓库的 <code>rust-version = "1.89"</code>，再在开发机上运行：</p>
+<pre><code class="language-bash">cargo test
+cargo test -p kinematics
+</code></pre>
+<p>如果报 <code>requires rustc 1.89</code>，不是项目代码坏了，而是本机工具链太旧；先用 rustup<br />
+安装 1.89 或更新版本，再重跑。</p>
+<p>这两步不需要 Radxa、不需要舵机，也不需要电池。然后阅读 <a href="进阶学习文档-训练仿真与部署.md">测试和仿真部署说明</a>。</p>
+<p>如果想观察运行时而不接总线，可以编译后使用 <code>robotd --fake</code>；它的意义是“没有总线、<br />
+没有真实机器人”，不是模拟一个完整的物理世界。命令帮助以当前代码为准：</p>
+<pre><code class="language-bash">cargo run -p robotd -- --help
+</code></pre>
+<p>验收标准：测试通过，并能说清“假总线测试”和“MuJoCo 物理仿真”的区别。</p>
+<h3 id="第-2-阶段用-pi-2-学一只-pwm-舵机">第 2 阶段：用 Pi 2 学一只 PWM 舵机</h3>
+<p>只有在你确认舵机型号和额定电压后再做：</p>
+<ol>
+<li>Pi 2 刷 Raspberry Pi OS，插网线，先只练 SSH；</li>
+<li>准备独立的、带限流的 5–6 V 电源；</li>
+<li>信号线接一个 GPIO，电源正负接外部电源，Pi 与外部电源共地；</li>
+<li>只接一只、只做小角度动作；</li>
+<li>观察堵转、电压下跌、重启和发热。</li>
+</ol>
+<p>这阶段的学习目标不是做鸭子，而是亲手体会：PWM 舵机通常没有真实位置反馈，外力把轴<br />
+掰走后，程序并不知道。</p>
+<p>验收标准：能安全地让一只舵机来回小角度运动，能解释为什么电源不能取自 Pi 的 5 V 脚。</p>
+<h3 id="第-3-阶段让-radxa-只跑软件">第 3 阶段：让 Radxa 只跑软件</h3>
+<p>在 Radxa 上按 <a href="robot/install-dev.md">install-dev.md</a> 做系统安装，重点观察：</p>
+<ul>
+<li>开发机负责编译，板子负责运行；</li>
+<li><code>/dev/ttyS2</code> 是项目默认电机 UART；</li>
+<li><code>serial-getty@ttyS2</code> 不能占着电机串口；</li>
+<li>设备树 overlay 和 ONNX Runtime 属于板级前置条件；</li>
+<li>任何脚本都要看清“在开发机执行”还是“在 Radxa 执行”。</li>
+</ul>
+<p>没有总线硬件时，先不要追求 <code>robotd</code> 健康通过；使用 <code>--fake</code> 和单元测试学习软件路径。</p>
+<h3 id="第-4-阶段一只总线舵机的实验">第 4 阶段：一只总线舵机的实验</h3>
+<p>如果你的机器狗舵机经确认是 Dynamixel/Feetech 一类总线舵机，再购买或借一个匹配的 USB<br />
+调试器，并且只接一只。验证顺序：</p>
+<ol>
+<li>查数据手册的额定电压、协议、电平和默认波特率；</li>
+<li>独立给舵机供电，调试器只负责通信；</li>
+<li>万用表测电源正负和空载电压；</li>
+<li>扫描、读取位置、电压、温度；</li>
+<li>只有确认通信稳定后，才改 ID；</li>
+<li>改 ID 后断电、贴标签、回读确认。</li>
+</ol>
+<p>对于当前项目，代码使用 1 Mbps、Dynamixel Protocol V2 和分段 ID。Feetech 或其它协议<br />
+需要适配层，不能只改一个 ID 就当成兼容。</p>
+<h3 id="第-5-阶段整机前的硬件门槛">第 5 阶段：整机前的硬件门槛</h3>
+<p>满足以下条件前，不要上官方步态：</p>
+<ul>
+<li>15 个执行器的型号、电压、通信协议和安装孔都已确认；</li>
+<li>有可靠的电源、保险/限流、急断电和共同地；</li>
+<li>有 IMU 总线设备或明确的替代方案；</li>
+<li>结构干装配无卡滞，线不会被夹断；</li>
+<li>已完成单舵机、少量舵机、悬空整机的逐级测试；</li>
+<li>你知道当前 ONNX 是为哪一组执行器和哪一套关节顺序训练的。</li>
+</ul>
+<hr />
+<h2 id="8-第一个月计划">8. 第一个月计划</h2>
+<h3 id="第-1-周只学习和盘点">第 1 周：只学习和盘点</h3>
+<ul>
+<li>[ ] 读完本指南第 1–5 节；</li>
+<li>[ ] 给所有舵机拍照、称重、记录型号和线序；</li>
+<li>[ ] 列出打印件清单并给每个零件编号；</li>
+<li>[ ] 浏览器跑一次官方仿真；</li>
+<li>[ ] 在开发机运行 <code>cargo test</code>；</li>
+<li>[ ] 用纸画出“Radxa → 总线 → 舵机 + IMU”的框图。</li>
+</ul>
+<h3 id="第-2-周pi-2-和结构干装">第 2 周：Pi 2 和结构干装</h3>
+<ul>
+<li>[ ] 如果是 PWM 舵机，完成单舵机安全台架；</li>
+<li>[ ] 用卡尺测打印件和舵机腔体；</li>
+<li>[ ] 不通电完成一条腿或一个关节的干装；</li>
+<li>[ ] 记录一个明确问题，不同时改十个变量。</li>
+</ul>
+<h3 id="第-3-周radxa-软件">第 3 周：Radxa 软件</h3>
+<ul>
+<li>[ ] 刷系统并 SSH 登录；</li>
+<li>[ ] 阅读 <code>provision-board.sh</code> 和 <code>setup-board.sh</code> 的执行位置；</li>
+<li>[ ] 运行开发板上的 <code>robotd --fake</code> 或在开发机上运行帮助/测试；</li>
+<li>[ ] 能查看 systemd 状态和 journal 日志。</li>
+</ul>
+<h3 id="第-4-周决定是否进入总线阶段">第 4 周：决定是否进入总线阶段</h3>
+<ul>
+<li>[ ] 确认机器狗舵机究竟是不是总线舵机；</li>
+<li>[ ] 只为一只样品准备匹配调试器和电源；</li>
+<li>[ ] 写一页“协议、电压、尺寸、重量、反馈、风险”对照表；</li>
+<li>[ ] 如果无法确认，停在这里，不要批量采购。</li>
+</ul>
+<hr />
+<h2 id="9-上电和调试安全卡">9. 上电和调试安全卡</h2>
+<p>每次上电前逐项打勾：</p>
+<ul>
+<li>[ ] 已知道舵机的型号和额定电压；</li>
+<li>[ ] 电源正负没有接反；</li>
+<li>[ ] 电源对地没有短路；</li>
+<li>[ ] 舵机电源没有取自 Radxa、Pi 或 USB；</li>
+<li>[ ] 调试器和舵机电源已经共地；</li>
+<li>[ ] 结构没有把输出轴顶死；</li>
+<li>[ ] 伸手能立即切断电源；</li>
+<li>[ ] 第一次测试在软垫上、低负载、远离桌边；</li>
+<li>[ ] 修改线缆前已断电；</li>
+<li>[ ] 总线只由一个程序拥有。</li>
+</ul>
+<p>出现以下任意现象，立刻断电：异常嗡鸣、快速发热、反复重启、冒烟、明显卡死、电源压降<br />
+过大。先断电，再查线；不要带电“试一下”。</p>
+<p><code>robotd</code> 正在运行时，不要同时用另一个程序或 USB 调试器打开同一条电机总线。需要做底层<br />
+扫描时，先停掉占用总线的服务，并确认没有 <code>serial-getty</code> 抢占 <code>/dev/ttyS2</code>。</p>
+<hr />
+<h2 id="10-常见误区">10. 常见误区</h2>
+<table>
+<thead>
+<tr>
+<th>误区</th>
+<th>正确理解</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>“Radxa 有 GPIO，所以能直接带舵机”</td>
+<td>GPIO 只表示信号能力，不代表电源、电平、协议和保护都匹配</td>
+</tr>
+<tr>
+<td>“舵机能转，就能跑官方模型”</td>
+<td>还要匹配反馈、协议、尺寸、质量、齿隙、增益和电压</td>
+</tr>
+<tr>
+<td>“3D 打印件外形一样就能装”</td>
+<td>轴线、孔位、限位、刚度和走线空间都要实测</td>
+</tr>
+<tr>
+<td>“先把 15 只都接上，再慢慢改 ID”</td>
+<td>出厂同 ID 的总线设备会互相抢答；总线阶段一次只接一只未配置设备</td>
+</tr>
+<tr>
+<td>“把 ESP32 直接接到舵机总线更简单”</td>
+<td>会破坏单一总线所有者和安全层；ESP32 应发高层命令</td>
+</tr>
+<tr>
+<td>“仿真里能走，真机只要调个速度”</td>
+<td>真机还会遇到电压、延迟、摩擦、回差、装配误差和跌倒</td>
+</tr>
+<tr>
+<td>“先买齐再研究”</td>
+<td>先做便宜、可逆的验证；每个采购都由上一个门槛解锁</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="11-下一步该读什么">11. 下一步该读什么</h2>
+<table>
+<thead>
+<tr>
+<th>目的</th>
+<th>当前仓库里的文件</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>看全局</td>
+<td><a href="../README.md">README</a>、<a href="design/architecture.md">architecture.md</a></td>
+</tr>
+<tr>
+<td>学控制闭环</td>
+<td><a href="design/robotd-design.md">robotd-design.md</a>、<a href="course/04-61到14-鸭子的神经回路.md">第 04 课</a></td>
+</tr>
+<tr>
+<td>学电路思路</td>
+<td><a href="deep-dive/41-电控架构总览.md">电控架构</a>、<a href="deep-dive/45-电源树.md">电源树</a>、<a href="deep-dive/46-半双工总线.md">半双工总线</a></td>
+</tr>
+<tr>
+<td>学协议和 ID</td>
+<td><a href="deep-dive/53-舵机协议.md">舵机协议</a>、<a href="deep-dive/59-ID分配与模式.md">ID 与模式</a></td>
+</tr>
+<tr>
+<td>学结构</td>
+<td><a href="../kinematics/assets/alpha/robot_walk.xml">MJCF 模型</a>、<code>kinematics/src/</code></td>
+</tr>
+<tr>
+<td>学 Radxa</td>
+<td><a href="robot/install-dev.md">开发板安装</a>、<a href="robot/install-by-hand.md">手工安装</a></td>
+</tr>
+<tr>
+<td>学日常命令</td>
+<td><a href="robot/cheatsheet.md">robotctl cheat sheet</a></td>
+</tr>
+<tr>
+<td>学仿真/训练</td>
+<td><a href="进阶学习文档-训练仿真与部署.md">进阶学习文档</a>、<a href="../tools/microduck_learning/README.md">学习工具</a></td>
+</tr>
+<tr>
+<td>学排错</td>
+<td><a href="course/07-排错方法论.md">第 07 课</a>、<a href="deep-dive/60-testbench验证.md">testbench 验证</a></td>
+</tr>
+</tbody>
+</table>
+<h3 id="读代码时的一条捷径">读代码时的一条捷径</h3>
+<p>遇到一个新模块，不要从第一行顺读。先回答四个问题：</p>
+<ol>
+<li>它读什么输入？</li>
+<li>它输出给谁？</li>
+<li>它是否能直接写电机？</li>
+<li>出错时是停、保持、降级，还是继续运行？</li>
+</ol>
+<p>能回答这四个问题，就已经是在读机器人系统，而不只是读 Rust 语法。</p>
+<p>最后记住：你现在不需要同时学会电路、机械、Rust、Linux 和强化学习。每次只验证一个小<br />
+闭环，并记录“接了什么、测到了什么、下一步是什么”。这比一次打印整机、一次接满 15<br />
+只舵机更快，也更安全。</p>
+<hr />
+<h2 id="12-已确定使用-hl-2915-c001-时的复刻路线">12. 已确定使用 HL-2915-C001 时的复刻路线</h2>
+<p>这一节专门针对飞特 <code>HL-2915-C001</code>。它不是 XL330 的直接替换件，而是一套新的执行器适配。</p>
+<h3 id="121-先把型号资料钉死">12.1 先把型号资料钉死</h3>
+<p>官方规格书给出的关键数据如下：</p>
+<table>
+<thead>
+<tr>
+<th>项目</th>
+<th>HL-2915-C001</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>工作电压</td>
+<td>9–14 V，典型 12 V</td>
+</tr>
+<tr>
+<td>堵转电流</td>
+<td>1.5 A @ 12 V</td>
+</tr>
+<tr>
+<td>额定电流</td>
+<td>500 mA @ 12 V</td>
+</tr>
+<tr>
+<td>外形</td>
+<td>34 × 20 × 23 mm</td>
+</tr>
+<tr>
+<td>重量</td>
+<td>27.8 ± 2 g</td>
+</tr>
+<tr>
+<td>输出轴</td>
+<td>25T，外径 4.95 mm</td>
+</tr>
+<tr>
+<td>位置</td>
+<td>0–4095，中心 2048，0.088°/步</td>
+</tr>
+<tr>
+<td>接头</td>
+<td>PH1.25-3P：1=GND，2=Vcc，3=Signal/TTL</td>
+</tr>
+<tr>
+<td>默认 ID</td>
 <td>1</td>
-<td>≈¥250</td>
-<td>总线协议：ID、波特率、读写寄存器</td>
-<td>50Hz 连读 10 分钟零误包</td>
 </tr>
 <tr>
-<td>2</td>
-<td>≈¥150</td>
-<td>装配手感；贴片焊接；IMU 数据</td>
-<td>16 台设备一次 sync_read 全应答</td>
+<td>默认波特率</td>
+<td>1 Mbps</td>
 </tr>
 <tr>
-<td>3</td>
-<td>大头</td>
-<td>系统集成：供电、走线、标定、sim2real</td>
-<td>鸭子站立 + 遥控走两步（摔了也算数，记录它）</td>
+<td>信号电平</td>
+<td>高电平 2–5 V，低电平 0–0.45 V</td>
 </tr>
 </tbody>
 </table>
-<p><strong>现在处于第 0 站。</strong> 具体到天，看第 8 节。</p>
-<hr />
-<h2 id="5-怎么看懂电路图">5. 怎么看懂电路图</h2>
-<blockquote>
-<p>教材就是你仓库里这份：<a href="../microduck-replica/hardware/imu_to_dxl/imu_to_dxl-原理图.pdf">imu_to_dxl-原理图.pdf</a>（全项目唯一要自己画的板，只有 5 个芯片，是完美的教学板）。配套 <a href="../microduck-replica/hardware/imu_to_dxl/imu_to_dxl-接线表.md">接线表</a> 和 <a href="../microduck-replica/docs/imu_to_dxl-设计包/">设计包</a>。</p>
-</blockquote>
-<h3 id="51-电路图到底在画什么">5.1 电路图到底在画什么</h3>
-<p>电路图（原理图，schematic）<strong>不是电路板的照片</strong>，而是"连接关系清单"的图形化。它只回答一个问题：<strong>哪个引脚和哪个引脚电气上连在一起</strong>。器件摆的位置、板子的形状，都不重要——那是 PCB 布局图的事。看图时把每根线理解为"导线"，而不是"画出的一条线"。</p>
-<h3 id="52-符号小字典imu-to-dxl-图上全有对照着认">5.2 符号小字典（imu_to_dxl 图上全有，对照着认）</h3>
-<table>
-<thead>
-<tr>
-<th>符号长什么样</th>
-<th>名字</th>
-<th>干什么</th>
-<th>图上的位号</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>一堆平行短横线（像蜈蚣）</td>
-<td>电阻</td>
-<td>限流、分压、"默认拉高/拉低"</td>
-<td>R1–R7</td>
-</tr>
-<tr>
-<td>两条平行线</td>
-<td>电容</td>
-<td>储电荷、滤掉电源毛刺（每个芯片电源脚旁必有一个 100nF，这是行规）</td>
-<td>C1–C9</td>
-</tr>
-<tr>
-<td>三角形+一竖线</td>
-<td>二极管</td>
-<td>电流单向阀</td>
-<td>D2 稳压管</td>
-</tr>
-<tr>
-<td>三角形+闪电折线</td>
-<td>TVS 二极管</td>
-<td>"电压过高瞬间导通泄放"，保命用</td>
-<td>D1</td>
-</tr>
-<tr>
-<td>三脚、像三明治</td>
-<td>稳压芯片（LDO）</td>
-<td>把总线上的 6–8.4V 降成稳定的 3.3V 喂给芯片</td>
-<td>U4 HT7533</td>
-</tr>
-<tr>
-<td>中间大方块、 many 引脚</td>
-<td>MCU（单片机）</td>
-<td>这块板的大脑，跑固件</td>
-<td>U1 STM32G031</td>
-</tr>
-<tr>
-<td>方块+GND/Vdd+SDA/SCL</td>
-<td>传感器芯片</td>
-<td>IMU，走 I²C</td>
-<td>U2 LSM6DSV16X</td>
-</tr>
-<tr>
-<td>方块+OE 脚</td>
-<td>缓冲器/收发器</td>
-<td>半双工方向切换的开关</td>
-<td>U3</td>
-</tr>
-<tr>
-<td>一排小方块</td>
-<td>排针/连接器</td>
-<td>接线、烧录、总线进出</td>
-<td>J1–J5</td>
-</tr>
-<tr>
-<td>中间画" Fuse "或波浪矩形</td>
-<td>自恢复保险丝</td>
-<td>电流过大自动断，冷却后恢复</td>
-<td>F1</td>
-</tr>
-</tbody>
-</table>
-<h3 id="53-读图五步法任何原理图通用">5.3 读图五步法（任何原理图通用）</h3>
-<ol>
-<li><strong>找电源入口</strong>：电从哪进？（这里是 J1/J2/J4/J5 四个座的 pin2，标着 <code>VDD_BUS</code>，6.0–8.4V）</li>
-<li><strong>找地（GND）</strong>：所有器件的 GND 汇成一张网。<strong>没有共同的地，一切信号都没有参照</strong>——接线事故 80% 出在地线上。</li>
-<li><strong>找主芯片</strong>：最大那块（U1 STM32）。看它的电源脚（VDD→+3V3、VSS→GND）先接对没有。</li>
-<li><strong>顺着网络标号走</strong>：图上不会把每根线都画出来，相同名字（如 <code>+3V3</code>、<code>SWDIO</code>）就是连在一起的。这是原理图的"超链接"。</li>
-<li><strong>看连接器</strong>：J1–J5 是板子与外界的全部接口，弄清每个 pin 是什么，接线表就能自己读了。</li>
-</ol>
-<h3 id="54-实战把-imu-to-dxl-图读成一句人话">5.4 实战：把 imu_to_dxl 图读成一句人话</h3>
-<p>打开 PDF，按信号流走一遍：</p>
-<pre><code>舵机总线 6–8.4V ──► F1 保险丝 ──► D1 TVS 钳压 ──┬──► 直接喂给总线座（原压直通，舵机要这个电压）
-                                               └──► U4 稳压成 3.3V ──► 喂 U1(MCU) 和 U2(IMU)
-U1 STM32 (大脑) ──UART──► U3 半双工缓冲 ──► 总线DATA线（会说话也能听）
-U2 IMU ──I²C(SDA/SCL)──► U1（IMU 汇报姿态）
-J3 排针 ──► SWD 烧录口（给 U1 灌固件用）
+<p>资料入口：</p>
+<ul>
+<li><a href="https://www.feetech.cn/585239">HL-2915-C001 产品页</a></li>
+<li><a href="https://www.feetech.cn/Data/feetechrc/upload/file/20260623/6391782995369048295663730.pdf">官方规格书 PDF</a></li>
+<li><a href="https://www.feetech.cn/Data/feetechrc/upload/file/20240702/%E8%88%B5%E6%9C%BA%E5%8D%8F%E8%AE%AE%E6%89%8B%E5%86%8C-%E7%A3%81%E7%BC%96%E7%A0%81%E7%89%88%E6%9C%AC.pdf">磁编码版本协议手册</a></li>
+<li><a href="https://www.feetech.cn/Data/feetechrc/upload/file/20240702/%E8%88%B5%E6%9C%BA%E5%8D%8F%E8%AE%AE%E5%86%85%E5%AD%98%E8%A1%A8-%E7%A3%81%E7%BC%96%E7%A0%81%E7%89%88%E6%9C%AC.xlsx">磁编码版本内存表</a></li>
+</ul>
+<p>规格书第 8 页的接口电路图中出现了 <code>DC6-9V</code> 字样，与产品参数表的 <code>9–14 V</code> 不一致。<br />
+第一次接线应以 HL-2915-C001 的产品参数表和实物确认结果为准，先用 12 V 限流电源，<br />
+不要照抄那张通用接口图给舵机上电。</p>
+<h3 id="122-通信寄存器速查">12.2 通信寄存器速查</h3>
+<p>飞特协议包格式是：</p>
+<pre><code class="language-text">FF FF | ID | Length | Instruction | Parameters... | Checksum
 </code></pre>
-<p>一句话总结这块板：<strong>"把 IMU 的姿态，翻译成舵机总线上 200 号设备的答复"</strong>。再对照接线表看 <code>+3V3</code> 网络：U4 输出 → U1.4 → U2.5/U2.8 → U3.8 → 每个芯片旁边挂一个 100nF（C1–C4）——你看，"每个芯片电源脚旁必有小电容"这条行规，在你自己的图里应验了。</p>
-<h3 id="55-新手电工四件套比看图更先学会">5.5 新手电工四件套（比看图更先学会）</h3>
-<ol>
-<li><strong>万用表两件事</strong>：通断档（蜂鸣响 = 两点直通，用来验证接线）和直流电压档（量电池、量 3.3V/5V）。</li>
-<li><strong>共地</strong>：两个电源给两个设备供电时，地线必须连在一起，否则信号没有参照。鸭子也一样：舵机侧 6V 和主控侧 5V <strong>必须共地</strong>。</li>
-<li><strong>先量后上电</strong>：任何接线完成，先不通电量一次"电源对地有没有短路"（通断档响 = 有短路，停）。</li>
-<li><strong>绝缘</strong>：焊点套热缩管或点热熔胶。舵机总线上 15 个设备共线，一处短路全线瘫痪。</li>
-</ol>
-<h3 id="56-工具">5.6 工具</h3>
+<p>校验：<code>Checksum = ~(ID + Length + Instruction + Parameters) &amp; 0xFF</code>。</p>
+<p>HL-2915-C001 磁编码内存表中，复刻最先需要这些地址：</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: right;">地址（十进制）</th>
+<th>含义</th>
+<th style="text-align: right;">长度</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: right;">5</td>
+<td>ID</td>
+<td style="text-align: right;">1</td>
+<td>逐只设置唯一 ID</td>
+</tr>
+<tr>
+<td style="text-align: right;">6</td>
+<td>Baud Rate</td>
+<td style="text-align: right;">1</td>
+<td><code>0=1 Mbps</code>，其余值按内存表映射</td>
+</tr>
+<tr>
+<td style="text-align: right;">40</td>
+<td>Torque Enable</td>
+<td style="text-align: right;">1</td>
+<td><code>0=关闭</code>，<code>1=打开</code>，<code>128=当前位置设为 2048</code></td>
+</tr>
+<tr>
+<td style="text-align: right;">42</td>
+<td>Goal Position</td>
+<td style="text-align: right;">2</td>
+<td>目标位置</td>
+</tr>
+<tr>
+<td style="text-align: right;">46</td>
+<td>Goal Speed</td>
+<td style="text-align: right;">2</td>
+<td>目标速度</td>
+</tr>
+<tr>
+<td style="text-align: right;">48</td>
+<td>Goal Torque</td>
+<td style="text-align: right;">2</td>
+<td>目标扭矩</td>
+</tr>
+<tr>
+<td style="text-align: right;">56</td>
+<td>Present Position</td>
+<td style="text-align: right;">2</td>
+<td>实际位置</td>
+</tr>
+<tr>
+<td style="text-align: right;">58</td>
+<td>Present Speed</td>
+<td style="text-align: right;">2</td>
+<td>实际速度</td>
+</tr>
+<tr>
+<td style="text-align: right;">60</td>
+<td>Present Load</td>
+<td style="text-align: right;">2</td>
+<td>实际负载</td>
+</tr>
+<tr>
+<td style="text-align: right;">62</td>
+<td>Present Voltage</td>
+<td style="text-align: right;">1</td>
+<td>单位 0.1 V</td>
+</tr>
+<tr>
+<td style="text-align: right;">63</td>
+<td>Present Temperature</td>
+<td style="text-align: right;">1</td>
+<td>单位 °C</td>
+</tr>
+<tr>
+<td style="text-align: right;">65</td>
+<td>Status</td>
+<td style="text-align: right;">1</td>
+<td>过载、温度、电压、舵机异常</td>
+</tr>
+<tr>
+<td style="text-align: right;">66</td>
+<td>Moving</td>
+<td style="text-align: right;">1</td>
+<td>是否运动</td>
+</tr>
+<tr>
+<td style="text-align: right;">69</td>
+<td>Present Current</td>
+<td style="text-align: right;">2</td>
+<td>单位约 6.5 mA/计数</td>
+</tr>
+</tbody>
+</table>
+<p>磁编码协议支持：<code>PING=0x01</code>、<code>READ=0x02</code>、<code>WRITE=0x03</code>、<code>SYNC_READ=0x82</code>、<br />
+<code>SYNC_WRITE=0x83</code>。协议示例用从地址 56 读取 8 字节，一次拿到位置、速度、负载、电压、<br />
+温度。这正好可以替代当前项目 XL330 的连续寄存器读取，但地址和数据单位不能照搬。</p>
+<h3 id="123-复刻任务清单">12.3 复刻任务清单</h3>
+<h4 id="task-hl2915-001单舵机资料确认">Task HL2915-001：单舵机资料确认</h4>
 <ul>
-<li><strong>嘉立创 EDA</strong>（免费，国产）：能直接打开仓库里的 <code>imu_to_dxl.eprj2</code> 工程看图改图；打样也是它一键下单；</li>
-<li><strong>Dynamixel Wizard 2.0</strong>（ROBOTIS 官方，免费）：配 USB 调试板后，图形界面扫总线上的舵机、改 ID、读角度——<strong>你第一个"电路活了"的成就感来自这个软件</strong>。</li>
+<li>Goal：确定电压、插头、默认 ID、波特率、协议和寄存器表。</li>
+<li>Files：本节资料链接；不改代码。</li>
+<li>Action：保存官方规格书、协议手册、内存表；给舵机和插头拍照。</li>
+<li>Why：接错 PH1.25-3P 的电源脚会损坏舵机或调试器。</li>
+<li>Verification：能写出 <code>1=GND, 2=Vcc, 3=Signal</code>，并能指出地址 42、56、62、63、69。</li>
+<li>Expected result：只买 1 只样品，不批量采购。</li>
 </ul>
+<h4 id="task-hl2915-002单舵机台架通信">Task HL2915-002：单舵机台架通信</h4>
+<ul>
+<li>Goal：证明一只舵机可稳定读写。</li>
+<li>Files：新增测试脚本或临时工具，不碰行走策略。</li>
+<li>Action：用 FE-URT-1 或兼容半双工 TTL 调试器；12 V 限流供电；完成 PING、读位置、<br />
+  写目标位置、读电压和温度。</li>
+<li>Why：先排除供电、接线、协议问题。</li>
+<li>Verification：连续读写 10 分钟无随机丢包；低速小角度移动；扭矩可关闭。</li>
+<li>Expected result：保存一份原始收发日志。</li>
+</ul>
+<h4 id="task-hl2915-003替换底层总线驱动">Task HL2915-003：替换底层总线驱动</h4>
+<ul>
+<li>Goal：让项目的上层控制循环能使用 HL-2915-C001。</li>
+<li>Files：保留 <a href="../duck-control/src/io.rs">RobotIo 接口</a>，新增 <code>Feetech2915Io</code>；不要修改<br />
+<code>Xl330Controller</code> 来冒充 HL-2915。</li>
+<li>Action：实现读写、扭矩、批量读写、位置单位转换、温度/电压/电流解析、错误状态。</li>
+<li>Why：当前 <a href="../duck-control/src/bus.rs">bus.rs</a> 按 Dynamixel XL330 地址和协议实现。</li>
+<li>Verification：1 只 → 3 只 → 15 只，逐级通过 PING、SYNC_READ、SYNC_WRITE。</li>
+<li>Expected result：50 Hz 控制循环可以稳定运行，只有一个程序占用串口。</li>
+</ul>
+<h4 id="task-hl2915-004重做供电和线束">Task HL2915-004：重做供电和线束</h4>
+<ul>
+<li>Goal：提供安全的 12 V 舵机电源和 5 V Radxa 电源。</li>
+<li>Files：电源树、线束表；暂不改策略代码。</li>
+<li>Action：12 V 电池/电源 → 保险丝/急停 → 舵机总线；另一路 12 V → 5 V 降压 → Radxa。<br />
+  15 只舵机的理论堵转峰值按 <code>15 × 1.5 A = 22.5 A</code> 估算，连续电流不能按这个数硬灌。</li>
+<li>Why：原项目的 2S 6.6–8.2 V 电池假设不适用于 C001。</li>
+<li>Verification：空载、单腿和整机分别测电压下陷、线缆温升、舵机温度。</li>
+<li>Expected result：不再使用原 XL330 的电池阈值和直连方式。</li>
+</ul>
+<h4 id="task-hl2915-005打印一个关节适配件">Task HL2915-005：打印一个关节适配件</h4>
+<ul>
+<li>Goal：验证一只 HL-2915 能安全安装。</li>
+<li>Files：<a href="../kinematics/assets/alpha/robot_walk.xml">原始 MJCF</a> 只作为关节位置和轴线参考。</li>
+<li>Action：按官方外形图重新画支架；保留输出轴中心和原关节轴线；使用 25T/4.95 mm 的匹配舵盘；<br />
+  给线缆留弯曲空间；增加硬限位。</li>
+<li>Why：舵机外形接近 XL330，但安装孔、输出轴、侧向载荷和线缆位置不能想当然。</li>
+<li>Verification：手动全行程不干涉；输出轴不承受不必要的弯矩；支架无明显变形。</li>
+<li>Expected result：单关节可低速往复，不碰壳、不卡死。</li>
+</ul>
+<h4 id="task-hl2915-006一条腿和动力学辨识">Task HL2915-006：一条腿和动力学辨识</h4>
+<ul>
+<li>Goal：测量真实的速度、延迟、回差、电流和温升。</li>
+<li>Files：台架日志、MJCF/BAM 执行器参数。</li>
+<li>Action：先做单关节，再做 3 只舵机的一条腿；记录目标位置、实际位置、速度、电流、温度、<br />
+  电压；重新填写质量、惯量、摩擦、回差、延迟和电压范围。</li>
+<li>Why：HL-2915-C001 每只约 27.8 g，15 只约 417 g，仅舵机就比原 15×18 g 多约 147 g。</li>
+<li>Verification：仿真阶跃响应和实物阶跃响应量级接近；一条腿能稳定保持站立位置。</li>
+<li>Expected result：形成 HL-2915 专用执行器参数，不能继续使用 XL330 的 BAM/ONNX 假设。</li>
+</ul>
+<h4 id="task-hl2915-007整机悬空落地">Task HL2915-007：整机、悬空、落地</h4>
+<ul>
+<li>Goal：安全地从整机通信走到行走。</li>
+<li>Files：策略元数据中的 <code>robot.servos</code>、供电阈值、训练参数。</li>
+<li>Action：15 只无负载总线测试 → 悬空开扭矩 → 软垫上静态站立 → 手工小步态 → 重新训练后的策略。</li>
+<li>Why：换舵机会同时改变重量、扭矩、速度、回差、延迟和电压模型。</li>
+<li>Verification：每一步都能断电、回读状态、查最高温度和最高电流。</li>
+<li>Expected result：只使用重新辨识和重新训练过的 HL-2915 模型。</li>
+</ul>
+<h3 id="124-现有硬件的分工">12.4 现有硬件的分工</h3>
+<ul>
+<li>Radxa Zero 3W：唯一的实时主控，运行总线驱动、IMU、控制循环和策略。</li>
+<li>小智 ESP32：语音、按钮、联网和高层命令，不直接控制舵机。</li>
+<li>树莓派 Pi 2：日志、网页、远程调试，可暂时不用。</li>
+<li>机器狗舵机：只用于练习和单独台架测试，不与 HL-2915-C001 混接。</li>
+</ul>
+<p>第一步只做 <code>HL2915-001</code>：拿到官方内存表，买一只舵机和调试器，完成单舵机 PING/读写。<br />
+没有这个结果，不进入打印整机、批量买舵机和训练策略。</p>
 <hr />
-<h2 id="6-结构怎么看怎么设计">6. 结构怎么看、怎么设计</h2>
-<blockquote>
-<p>教材：<a href="../microduck-replica-cad/README.md">microduck-replica-cad/</a>（56 个 SolidWorks 零件 + <a href="../microduck-replica-cad/安装说明书/microduck装配安装说明书.pdf">21 页装配安装说明书 PDF</a> + 23 张组件图/爆炸图）、<a href="../microduck-replica/docs/打印工艺调整表.md">打印工艺调整表</a>、<a href="../microduck-replica/docs/紧固件反推.md">紧固件反推</a>。</p>
-</blockquote>
-<h3 id="61-好消息你不需要从零设计">6.1 好消息：你不需要"从零设计"</h3>
-<p>复刻项目的结构已经被反推/重建过一遍：47 个官方仿真 STL → 装配关系精确到 0.1mm → 爆炸图、BOM、SolidWorks 装配体全套现成。你的路径是：<strong>先学会"装配"（读懂它为什么这么设计），再学"改"（加个走线槽、换个卡扣），最后才是"设计"</strong>。对新手，前两步已经覆盖 90% 的需求。</p>
-<h3 id="62-先读懂这只鸭子的骨架10-分钟">6.2 先读懂这只鸭子的骨架（10 分钟）</h3>
-<p>看 <a href="../microduck-replica/assembly-drawings/">装配爆炸图</a> 或组件图目录，对着下面这棵树：</p>
-<pre><code>躯干主体 199g（装配基准件，一切从它开始）
-├─ 左腿: 髋yaw(23g) → 髋roll(6g) → 大腿(48g) → 小腿(22g) → 踝+脚(30g)
-├─ 右腿: 同上（左右镜像）
-└─ 颈根(37g) → 颈俯仰(6g) → 头yaw/roll机构(49g) → 头部总成+喙(189g)
+<h2 id="13-两只-hl-2915-c001-的实际落地步骤代码已放入仓库">13. 两只 HL-2915-C001 的实际落地步骤（代码已放入仓库）</h2>
+<p>本仓库现在已经有一个“只做台架验证”的最小程序：</p>
+<ul>
+<li><a href="../duck-control/src/hl2915.rs">HL-2915 驱动封装</a>：复用 <code>rustypot</code> 已验证的 Feetech 协议 v1，<br />
+  按 HL-2915 的寄存器地址读写；这里没有把它伪装成 XL330。</li>
+<li><a href="../duck-control/src/bin/hl2915_probe.rs">台架探测器</a>：默认只 Ping 和读取状态，<strong>不会主动运动</strong>。</li>
+</ul>
+<h3 id="131-先准备硬件">13.1 先准备硬件</h3>
+<p>你至少需要：两只 HL-2915-C001、一个支持单线半双工 TTL 的 Feetech 调试器（例如 FE-URT-1）、<br />
+一个可限流的 12 V 电源、万用表和一根 USB 线。Radxa 的 5 V 电源不能直接接到舵机 Vcc，<br />
+树莓派和小智 ESP32 也先不要接舵机总线。</p>
+<p>舵机 PH1.25-3P 的线序按官方资料核对：</p>
+<pre><code class="language-text">1 = GND（电源负极、调试器 GND、Radxa GND 共地）
+2 = Vcc（先用 12 V，限流）
+3 = Signal/TTL（调试器的半双工数据线）
 </code></pre>
-<p>三个观察，理解"设计意图"：</p>
-<ul>
-<li><strong>每条腿 5 个关节</strong>（yaw 转向 / roll 侧摆 / pitch 前后摆 / 膝 / 踝）——双腿 10 个 + 头颈 4 个 = 14 个受控，第 15 个管嘴；</li>
-<li><strong>头几乎和躯干一样重</strong>（189g vs 199g）。头是甩来甩去的大摆锤，重心极高——这就是走路策略难训的原因，也是"别自己乱加重物在头上"的原因；</li>
-<li><strong>全部 M2 螺丝系统</strong>：过孔 Ø2.2（螺丝穿过）×111、沉头孔 Ø4.4（螺丝头埋进去）×48、攻丝底孔 Ø1.6（拧自攻螺丝）×27。三种孔三种用途，装配时认清楚。</li>
-</ul>
-<h3 id="63-结构设计入门十词">6.3 结构设计入门十词</h3>
-<table>
-<thead>
-<tr>
-<th>词</th>
-<th>一句话解释</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>自由度（DOF）</td>
-<td>一个关节能独立动的方向数。髋 pitch 只能前后摆 = 1 自由度</td>
-</tr>
-<tr>
-<td>运动链</td>
-<td>关节连成的一条链：躯干→髋→膝→踝。链末端（脚）的位置由链上每个关节决定</td>
-</tr>
-<tr>
-<td>基准件</td>
-<td>装配从哪个零件开始。躯干是基准，先把它固定好</td>
-</tr>
-<tr>
-<td>过孔</td>
-<td>让螺丝穿过去的通孔，Ø2.2（M2 螺丝杆 2.0 + 余量）</td>
-</tr>
-<tr>
-<td>沉头孔</td>
-<td>让平头螺丝头<strong>埋进表面</strong>的台阶孔，Ø4.4</td>
-</tr>
-<tr>
-<td>攻丝底孔</td>
-<td>拧自攻螺丝的孔，Ø1.6——塑料里拧 M2 自攻，靠材料自身被挤出螺纹</td>
-</tr>
-<tr>
-<td>轴承座轻压入</td>
-<td>轴承装进孔里，公差刚好到"用手轻压进去、不晃不裂"</td>
-</tr>
-<tr>
-<td>热熔螺母</td>
-<td>用烙铁把铜螺母烫进塑料孔，得到可反复拆装金属螺纹</td>
-</tr>
-<tr>
-<td>公差补偿</td>
-<td>打印孔会缩 0.1–0.3mm，画图时提前放大 +0.15~0.25</td>
-</tr>
-<tr>
-<td>走线空间</td>
-<td>结构腔体里要给舵机线和电路板留通道——<strong>复刻件最大的坑就是没走线空间</strong></td>
-</tr>
-</tbody>
-</table>
-<h3 id="64-3d-打印工程第一课测试片先行">6.4 3D 打印工程第一课：测试片先行</h3>
-<p>别直接打印整套。先打一张 <a href="../microduck-replica/docs/打印工艺调整表.md">打印工艺调整表</a> 第二节的 <strong>60×40×4mm 测试片</strong>（上面有孔径三档阶梯：M2 过孔/攻丝/沉头 + 轴承孔 Ø21.9–22.1），实测你的打印机+耗材的收缩量，把补偿值记下来，再批量打印。耗材预算：全机约 300g PLA，一公斤卷足够。</p>
-<h3 id="65-想动手改结构软件路线">6.5 想动手改结构：软件路线</h3>
+<p>两只新舵机通常都为 ID=1。因此，<strong>第一次不能把两只同时接上</strong>，否则它们会同时回答同一个<br />
+ID，通信必然冲突。</p>
+<h3 id="132-在电脑上先测第一只">13.2 在电脑上先测第一只</h3>
+<p>在仓库根目录打开 PowerShell。把 <code>COM3</code> 换成调试器在设备管理器显示的端口：</p>
+<pre><code class="language-powershell">Get-CimInstance Win32_SerialPort | Format-Table DeviceID,Caption
+cargo test -p duck-control hl2915
+cargo check -p duck-control --bin hl2915_probe
+cargo run -p duck-control --bin hl2915_probe -- COM3 1
+</code></pre>
+<p>最后一条命令的默认行为是：打开 <code>1 Mbps</code>、Ping ID 1、读取位置/速度/负载/电压/温度，然后退出。<br />
+看到 <code>响应=[1]</code> 才算通信链路成立。若报“没有响应”，先断电，再按 GND/Vcc/Signal、12 V、ID、<br />
+半双工转接器顺序排查；不要先改程序。</p>
+<h3 id="133-给第二只改成-id2">13.3 给第二只改成 ID=2</h3>
+<p>只接第二只舵机（第一只必须断开），仍然使用它出厂的 ID=1：</p>
+<pre><code class="language-powershell">cargo run -p duck-control --bin hl2915_probe -- COM3 1 --set-id 2
+</code></pre>
+<p>程序只在显式写出 <code>--set-id</code> 时改 EEPROM。看到成功提示后，给舵机断电再上电，然后验证：</p>
+<pre><code class="language-powershell">cargo run -p duck-control --bin hl2915_probe -- COM3 2
+</code></pre>
+<p>必须看到 <code>响应=[2]</code>。如果没有，停止继续接线，重新只接这一只并检查供电；不要用广播命令“碰运气”。</p>
+<h3 id="134-两只一起做只读验证">13.4 两只一起做只读验证</h3>
+<p>确认一只 ID=1、另一只 ID=2 后，才把两只并联到同一条 12 V/GND/Signal 总线：</p>
+<pre><code class="language-powershell">cargo run -p duck-control --bin hl2915_probe -- COM3 1 2
+</code></pre>
+<p>预期输出中 <code>响应=[1, 2]</code>，并各有一行状态。这个步骤只读，不会让两只舵机转动；建议先连续运行<br />
+几次并记录电压和温度。</p>
+<p>要做第一轮稳定性验收，可以让程序连续只读 10 分钟：</p>
+<pre><code class="language-powershell">cargo run -p duck-control --bin hl2915_probe -- COM3 1 2 --watch-seconds 600
+</code></pre>
+<p>它每 100 ms 读一次，遇到一次读错误会记录并继续，结束时以非零状态退出；因此可以把它当作<br />
+“两只舵机通信是否稳定”的自动门槛。没有错误时应看到 <code>errors=0</code>，并记录 <code>min_voltage</code> 和<br />
+<code>max_temperature</code>。</p>
+<h3 id="135-第一次运动只做回中">13.5 第一次运动只做“回中”</h3>
+<p>先把舵盘拆下或让输出轴完全悬空，确认周围没有夹手和撞壳风险。然后才执行：</p>
+<pre><code class="language-powershell">cargo run -p duck-control --bin hl2915_probe -- COM3 1 2 --move-center
+</code></pre>
+<p>程序会打开扭矩、给两只写入原始位置 2048、等待 1 秒、读取状态、关闭扭矩。位置 2048 是协议定义的<br />
+中心，不代表已经对齐你的机械零位；机械装配完成后还要单独记录“舵机中心 ↔ 关节零位”的偏移。</p>
+<h3 id="136-再装到打印件顺序不要跳">13.6 再装到打印件，顺序不要跳</h3>
 <ol>
-<li><strong>看</strong>：先用 PDF 阅读器翻完 21 页装配说明书（不用装任何软件）；</li>
-<li><strong>转</strong>：装 <strong>FreeCAD</strong>（完全免费）打开 <code>cad/</code> 下的 STL 装配体，学会旋转/剖切/测量三个操作；</li>
-<li><strong>改</strong>：给自己定一个 30 分钟小任务，比如"给躯干内腔壁加一条 3mm 走线槽"——用草图+拉伸两个功能就能完成；</li>
-<li>（可选）<strong>学</strong>：Fusion 360 个人版免费，B 站搜"Fusion 360 入门"，跟完一个杯子/盒子教程就够用。</li>
+<li>不通电，把一只舵机放进打印支架，确认 34×20×23 mm 外形、安装孔、线缆弯曲半径和 25T 舵盘都不干涉。</li>
+<li>手动转动关节全行程，确认先碰到机械硬限位，而不是舵机齿轮或线缆先受力。</li>
+<li>只装一只，悬空运行 <code>--move-center</code>，观察支架变形、异响和线缆拉扯。</li>
+<li>两只装好后仍悬空测试；再放到软垫上，只给静态小角度目标。</li>
+<li>在这五步都通过前，不接 Radxa 控制循环，不写行走策略。</li>
 </ol>
-<h3 id="66-装配顺序经验">6.6 装配顺序经验</h3>
-<p>照 21 页说明书走，大原则：<strong>躯干 → 双腿 → 头颈</strong>；每装完一个组件手动转一下关节（应顺滑无卡滞再装下一个）；M2 自攻螺丝不要拧到底硬怼（塑料滑丝不可逆）；舵机装上前先在调试板上设好 ID（装完再改 = 全部拆开重来）。</p>
-<hr />
-<h2 id="7-软件与强化学习纯电脑阶段">7. 软件与强化学习：纯电脑阶段</h2>
-<p>好消息：第 0 站的一切都不需要买任何硬件。</p>
-<ol>
-<li><strong>今天就能玩（30 秒）</strong>：浏览器打开<a href="https://huggingface.co/spaces/pollen-robotics/microduck-simulator">官方在线仿真器</a>，方向键开走。先建立直觉。</li>
-<li><strong>术语课（30 分钟）</strong>：<a href="../open-microduck/docs/zh-CN/getting-started/glossary.md">open-microduck 小白术语表</a>。</li>
-<li><strong>本地跑官方策略（一个下午，无需 GPU）</strong>：照 <a href="../open-microduck/docs/zh-CN/getting-started/simulation-first.md">仿真优先教程</a>——clone 两个官方仓 → <code>uv sync</code> → 用 <code>infer_policy.py</code> 加载官方 walk.onnx 在 MuJoCo 里跑。验收不是"动画动了"，而是确认输入 61 维、输出 14 维的接口理解正确。</li>
-<li><strong>玩具强化学习（半小时）</strong>：跑 <a href="../microduck-replica/learning/duck_food_qlearning.py">duck_food_qlearning.py</a>——零依赖的 Q-learning 小游戏（鸭子找玉米），看完 Q 表你就懂了"奖励驱动学习"的最小内核。</li>
-<li><strong>想深入训练</strong>：你的 <a href="../microduck-replica/rl-series/30天计划.md">rl-series/30天计划.md</a> 已成体系（环境→obs/action→PPO→ONNX→Rust 运行时），配合官方 <a href="https://github.com/pollen-robotics/microduck_rl">microduck_rl</a> 仓。</li>
-<li><strong>Radxa 侧</strong>：<a href="../docs/robot/install-dev.md">官方开发板装机文档</a> + <a href="../docs/design/architecture.md">架构总览</a>（7 个守护进程各管什么，robotd 为什么是唯一能碰舵机的进程）。</li>
-</ol>
-<hr />
-<h2 id="8-你的-30-天计划">8. 你的 30 天计划</h2>
-<blockquote>
-<p>结合你的库存定制（Radxa✅ 打印件✅ Pi2✅ SG90✅ ESP32✅），大钱全部押后。每周照着做，每周末把结果写进构建日志——<strong>写下来才算数</strong>。</p>
-</blockquote>
-<h3 id="第-1-周手上和电脑上0">第 1 周：手上和电脑上（¥0）</h3>
-<table>
-<thead>
-<tr>
-<th>天</th>
-<th>任务</th>
-<th>产出</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>D1</td>
-<td>打印件收货实测：M2 试穿 + 目检（第 3.2 节）</td>
-<td>G1 数据记入构建日志</td>
-</tr>
-<tr>
-<td>D2</td>
-<td>辨认机器狗舵机型号（第 3.3 节）；清点引脚数、拍标签</td>
-<td>舵机档案</td>
-</tr>
-<tr>
-<td>D3–4</td>
-<td>Pi 2 装 Raspberry Pi OS（网线连电脑/路由器），跑 <code>pi_sg90_bench.py</code> 前两课：单舵机脉宽 + 负载保持</td>
-<td>一只听话的舵机</td>
-</tr>
-<tr>
-<td>D5</td>
-<td>SG90 第 3–4 课：6 舵机序列 + 开环漂移实验（命令 90° 实测停几度）</td>
-<td>"开环的宿命"实测数据</td>
-</tr>
-<tr>
-<td>D6–7</td>
-<td>电脑上跑通官方仿真策略（第 7 节第 3 步）；浏览器玩 Sandbox</td>
-<td>仿真里的鸭子会走</td>
-</tr>
-</tbody>
-</table>
-<h3 id="第-2-周radxa-点亮-下第一单">第 2 周：Radxa 点亮 + 下第一单</h3>
-<table>
-<thead>
-<tr>
-<th>天</th>
-<th>任务</th>
-<th>产出</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>D8–9</td>
-<td>Armbian 刷机 → SSH 进去 → 过三个坑（mask serial-getty、i2c3 引脚取舍、NPU overlay）</td>
-<td>Radxa 可用</td>
-</tr>
-<tr>
-<td>D10</td>
-<td>编译官方 Rust 运行时（<code>cargo build</code>，先不接舵机，看 robotd 起得来）</td>
-<td>大脑装好</td>
-</tr>
-<tr>
-<td>D11</td>
-<td>🛒 下单：USB 总线调试板（FE-URT-1 ≈¥45）+ <strong>1 只</strong>鸭子级舵机（见下）</td>
-<td>G2 门票</td>
-</tr>
-<tr>
-<td>D12–13</td>
-<td>Pi 2 + SG90 复习接线；小智 ESP32 按官方文档烧录玩一次（纯娱乐，验收语音链路）</td>
-<td>玩具时间</td>
-</tr>
-<tr>
-<td>D14</td>
-<td>周复盘写日志</td>
-<td>—</td>
-</tr>
-</tbody>
-</table>
-<blockquote>
-<p><strong>D11 买哪只舵机？</strong> 预算充足 → XL330-M288 单只（≈¥172，官方 ONNX 保真）；想省钱走重训 → 飞特一只样品（先试后买 15 只）。<strong>只买一只</strong>，这是台架，不是大单。</p>
-</blockquote>
-<h3 id="第-3-周总线课-电路课">第 3 周：总线课 + 电路课</h3>
-<table>
-<thead>
-<tr>
-<th>天</th>
-<th>任务</th>
-<th>产出</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>D15–16</td>
-<td>调试板+单舵机到货：Dynamixel Wizard 扫到它 → 改 ID → 读角度 → 50Hz 连读 10 分钟</td>
-<td>G2 通过</td>
-</tr>
-<tr>
-<td>D17–18</td>
-<td><strong>电路图课</strong>：按第 5 节把 imu_to_dxl 原理图逐块读懂，对照接线表把 23 个网络讲给自己听</td>
-<td>看图能力</td>
-</tr>
-<tr>
-<td>D19</td>
-<td>玩 <code>duck_food_qlearning.py</code>；读 <a href="../microduck-replica/docs/硬件入门.md">硬件入门</a></td>
-<td>概念闭环</td>
-</tr>
-<tr>
-<td>D20–21</td>
-<td>🛒 决策舵机大单路线（XL330 保官方模型 vs 飞特走重训），下单或存钱；同时下单 NP-F550 电池</td>
-<td>关键决策</td>
-</tr>
-</tbody>
-</table>
-<h3 id="第-4-周机械课-自制板">第 4 周：机械课 + 自制板</h3>
-<table>
-<thead>
-<tr>
-<th>天</th>
-<th>任务</th>
-<th>产出</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>D22–23</td>
-<td>打孔径测试片 → 实测补偿值 → 记录</td>
-<td>打印定标</td>
-</tr>
-<tr>
-<td>D24–26</td>
-<td>按 21 页说明书试装<strong>一条腿</strong>（5 舵机骨架，舵机没到可先空装结构件）</td>
-<td>装配手感</td>
-</tr>
-<tr>
-<td>D27</td>
-<td>🛒 imu_to_dxl 打样下单（嘉立创，≈¥100）</td>
-<td>G3 门票</td>
-</tr>
-<tr>
-<td>D28–30</td>
-<td>月度复盘：构建日志补全 + 写一篇总结（喂给你的公众号系列）</td>
-<td>阶段闭环</td>
-</tr>
-</tbody>
-</table>
-<p><strong>30 天结束时你应该有</strong>：能看懂原理图的眼睛、能试装结构件的手、一台点亮的 Radxa、一个跑过官方策略的仿真环境、以及一张校准过的"钱该花在哪"的决策表。舵机大单和整机装配是第二个月的事。</p>
-<hr />
-<h2 id="9-必踩的坑">9. 必踩的坑</h2>
-<ol>
-<li><strong>Armbian 的登录控制台占着 ttyS2</strong>（舵机总线用的串口）。<code>sudo systemctl mask serial-getty@ttyS2</code> 屏蔽掉，否则总线发疯。</li>
-<li><strong>i2c3 与 USB-C 供电协商抢引脚</strong>。用排针 3/5 脚的硬件 I²C 的代价是失去 PD 快充协商（普通 5V 充电不受影响）。</li>
-<li><strong>NPU 出厂默认关闭</strong>。要跑视觉模型需刷 overlay 并重启。</li>
-<li><strong>舵机出厂 return_delay=500µs</strong>，16 台设备一 tick 就吃掉 8ms——必须全部写 0，否则 50Hz 循环装不下。</li>
-<li><strong>XL330 是超压运行的</strong>（舵机直接吃电池 6.6–8.2V，标称只有 5–7.4V）。这是官方设计特性，不是接错；但意味着你的供电方案要能扛。</li>
-<li><strong>SG90/机器狗舵机装不进鸭子</strong>。不是歧视，是物理：没有位置反馈 + 力矩 1/3 + 孔位不同。它们的岗位是台架教具。</li>
-<li><strong>打印孔缩 0.1–0.3mm</strong>。测试片先行，补偿值回填后再批量。</li>
-<li><strong>电池是 NP-F550，不是 F970</strong>。买错装不进，还重 300g。</li>
-<li><strong>两套舵机 ID 表不要混用</strong>：平价教程路线（Microduck-build-tutorial）用 ID 1–15；官方/复刻路线用 10–14（右腿）、20–24（左腿）、30–34（头颈嘴）、200（IMU）。照哪条路线就用哪张表，混了全乱。</li>
-<li><strong>永远不要直接拔电</strong>。先 <code>sudo shutdown -h now</code>，等 15 秒再关电源开关，SD 卡和文件系统会感谢你。</li>
-<li><strong>总线上偶发丢包（约 0.27%）是正常的</strong>，官方运行时自带容错（连丢 3 tick 才算故障）。别看到一个 CRC 错误就拆机。</li>
-<li><strong>第一次真机运行必须手扶</strong>，且不要在桌边——摔倒不是失败，是数据。</li>
-</ol>
-<hr />
-<h2 id="10-安全守则">10. 安全守则</h2>
-<ul>
-<li>上电前：万用表确认电源正负极、确认无短路（通断档）；</li>
-<li>电池：不过放（NP-F550 单芯 &lt;3.0V 就停）、不短路存放、充电时人不离开；</li>
-<li>焊接：焊点套热缩管；烙铁离开就放支架；通风；</li>
-<li>舵机：堵转（被卡住还猛发力）几秒内就能烧齿轮/芯片，听到"嗡嗡"异响立刻断电；</li>
-<li>真机测试：低重心、软垫、手扶、远离桌沿；</li>
-<li>关机流程：软件关机 → 等 15 秒 → 断电源开关。</li>
-</ul>
-<hr />
-<h2 id="11-文档地图">11. 文档地图</h2>
-<table>
-<thead>
-<tr>
-<th>你想…</th>
-<th>去读</th>
-<th>路径</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>5 分钟建立全局</td>
-<td>本文第 1 节</td>
-<td>—</td>
-</tr>
-<tr>
-<td>系统学概念</td>
-<td>小白术语表</td>
-<td><code>open-microduck/docs/zh-CN/getting-started/glossary.md</code></td>
-</tr>
-<tr>
-<td>选学习路线</td>
-<td>路线与电脑要求</td>
-<td><code>open-microduck/docs/zh-CN/getting-started/choose-your-path.md</code></td>
-</tr>
-<tr>
-<td>本地跑仿真</td>
-<td>仿真优先教程</td>
-<td><code>open-microduck/docs/zh-CN/getting-started/simulation-first.md</code></td>
-</tr>
-<tr>
-<td>懂电气五模块</td>
-<td>硬件入门</td>
-<td><code>microduck-replica/docs/硬件入门.md</code></td>
-</tr>
-<tr>
-<td>一页纸规格速查</td>
-<td>硬件规格速查</td>
-<td><code>microduck-replica/docs/硬件规格速查.md</code></td>
-</tr>
-<tr>
-<td>看懂原理图</td>
-<td>本文第 5 节 + 原理图 PDF</td>
-<td><code>microduck-replica/hardware/imu_to_dxl/</code></td>
-</tr>
-<tr>
-<td>装配机械</td>
-<td>21 页安装说明书</td>
-<td><code>microduck-replica-cad/安装说明书/microduck装配安装说明书.pdf</code></td>
-</tr>
-<tr>
-<td>打印不出错</td>
-<td>打印工艺调整表 + 打印就绪检查</td>
-<td><code>microduck-replica/docs/打印*.md</code></td>
-</tr>
-<tr>
-<td>买东西不踩坑</td>
-<td>电控/机械采购清单</td>
-<td><code>microduck-replica/docs/*采购清单.md</code></td>
-</tr>
-<tr>
-<td>算总账</td>
-<td>BOM</td>
-<td><code>microduck-replica/BOM.md</code></td>
-</tr>
-<tr>
-<td>换舵机/重训</td>
-<td>换舵机重训全流程</td>
-<td><code>microduck-replica/docs/换舵机重训全流程.md</code></td>
-</tr>
-<tr>
-<td>刷 Radxa</td>
-<td>官方装机文档</td>
-<td><code>docs/robot/install-dev.md</code></td>
-</tr>
-<tr>
-<td>懂官方软件架构</td>
-<td>架构总览</td>
-<td><code>docs/design/architecture.md</code></td>
-</tr>
-<tr>
-<td>日常操作鸭子</td>
-<td>Cheat sheet</td>
-<td><code>docs/robot/cheatsheet.md</code></td>
-</tr>
-<tr>
-<td>记录进度</td>
-<td>构建日志</td>
-<td><code>microduck-replica/构建日志.md</code></td>
-</tr>
-</tbody>
-</table>
-<hr />
-<p><em>最后一句：这个项目里没有一步是"天才操作"，全部是"照文档做 + 出错查日志 + 记下来"。摔 100 次的鸭子和写满 100 行的构建日志，就是从新手到作者的全部距离。</em></p>
+<h3 id="137-这次代码验证了什么没有验证什么">13.7 这次代码验证了什么、没有验证什么</h3>
+<p>已经在无硬件环境自动验证：8 字节状态的小端解析、短报文拒绝、角度和原始位置换算、ID 唯一性、<br />
+以及二进制能编译。每次改代码后重复：</p>
+<pre><code class="language-powershell">cargo test -p duck-control hl2915
+cargo check -p duck-control --bin hl2915_probe
+</code></pre>
+<p>真实舵机的供电压降、丢包率、温升、回差、安装强度和“是否真的转到正确机械角度”，只能按 13.2–13.6<br />
+的台架顺序现场验证。当前程序还没有把 HL-2915 接入原项目的 <code>RobotIo</code>/行走策略；这是故意的安全边界，<br />
+因为原 <a href="../duck-control/src/bus.rs">bus.rs</a> 是 XL330 的 Dynamixel 协议和寄存器，不能直接套用。</p>
+<h3 id="138-通过后再搬到-radxa-zero-3w">13.8 通过后再搬到 Radxa Zero 3W</h3>
+<p>电脑上的 <code>COM3</code> 只是第一次调试用的端口。Radxa 上通常会显示成 <code>/dev/ttyUSB0</code> 或 <code>/dev/ttyACM0</code>，<br />
+程序本身不需要改：</p>
+<pre><code class="language-bash">sudo apt update
+sudo apt install -y build-essential pkg-config
+# 按仓库要求准备 Rust 1.89；然后把仓库放到 Radxa，例如 ~/microduck
+cd ~/microduck
+cargo test -p duck-control hl2915
+cargo build --release -p duck-control --bin hl2915_probe
+ls /dev/ttyUSB* /dev/ttyACM*
+./target/release/hl2915_probe /dev/ttyUSB0 1
+</code></pre>
+<p>第一次在 Radxa 上仍然只接一只、只读。等 <code>1</code> 和 <code>2</code> 都能独立 Ping，再做两只并联验证；小智 ESP32、<br />
+Pi 2 和行走策略继续保持断开，避免多个程序同时抢同一条半双工总线。</p>
     <div class="doc-foot">
       <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
       <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
