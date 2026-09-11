@@ -420,6 +420,15 @@ impl RobotIo for Hl2915RobotIo {
         self.write_register(TORQUE_ENABLE_ADDR, &vec![value; NUM_JOINTS])
     }
 
+    fn reboot(&mut self, id: u8) -> IoResult<()> {
+        // The status packet is a courtesy the servo may not manage before it resets, so only a
+        // failure to send is an error here.
+        self.v1
+            .reboot(self.serial.as_mut(), id)
+            .map(|_| ())
+            .map_err(|e| IoError::Bus(format!("HL-2915 reboot {id}: {e}")))
+    }
+
     fn set_gain(&mut self, kp: u16) -> IoResult<()> {
         // Feetech's P/I/D registers are one byte and do not share XL330's scale. This is a
         // deliberately conservative bridge: it keeps the control path functional, while the
