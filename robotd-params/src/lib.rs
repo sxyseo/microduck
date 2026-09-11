@@ -1558,6 +1558,28 @@ pub struct Bus {
     /// Serial port the servos and the IMU board share. The Radxa Zero 3W wires them to
     /// `/dev/ttyS2`.
     pub port: String,
+    /// Protocol/backend used on that port. The default preserves the shipped XL330 robot.
+    pub backend: BusBackend,
+}
+
+/// Motor-bus implementation selected explicitly per robot.
+///
+/// `hl2915` uses Feetech protocol v1 for the servos and protocol v2 for the existing ID-200 IMU
+/// on the same half-duplex port. It is intentionally opt-in: changing a servo model must never
+/// happen just because a daemon release was upgraded.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum BusBackend {
+    #[serde(rename = "dynamixel")]
+    Dynamixel,
+    #[serde(rename = "hl2915")]
+    Hl2915,
+}
+
+impl Default for BusBackend {
+    fn default() -> Self {
+        Self::Dynamixel
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -1613,6 +1635,7 @@ impl Default for Bus {
     fn default() -> Self {
         Self {
             port: "/dev/ttyS2".into(),
+            backend: BusBackend::Dynamixel,
         }
     }
 }

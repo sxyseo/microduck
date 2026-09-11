@@ -9,6 +9,7 @@
 
 pub mod bus;
 pub mod fall;
+pub mod hl2915;
 pub mod imu;
 pub mod io;
 pub mod model;

@@ -34,7 +34,9 @@ use std::time::{Duration, Instant};
 
 use arc_swap::{ArcSwap, ArcSwapOption};
 use clap::{Parser, Subcommand};
+use duck_control::bus::DynamixelIo;
 use duck_control::fall::{FallPredictor, FallPredictorConfig};
+use duck_control::hl2915::{DEFAULT_HL2915_IDS, FeetechCalibration, Hl2915RobotIo};
 use duck_control::io::RobotIo;
 use duck_control::obs::{BodyPose, Command as PolicyCommand};
 use duck_control::policy::{DEFAULT_STANDING_THRESHOLD, Policy, PolicyError, PolicyPaths};
@@ -46,7 +48,7 @@ use tokio::net::{UnixListener, UnixStream};
 
 use control::{Controller, Driving, SkillTuning, Tuning};
 use intents::Intents;
-use params::{Mode, Params, Slot};
+use params::{BusBackend, Mode, Params, Slot};
 
 /// What to do when the shutdown sequence completes. Injected so the tests can observe the
 /// call instead of powering off the machine running them.
@@ -971,17 +973,10 @@ async fn main() -> ExitCode {
 /// Enable torque and ramp to the home pose.
 #[cfg(target_os = "linux")]
 fn run_init(params: &Params, duration: Duration) -> ExitCode {
-    let mut io = match duck_control::bus::DynamixelIo::open(&params.bus.port) {
-        Ok(io) => io,
-        Err(e) => {
-            tracing::error!(error = %e, port = %params.bus.port, "cannot open the bus");
-            return ExitCode::FAILURE;
-        }
+    let mut io = match open_bus_for(&params.bus.port, params.bus.backend, 0) {
+        Some(io) => io,
+        None => return ExitCode::FAILURE,
     };
-    if let Err(e) = io.check_registers() {
-        tracing::error!(error = %e, "motor register check failed");
-        return ExitCode::FAILURE;
-    }
     if let Err(e) = io.set_torque(true) {
         tracing::error!(error = %e, "cannot enable torque");
         return ExitCode::FAILURE;
@@ -1029,6 +1024,7 @@ fn spawn_control_thread(
     let period = params.period();
     let fake = args.fake;
     let port = params.bus.port.clone();
+    let backend = params.bus.backend;
     let params = params.clone();
     // So a reload can re-read `[policy]` without a restart. The path rather than the loaded
     // params, because the point is to pick up what has been written since.
@@ -1072,7 +1068,7 @@ fn spawn_control_thread(
             // loop has not completed a cycle yet", forever, whatever happened to the robot
             // afterwards. Retrying the read alone was not enough: execution never got there.
             runtime.block_on(async move {
-                if let Some(io) = open_bus_waiting(&port, &state).await {
+                if let Some(io) = open_bus_waiting_with_backend(&port, backend, &state).await {
                     control_loop(io, state, intents, params, params_path, period, poweroff).await;
                 }
             });
@@ -1081,7 +1077,96 @@ fn spawn_control_thread(
 
 /// The real bus on the board; a fake elsewhere, so `open_bus_waiting` has one signature.
 #[cfg(target_os = "linux")]
-type BusIo = duck_control::bus::DynamixelIo;
+enum BusIo {
+    Dynamixel(DynamixelIo),
+    Hl2915(Hl2915RobotIo),
+}
+
+#[cfg(target_os = "linux")]
+impl BusIo {
+    fn prepare(&mut self) -> duck_control::io::Result<usize> {
+        match self {
+            Self::Dynamixel(io) => io.check_registers(),
+            Self::Hl2915(io) => {
+                io.check_devices()?;
+                Ok(0)
+            }
+        }
+    }
+
+    fn set_torque(&mut self, on: bool) -> duck_control::io::Result<()> {
+        match self {
+            Self::Dynamixel(io) => RobotIo::set_torque(io, on),
+            Self::Hl2915(io) => RobotIo::set_torque(io, on),
+        }
+    }
+
+    fn set_gain(&mut self, kp: u16) -> duck_control::io::Result<()> {
+        match self {
+            Self::Dynamixel(io) => RobotIo::set_gain(io, kp),
+            Self::Hl2915(io) => RobotIo::set_gain(io, kp),
+        }
+    }
+
+    fn interpolate_to(
+        &mut self,
+        target: &[f64; NUM_JOINTS],
+        duration: Duration,
+        step: Duration,
+    ) -> duck_control::io::Result<()> {
+        match self {
+            Self::Dynamixel(io) => io.interpolate_to(target, duration, step),
+            Self::Hl2915(io) => io.interpolate_to(target, duration, step),
+        }
+    }
+}
+
+#[cfg(target_os = "linux")]
+impl RobotIo for BusIo {
+    fn read(&mut self) -> duck_control::io::Result<duck_control::Sensors> {
+        match self {
+            Self::Dynamixel(io) => io.read(),
+            Self::Hl2915(io) => io.read(),
+        }
+    }
+
+    fn write(&mut self, targets: &duck_control::JointTargets) -> duck_control::io::Result<()> {
+        match self {
+            Self::Dynamixel(io) => io.write(targets),
+            Self::Hl2915(io) => io.write(targets),
+        }
+    }
+
+    fn set_gain(&mut self, kp: u16) -> duck_control::io::Result<()> {
+        Self::set_gain(self, kp)
+    }
+
+    fn set_torque(&mut self, on: bool) -> duck_control::io::Result<()> {
+        Self::set_torque(self, on)
+    }
+
+    fn slow_sensors(&mut self) -> duck_control::io::Result<duck_control::SlowSensors> {
+        match self {
+            Self::Dynamixel(io) => io.slow_sensors(),
+            Self::Hl2915(io) => io.slow_sensors(),
+        }
+    }
+
+    fn imu_stale(&self) -> duck_control::io::ImuStale {
+        match self {
+            Self::Dynamixel(io) => io.imu_stale(),
+            Self::Hl2915(io) => io.imu_stale(),
+        }
+    }
+
+    fn imu_ready(&self) -> bool {
+        match self {
+            Self::Dynamixel(io) => io.imu_ready(),
+            Self::Hl2915(io) => io.imu_ready(),
+        }
+    }
+}
+
 #[cfg(not(target_os = "linux"))]
 type BusIo = FakeIo;
 
@@ -1093,12 +1178,20 @@ type BusIo = FakeIo;
 ///
 /// Returns `None` only if shutdown is requested while waiting.
 async fn open_bus_waiting(port: &str, state: &RobotState) -> Option<BusIo> {
+    open_bus_waiting_with_backend(port, BusBackend::Dynamixel, state).await
+}
+
+async fn open_bus_waiting_with_backend(
+    port: &str,
+    backend: BusBackend,
+    state: &RobotState,
+) -> Option<BusIo> {
     let mut attempt = 0u32;
 
     while !state.shutdown.load(Ordering::Relaxed) {
         // Logging lives in `open_bus`, which is chatty by design on the first attempt and
         // quiet thereafter — a board waiting overnight must not fill the journal.
-        if let Some(io) = open_bus(port, attempt) {
+        if let Some(io) = open_bus_for(port, backend, attempt) {
             state.startup_bus_failures.store(0, Ordering::Relaxed);
             return Some(io);
         }
@@ -1119,19 +1212,35 @@ async fn open_bus_waiting(port: &str, state: &RobotState) -> Option<BusIo> {
 /// Open and verify the bus, or explain why not.
 #[cfg(target_os = "linux")]
 fn open_bus(port: &str, attempt: u32) -> Option<BusIo> {
+    open_bus_for(port, BusBackend::Dynamixel, attempt)
+}
+
+#[cfg(target_os = "linux")]
+fn open_bus_for(port: &str, backend: BusBackend, attempt: u32) -> Option<BusIo> {
     // First attempt and every thirtieth — about one line per 30 s while waiting.
     let loud = attempt == 0 || attempt.is_multiple_of(STARTUP_READ_LOG_EVERY);
 
-    let mut io = match duck_control::bus::DynamixelIo::open(port) {
+    let opened = match backend {
+        BusBackend::Dynamixel => DynamixelIo::open(port).map(BusIo::Dynamixel),
+        BusBackend::Hl2915 => Hl2915RobotIo::open(
+            port,
+            &DEFAULT_HL2915_IDS,
+            duck_control::model::IMU_DXL_ID,
+            FeetechCalibration::default(),
+            Duration::from_millis(30),
+        )
+        .map(BusIo::Hl2915),
+    };
+    let mut io = match opened {
         Ok(io) => io,
         Err(e) => {
             if loud {
-                tracing::error!(error = %e, port, attempt, "cannot open the bus; waiting");
+                tracing::error!(error = %e, port, ?backend, attempt, "cannot open the bus; waiting");
             }
             return None;
         }
     };
-    match io.check_registers() {
+    match io.prepare() {
         Ok(0) => tracing::info!("motor registers already correct"),
         Ok(n) => tracing::warn!(corrected = n, "motor registers corrected"),
         Err(e) => {
@@ -1150,6 +1259,11 @@ fn open_bus(port: &str, attempt: u32) -> Option<BusIo> {
 
 #[cfg(not(target_os = "linux"))]
 fn open_bus(_port: &str, _attempt: u32) -> Option<BusIo> {
+    open_bus_for(_port, BusBackend::Dynamixel, _attempt)
+}
+
+#[cfg(not(target_os = "linux"))]
+fn open_bus_for(_port: &str, _backend: BusBackend, _attempt: u32) -> Option<BusIo> {
     tracing::error!("no bus on this platform; use --fake");
     None
 }

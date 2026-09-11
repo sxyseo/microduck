@@ -26,3 +26,14 @@ secret*
 __pycache__/
 node_modules/
 .wrangler/
+
+# Local application secrets and generated web/runtime files.
+.env
+.env.*
+!.env.example
+data/local.db
+.output/server/index.mjs
+.nitro/x
+src/paraglide/runtime.js
+src/routeTree.gen.ts
+npm-debug.log

@@ -80,6 +80,9 @@ It also sits, kicks a ball, rolls forward on command, and quacks in a voice that
 
 | | |
 |---|---|
+| [新手学习文档](docs/新手学习文档.md) | Hardware, circuit, structure, Radxa and first experiments for beginners. |
+| [代码解释与使用教程](docs/代码解释与使用教程.md) | 用一条真实控制链读懂 Rust workspace，并按层改参数、策略、IPC 和硬件。 |
+| [HL2915 全链路落地手册](docs/HL2915全链路落地手册.md) | Two-servo bench bring-up, Radxa/IMU/camera gates, and the retraining boundary. |
 | [microduck_rl](https://github.com/pollen-robotics/microduck_rl) | Where the policies come from: MuJoCo, PPO, domain randomisation, and the ONNX export this repo loads. |
 | [How it works](docs/design/architecture.md) | The whole system on one page — the daemons, the bus, how an update reaches a robot — then a page per part. |
 | [Set up a dev board](docs/robot/install-dev.md) | From a blank board to a robot that takes branch builds. |
