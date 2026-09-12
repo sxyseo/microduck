@@ -99,6 +99,11 @@ class RunRetryIn(BaseModel):
     confirm: bool = False
 
 
+class RunCompareIn(BaseModel):
+    left_id: str = Field(min_length=1)
+    right_id: str = Field(min_length=1)
+
+
 class TensorboardIn(BaseModel):
     training_dir: str = Field(min_length=1)
     run_dir: str = Field(min_length=1)
@@ -545,6 +550,26 @@ def run_status(run_id: str):
         return store.get_run(run_id)
     except KeyError as exc:
         raise HTTPException(status_code=404, detail="run not found") from exc
+
+
+@app.get("/api/runs/{run_id}/events")
+def run_events(run_id: str, after: int = Query(default=0, ge=0)):
+    try:
+        return {"events": store.list_run_events(run_id, after)}
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="run not found") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/api/projects/{project_id}/runs/compare")
+def compare_project_runs(project_id: str, body: RunCompareIn):
+    try:
+        return store.compare_runs(project_id, body.left_id, body.right_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="run not found") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @app.post("/api/runs/{run_id}/cancel")

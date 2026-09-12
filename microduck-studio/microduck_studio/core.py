@@ -1889,6 +1889,14 @@ class StudioStore:
                     data TEXT NOT NULL,
                     updated_at TEXT NOT NULL
                 );
+                CREATE TABLE IF NOT EXISTS run_events (
+                    run_id TEXT NOT NULL,
+                    sequence INTEGER NOT NULL,
+                    timestamp TEXT NOT NULL,
+                    type TEXT NOT NULL,
+                    data TEXT NOT NULL,
+                    PRIMARY KEY (run_id, sequence)
+                );
                 """
             )
             columns = {row[1] for row in conn.execute("PRAGMA table_info(tasks)")}
@@ -1924,6 +1932,12 @@ class StudioStore:
                 conn.execute(
                     "UPDATE runs SET status = 'interrupted', ended_at = ?, result = ? WHERE id = ?",
                     (_now(), _json(result), run["id"]),
+                )
+                self._append_run_event(
+                    conn,
+                    run["id"],
+                    "finished",
+                    {"status": "interrupted", "reasons": reasons},
                 )
                 task_id = RUN_TASKS.get(run["kind"])
                 if task_id:
@@ -2881,6 +2895,9 @@ class StudioStore:
                     "INSERT INTO runs VALUES (?, ?, ?, ?, ?, ?, ?)",
                     (run["id"], project_id, run["kind"], run["status"], run["started_at"], None, _json({})),
                 )
+                self._append_run_event(
+                    conn, run["id"], "started", {"status": "running", "kind": kind}
+                )
                 return run
 
     def start_training(
@@ -3434,6 +3451,8 @@ class StudioStore:
             if process is None:
                 raise RuntimeError("run is not cancellable")
             _CANCELLED_RUNS.add(run_id)
+            with self._connect() as conn:
+                self._append_run_event(conn, run_id, "cancelling", {"status": "cancelling"})
             _stop_process(process)
         return {"id": run_id, "status": "cancelling"}
 
@@ -3608,6 +3627,9 @@ class StudioStore:
                     "INSERT INTO runs VALUES (?, ?, ?, ?, ?, ?, ?)",
                     (run["id"], project_id, run["kind"], run["status"], run["started_at"], None, _json({})),
                 )
+                self._append_run_event(
+                    conn, run["id"], "started", {"status": "running", "kind": kind}
+                )
                 return run
 
     def record_continuous_test(
@@ -3666,7 +3688,85 @@ class StudioStore:
                 "INSERT INTO runs VALUES (?, ?, ?, ?, ?, ?, ?)",
                 (run["id"], project_id, kind, run["status"], run["started_at"], None, _json({})),
             )
+            self._append_run_event(conn, run["id"], "started", {"status": "running", "kind": kind})
         return run
+
+    @staticmethod
+    def _append_run_event(
+        conn: sqlite3.Connection,
+        run_id: str,
+        event_type: str,
+        data: dict[str, Any],
+    ) -> None:
+        sequence = conn.execute(
+            "SELECT COALESCE(MAX(sequence), 0) + 1 FROM run_events WHERE run_id = ?",
+            (run_id,),
+        ).fetchone()[0]
+        conn.execute(
+            "INSERT INTO run_events VALUES (?, ?, ?, ?, ?)",
+            (run_id, sequence, _now(), event_type, _json(data)),
+        )
+
+    def list_run_events(self, run_id: str, after_sequence: int = 0) -> list[dict[str, Any]]:
+        if isinstance(after_sequence, bool) or not isinstance(after_sequence, int) or after_sequence < 0:
+            raise ValueError("after sequence must be a non-negative integer")
+        with self._connect() as conn:
+            if not conn.execute("SELECT 1 FROM runs WHERE id = ?", (run_id,)).fetchone():
+                raise KeyError(run_id)
+            rows = conn.execute(
+                "SELECT run_id, sequence, timestamp, type, data FROM run_events "
+                "WHERE run_id = ? AND sequence > ? ORDER BY sequence",
+                (run_id, after_sequence),
+            ).fetchall()
+        return [
+            _with_schema({**dict(row), "data": _loads(row["data"])})
+            for row in rows
+        ]
+
+    def compare_runs(self, project_id: str, left_id: str, right_id: str) -> dict[str, Any]:
+        if left_id == right_id:
+            raise ValueError("runs to compare must be different")
+        left = self.get_run(left_id)
+        right = self.get_run(right_id)
+        if left["project_id"] != project_id or right["project_id"] != project_id:
+            raise KeyError("run")
+        if left["status"] == "running" or right["status"] == "running":
+            raise ValueError("running records cannot be compared")
+
+        def mapping(result: dict[str, Any], key: str) -> dict[str, Any]:
+            value = result.get(key, {})
+            return value if isinstance(value, dict) else {}
+
+        left_config = mapping(left["result"], "effective_config")
+        right_config = mapping(right["result"], "effective_config")
+        config_changes = [
+            {"field": field, "before": left_config.get(field), "after": right_config.get(field)}
+            for field in sorted(set(left_config) | set(right_config))
+            if left_config.get(field) != right_config.get(field)
+        ]
+        left_metrics = mapping(left["result"], "metrics")
+        right_metrics = mapping(right["result"], "metrics")
+        metric_changes = []
+        for field in sorted(set(left_metrics) | set(right_metrics)):
+            before = left_metrics.get(field)
+            after = right_metrics.get(field)
+            if before == after:
+                continue
+            delta = (
+                float(after) - float(before)
+                if not isinstance(before, bool)
+                and not isinstance(after, bool)
+                and isinstance(before, (int, float))
+                and isinstance(after, (int, float))
+                else None
+            )
+            metric_changes.append({"field": field, "before": before, "after": after, "delta": delta})
+        return _with_schema({
+            "left": {"id": left_id, "kind": left["kind"], "status": left["status"]},
+            "right": {"id": right_id, "kind": right["kind"], "status": right["status"]},
+            "config_changes": config_changes,
+            "metric_changes": metric_changes,
+        })
 
     def update_run_result(self, run_id: str, result: dict[str, Any]) -> None:
         with self._connect() as conn:
@@ -3686,6 +3786,13 @@ class StudioStore:
             updated = conn.execute(
                 "UPDATE runs SET result = ? WHERE id = ?", (_json(result), run_id)
             ).rowcount
+            if updated:
+                event_data = {
+                    key: result[key]
+                    for key in ("status", "progress", "metrics", "message", "reasons")
+                    if key in result
+                }
+                self._append_run_event(conn, run_id, "updated", event_data)
         if not updated:
             raise KeyError(run_id)
 
@@ -3714,6 +3821,10 @@ class StudioStore:
                 "UPDATE runs SET status = ?, ended_at = ?, result = ? WHERE id = ?",
                 (status, _now(), _json(result), run_id),
             )
+            event_data = {"status": status}
+            if result.get("reasons") is not None:
+                event_data["reasons"] = result["reasons"]
+            self._append_run_event(conn, run_id, "finished", event_data)
 
     def register_artifact(
         self,

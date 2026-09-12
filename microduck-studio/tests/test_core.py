@@ -576,6 +576,67 @@ def test_start_run_rejects_unknown_project(tmp_path: Path):
         store.start_run("missing-project", "preflight")
 
 
+def test_run_timeline_records_start_result_and_finish_in_order(tmp_path: Path):
+    store = StudioStore(tmp_path / "studio.db")
+    project = store.create_project("duck", tmp_path)
+
+    run = store.start_run(project["id"], "preflight")
+    store.update_run_result(run["id"], {"status": "running", "progress": 0.5})
+    store.finish_run(run["id"], "passed", {"status": "passed"})
+
+    events = store.list_run_events(run["id"])
+
+    assert [item["type"] for item in events] == ["started", "updated", "finished"]
+    assert [item["sequence"] for item in events] == [1, 2, 3]
+    assert events[1]["data"] == {"progress": 0.5, "status": "running"}
+
+
+def test_run_comparison_reports_config_and_metric_differences(tmp_path: Path):
+    store = StudioStore(tmp_path / "studio.db")
+    project = store.create_project("duck", tmp_path)
+    left = store.start_run(project["id"], "training")
+    right = store.start_run(project["id"], "training")
+    store.finish_run(
+        left["id"],
+        "passed",
+        {"effective_config": {"seed": 1}, "metrics": {"reward": 2.0}},
+    )
+    store.finish_run(
+        right["id"],
+        "passed",
+        {"effective_config": {"seed": 2}, "metrics": {"reward": 3.5}},
+    )
+
+    comparison = store.compare_runs(project["id"], left["id"], right["id"])
+
+    assert comparison["config_changes"] == [{"field": "seed", "before": 1, "after": 2}]
+    assert comparison["metric_changes"] == [
+        {"field": "reward", "before": 2.0, "after": 3.5, "delta": 1.5}
+    ]
+
+
+def test_run_timeline_and_comparison_api_expose_structured_data(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    import microduck_studio.app as app_module
+
+    store = StudioStore(tmp_path / "studio.db")
+    project = store.create_project("duck", tmp_path)
+    left = store.start_run(project["id"], "training")
+    right = store.start_run(project["id"], "training")
+    store.finish_run(left["id"], "passed", {"metrics": {"reward": 1.0}})
+    store.finish_run(right["id"], "passed", {"metrics": {"reward": 2.0}})
+    monkeypatch.setattr(app_module, "store", store)
+
+    events = app_module.run_events(left["id"], after=0)
+    compared = app_module.compare_project_runs(
+        project["id"], app_module.RunCompareIn(left_id=left["id"], right_id=right["id"])
+    )
+
+    assert events["events"][-1]["type"] == "finished"
+    assert compared["metric_changes"][0]["delta"] == 1.0
+
+
 def test_next_task_exposes_evidence_and_failure_contract(tmp_path: Path):
     store = StudioStore(tmp_path / "studio.db")
     project = store.create_project("任务卡契约", tmp_path)
@@ -2998,6 +3059,7 @@ def test_reopening_store_interrupts_incomplete_runs(tmp_path: Path):
     assert saved["result"]["status"] == "interrupted"
     assert "service_restarted" in saved["result"]["reasons"]
     assert task["status"] == "interrupted"
+    assert reopened.list_run_events(run["id"])[-1]["data"]["status"] == "interrupted"
 
 
 def test_terminal_run_cannot_be_overwritten_by_late_worker(tmp_path: Path):
@@ -4116,6 +4178,7 @@ def test_training_run_persists_new_checkpoint_with_hash(
             "size": len(b"checkpoint-20"),
         }
     ]
+    assert store.list_run_events(run["id"])[0]["type"] == "started"
 
 
 def test_training_recipe_and_plan_api_use_store_contract(
@@ -4325,6 +4388,7 @@ def test_training_smoke_can_be_cancelled_and_persists_interrupted(
     assert saved["status"] == "interrupted"
     assert "cancelled" in saved["result"]["reasons"]
     assert saved["result"]["training_provenance"] == run["result"]["training_provenance"]
+    assert "cancelling" in [event["type"] for event in store.list_run_events(run["id"])]
 
 
 def test_training_smoke_success_without_fresh_outputs_is_insufficient_evidence(
