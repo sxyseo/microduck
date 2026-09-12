@@ -107,6 +107,21 @@ pub const REGISTRY: &[Entry] = &[
         Kind::Choice(&["dynamixel", "hl2915"]),
         "Motor bus backend",
     ),
+    entry(
+        "bus.hl2915_ids",
+        Kind::IntegerList,
+        "HL-2915 IDs in joint order",
+    ),
+    entry(
+        "bus.hl2915_zero_raw",
+        Kind::IntegerList,
+        "HL-2915 encoder zeroes in joint order",
+    ),
+    entry(
+        "bus.hl2915_direction",
+        Kind::IntegerList,
+        "HL-2915 directions, 1 or -1",
+    ),
     // ── [control] ────────────────────────────────────────────────────────────
     entry("control.hz", Kind::Integer, "Control loop rate"),
     entry(

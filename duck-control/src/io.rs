@@ -57,6 +57,12 @@ pub enum IoError {
     },
     #[error("bus transaction failed: {0}")]
     Bus(String),
+    /// The actuator answered, but its own telemetry says it is unsafe to keep driving.
+    ///
+    /// This is intentionally separate from [`Self::Bus`]: a dropped packet may be coasted over
+    /// for a few ticks, while a servo-reported fault must stop torque immediately.
+    #[error("actuator fault: {0}")]
+    ActuatorFault(String),
     /// A `sync_read` that returns the wrong number of blocks, or a block of the wrong
     /// length, means a device did not answer. Reported rather than papered over: a
     /// silently short read would leave stale values in half the joint array.

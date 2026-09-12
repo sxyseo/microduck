@@ -1,0 +1,669 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Microduck Studio</title>
+  <style>
+    :root{font:16px system-ui,sans-serif;color:#211a11;background:#f6f1e7}body{max-width:980px;margin:0 auto;padding:28px}h1{margin-bottom:4px}small,.muted{color:#6b6151}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}.card{background:#fff;border:1px solid #d9cdb9;border-radius:12px;padding:18px;box-shadow:4px 4px #e9dcc8}label{display:block;margin:10px 0 4px}input,textarea,select,button{font:inherit;padding:9px;border:1px solid #9c8e7b;border-radius:7px}input,textarea,select{width:100%;box-sizing:border-box}textarea{min-height:100px;font-family:ui-monospace,monospace}button{background:#211a11;color:#fff;cursor:pointer;margin-top:12px}.status{white-space:pre-wrap;font-family:ui-monospace,monospace;background:#211a11;color:#f6f1e7;padding:12px;border-radius:8px;min-height:90px}.ok{color:#17633a}.bad{color:#9d2d14}
+  </style>
+</head>
+<body>
+  <h1>Microduck Studio</h1>
+  <p class="muted">个人本地复刻工作台 · 阶段 0/1</p>
+  <div class="grid">
+    <section class="card">
+      <h2>新建“我的鸭子”</h2>
+      <label>项目名称<input id="name" value="我的鸭子"></label>
+      <label>仓库路径<input id="root" value=".."></label>
+      <button id="create">创建项目</button>
+      <label>已有项目<select id="project-list" style="width:100%;padding:9px;border:1px solid #9c8e7b;border-radius:7px"><option value="">加载中…</option></select></label>
+      <p id="project" class="muted">尚未创建项目</p>
+    </section>
+    <section class="card">
+      <h2>硬件路线</h2>
+      <p class="muted">未确认型号不会自动选择默认参数；留空会继续保持待确认。</p>
+      <label>已确认舵机型号（可留空）<input id="servo-model" placeholder="例如 HL-2915"></label>
+      <label>舵机候选（逗号分隔）<input id="servos" value="HL-2915"></label>
+      <label>舵机数量<input id="servo-count" type="number" min="1" placeholder="例如 12"></label>
+      <label>主控型号<input id="controller-model" placeholder="例如 Radxa Zero 3W"></label>
+      <label>IMU 型号<input id="imu-model" placeholder="例如 BMI270"></label>
+      <label>供电电压（V）<input id="power-voltage" type="number" step="0.1" placeholder="例如 12.0"></label>
+      <label>打印件版本<input id="printed-version" placeholder="例如 v1"></label>
+      <label>运行时版本<input id="runtime-version" placeholder="commit 或版本号"></label>
+      <label>训练仓库<input id="training-repo" placeholder="例如 microduck_rl"></label>
+      <label>训练仓版本<input id="training-revision" placeholder="commit 或版本号"></label>
+      <button id="save-hardware">保存硬件档案</button>
+    </section>
+    <section class="card">
+      <h2>HL-2915 只读探针计划</h2>
+      <p class="muted">只生成命令，不打开串口；需要先确认 HL-2915。</p>
+      <label>本机可见端口<select id="probe-port-list" style="width:100%;padding:9px;border:1px solid #9c8e7b;border-radius:7px"><option value="">尚未读取</option></select></label>
+      <button id="probe-ports">列出本机端口（只读）</button>
+      <label>已确认串口<input id="probe-port" value="" placeholder="例如 COM3 或 /dev/ttyUSB0"></label>
+      <p class="muted">端口列表不会判断舵机型号；请根据实际接线确认后再执行探针。</p>
+      <label>舵机 ID（逗号分隔，1–199）<input id="probe-ids" value="1"></label>
+      <label>观察秒数（1–300）<input id="probe-seconds" type="number" value="10" min="1" max="300"></label>
+      <label><input id="probe-include-imu" type="checkbox"> 已接入 ID=200 IMU（勾选后使用混合协议探针）</label>
+      <button id="probe-plan">生成只读计划</button>
+      <button id="probe-run">执行只读探针（需确认）</button>
+      <button id="probe-cancel">取消当前探针</button>
+    </section>
+    <section class="card">
+      <h2>开发机只读预检</h2>
+      <button id="preflight">运行预检</button>
+      <div id="status" class="status">等待操作</div>
+    </section>
+    <section class="card">
+      <h2>主控只读诊断</h2>
+      <p class="muted">仅执行固定的 <code>robotctl health --json</code>；SSH 使用 BatchMode 和严格主机密钥校验。</p>
+      <label>主控地址<input id="controller-host" placeholder="例如 duck.local"></label>
+      <label>SSH 用户<input id="controller-user" value="rock"></label>
+      <label>SSH 端口<input id="controller-port" type="number" value="22" min="1" max="65535"></label>
+      <button id="controller-plan">生成诊断计划</button>
+      <button id="controller-run">执行诊断（需确认）</button>
+    </section>
+    <section class="card">
+      <h2>连续测试结果</h2>
+      <p class="muted">需先确认硬件路线；导入原始计数后由工作台重新判定并绑定当前档案，不采信脚本 PASS。</p>
+      <label>原始数据（JSON）<textarea id="bench">{"packets_sent":1000,"packets_lost":0,"duration_s":60,"script_pass":true}</textarea></label>
+      <button id="bench-run">判定 60 秒测试</button>
+    </section>
+    <section class="card">
+      <h2>CPU smoke 训练</h2>
+      <p class="muted">固定 5 次迭代、8 环境、每环境 24 steps；只在你确认后启动，训练 checkout 会写入日志和模型。</p>
+      <label>训练 checkout 路径<input id="training-dir" placeholder="例如 ..\microduck_rl"></label>
+      <button id="training-plan">生成训练计划</button>
+      <button id="training-run">启动 smoke（需确认）</button>
+      <button id="training-cancel">取消当前运行</button>
+    </section>
+    <section class="card">
+      <h2>TensorBoard 指标摘要</h2>
+      <p class="muted">读取已完成训练的 event 文件，生成 scalars.csv、summary.md 和 metrics.png；输出目录必须在项目根目录内。</p>
+      <label>训练 checkout 路径<input id="tb-training-dir" placeholder="例如 ..\microduck_rl"></label>
+      <label>run 目录<input id="tb-run-dir" placeholder="例如 ..\microduck_rl\logs\rsl_rl\velocity\run"></label>
+      <label>输出目录<input id="tb-output-dir" value="artifacts/tensorboard/latest"></label>
+      <button id="tb-plan">生成摘要计划</button>
+      <button id="tb-run">生成摘要（需确认）</button>
+    </section>
+    <section class="card">
+      <h2>实验记录</h2>
+      <label>标题<input id="exp-title" value="动作滤波一致性"></label>
+      <label>假设<input id="exp-hypothesis" value="训练与运行时一致后抖动会减少"></label>
+      <label>变量<input id="exp-variable" value="action_filter"></label>
+      <label>基线（JSON）<textarea id="exp-baseline">true</textarea></label>
+      <label>用户条件（JSON，可留空）<textarea id="exp-context">{}</textarea></label>
+      <label>预期<input id="exp-expected" value="更稳定"></label>
+      <button id="exp-create">建立实验</button>
+      <label>记录结果的实验 ID<input id="exp-update-id" placeholder="建立实验后粘贴 ID"></label>
+      <label>实验状态<select id="exp-update-status" style="width:100%;padding:9px;border:1px solid #9c8e7b"><option value="running">进行中</option><option value="concluded">已结论</option><option value="abandoned">已放弃</option></select></label>
+      <label>结果（JSON）<textarea id="exp-update-result">null</textarea></label>
+      <label>结论<input id="exp-update-decision" placeholder="例如：保留，待真机验证"></label>
+      <label>证据引用（JSON 数组）<textarea id="exp-update-evidence">[]</textarea></label>
+      <button id="exp-update">保存实验结果</button>
+      <label>关联已完成运行 ID<input id="exp-link-run-id" placeholder="例如 bench run ID"></label>
+      <button id="exp-link-run">把运行关联为实验依据</button>
+      <label>左侧实验 ID<input id="exp-left-id" placeholder="建立实验后粘贴 ID"></label>
+      <label>右侧实验 ID<input id="exp-right-id" placeholder="建立实验后粘贴 ID"></label>
+      <button id="exp-compare">比较实验</button>
+    </section>
+    <section class="card">
+      <h2>标定记录（只记录，不驱动）</h2>
+      <p class="muted">绑定当前已确认硬件；记录舵机 ID、方向、零位、限位和可选 IMU 安装姿态，不会写寄存器。</p>
+    <label>标定数据（JSON）<textarea id="calibration-data">{"joints":[{"name":"left_hip","id":1,"direction":1,"zero_deg":0,"limits_deg":[-30,30]}],"imu":{"frame":"base_link","rpy_deg":[0,0,0]},"conditions":{"voltage_v":12,"temperature_c":24},"operator":"","verified":false}</textarea></label>
+      <button id="calibration-save">保存标定记录</button>
+      <button id="calibration-list">查看标定记录</button>
+    </section>
+    <section class="card">
+      <h2>装配与上电清单</h2>
+      <p class="muted">关联资料、物料和人工检查证据；没有证据的项目不能标记为通过，不会自动判断实物尺寸或接线正确。</p>
+      <label>装配数据（JSON）<textarea id="assembly-data">{"title":"第一次干装配","source_refs":["docs/course/20-组装与上电.md"],"materials":[{"name":"M2 自攻螺丝","status":"received","quantity":20,"spec":"M2×8","source":"旧物料记录","alternative":"M2×6","price":0.12}],"checks":[{"id":"trunk","title":"躯干作为基准件","status":"pending","evidence":[]},{"id":"power","title":"上电前确认电压、共地、急停","status":"pending","evidence":[]}]}</textarea></label>
+      <button id="assembly-save">保存装配记录</button>
+      <button id="assembly-list">查看装配记录</button>
+    </section>
+    <section class="card">
+      <h2>执行器辨识证据</h2>
+      <p class="muted">只记录 HL-2915/BAM 摘要、拟合文件和独立验证；没有独立数据或原始摘要故障时不会标记为可进入仿真。</p>
+      <label>辨识数据（JSON）<textarea id="identification-data">{"actuator_model":"HL-2915","raw_summary":{"status":"pending","rows":0,"duration_s":0,"expected_hz":50,"ids":[],"faults":[],"errors":[]},"fit":{"path":"artifacts/bam/hl2915-m6.json","model":"m6","trials":1},"validation":{"dataset":"待填写","independent":false,"mae":0},"conditions":{"voltage_v":[12,12],"temperature_c":[],"load":"待填写"}}</textarea></label>
+      <button id="identification-save">保存辨识记录</button>
+      <button id="identification-list">查看辨识记录</button>
+      <label>BAM 采样计划（JSON）<textarea id="bam-plan-data">{"port":"","servo_id":1,"mass_kg":0.05,"arm_length_m":0.1,"output_path":"artifacts/bam/raw/test.json","amplitude_deg":10,"duration_s":6,"hz":100,"confirm_motion":false}</textarea></label>
+      <button id="bam-plan">生成辨识采样计划（不执行）</button>
+      <button id="bam-run">启动 BAM 采样（双重确认）</button>
+    </section>
+    <section class="card">
+      <h2>问题台账</h2>
+      <p class="muted">记录症状、可能原因、下一项检查和解决结论；也可从已有运行记录自动带入诊断证据。</p>
+      <label>问题数据（JSON）<textarea id="issue-data">{"title":"待记录问题","severity":"warning","symptom":"填写实际症状","suspected_causes":[],"next_checks":[],"evidence_refs":[]}</textarea></label>
+      <button id="issue-save">保存问题</button>
+      <button id="issue-list">查看问题</button>
+      <label>更新问题 ID<input id="issue-update-id" placeholder="保存问题后粘贴 ID"></label>
+      <label>问题状态<select id="issue-update-status" style="width:100%;padding:9px;border:1px solid #9c8e7b"><option value="open">开放</option><option value="investigating">调查中</option><option value="resolved">已解决</option><option value="wont_fix">不处理</option></select></label>
+      <label>解决结论<input id="issue-update-resolution" placeholder="填写验证过的解决结论"></label>
+      <label>证据引用（JSON 数组）<textarea id="issue-update-evidence">[]</textarea></label>
+      <button id="issue-update">更新问题</button>
+      <label>关联已完成运行 ID<input id="issue-link-run-id" placeholder="例如修复后的验证 run ID"></label>
+      <button id="issue-link-run">把运行关联为问题证据</button>
+      <label>从运行记录创建（run ID）<input id="issue-run-id" placeholder="粘贴失败运行 ID"></label>
+      <button id="issue-from-run">从运行记录带入</button>
+    </section>
+    <section class="card">
+      <h2>策略包检查</h2>
+      <p class="muted">读取项目内 ONNX 和 manifest.json，登记 SHA-256；不加载、不部署。</p>
+      <label>ONNX 路径<input id="policy-onnx" placeholder="例如 output/policy.onnx"></label>
+      <label>Manifest 路径<input id="policy-manifest" placeholder="例如 output/manifest.json"></label>
+      <label>策略名（多策略 manifest 必填）<input id="policy-name"></label>
+      <button id="policy-inspect">检查策略包</button>
+    </section>
+    <section class="card">
+      <h2>部署前兼容性</h2>
+      <p class="muted">使用当前已确认硬件与策略 manifest 对照运行时约定；只做预检，不部署。</p>
+      <label>运行时约定（JSON）<textarea id="runtime-contract">{"obs_len":61,"action_dim":14,"control_hz":50,"action_filter":false,"servo_model":"HL-2915"}</textarea></label>
+      <button id="deployment-preflight">执行部署前预检</button>
+      <button id="deployment-plan">生成部署计划</button>
+      <button id="deployment-execute">部署 walk 策略（高风险）</button>
+    </section>
+    <section class="card">
+      <h2>来源与版本</h2>
+      <label>类型<input id="source-kind" value="training"></label>
+      <label>位置<input id="source-location" value="microduck_rl"></label>
+      <label>commit / 版本（本地 Git 可留空自动读取）<input id="source-revision" placeholder="留空自动读取实际 commit"></label>
+      <button id="source-save">登记来源</button>
+      <button id="source-list">查看已登记来源</button>
+    </section>
+    <section class="card">
+      <h2>源码与资料搜索</h2>
+      <p class="muted">只搜索项目目录内的文本文件；跳过 Git、虚拟环境、构建目录和大文件，结果只显示相对路径、行号和脱敏摘要。</p>
+      <label>关键词<input id="search-query" placeholder="例如 HL-2915、action_filter、robotd"></label>
+      <button id="search-run">搜索资料</button>
+      <div id="search-body" class="status">尚未搜索</div>
+      <label>记录关键词<input id="record-search-query" placeholder="运行 ID、问题标题、产物或来源"></label>
+      <label>记录类型<select id="record-search-type"><option value="">全部</option><option value="run">运行</option><option value="artifact">产物</option><option value="source">来源</option><option value="experiment">实验</option><option value="issue">问题</option></select></label>
+      <label>记录状态<select id="record-search-status"><option value="">任意</option><option value="running">running</option><option value="passed">passed</option><option value="failed">failed</option><option value="insufficient_evidence">insufficient_evidence</option><option value="interrupted">interrupted</option><option value="open">open</option><option value="investigating">investigating</option><option value="resolved">resolved</option><option value="wont_fix">wont_fix</option><option value="planned">planned</option><option value="concluded">concluded</option><option value="abandoned">abandoned</option></select></label>
+      <button id="record-search">搜索证据记录</button>
+      <div id="record-search-body" class="status">尚未搜索记录</div>
+      <label>证据详情 ID<input id="record-detail-id" placeholder="搜索结果会自动填入"></label>
+      <button id="record-detail">读取证据详情（脱敏）</button>
+      <div id="record-detail-body" class="status">尚未读取详情</div>
+    </section>
+    <section class="card">
+      <h2>当前报告</h2>
+      <button id="report">刷新报告</button>
+      <button id="retry-last-run">重试最近失败/中断探针或训练</button>
+      <button id="issue-from-latest-run">从最近失败/中断运行建问题草稿</button>
+      <label>支持包路径（留空自动生成）<input id="support-path" placeholder="例如 artifacts/support/issue-001.zip"></label>
+      <button id="support-bundle">生成脱敏支持包（需确认）</button>
+      <div id="report-body" class="status">尚未创建项目</div>
+    </section>
+  </div>
+  <script>
+    let projectId = localStorage.getItem('microduckStudioProjectId');
+    const activeRuns = {bench: null, training: null};
+    const resetActiveRuns = () => { activeRuns.bench = null; activeRuns.training = null; };
+    const $ = (id) => document.getElementById(id);
+    const show = (id, value) => $(id).textContent = typeof value === 'string' ? value : JSON.stringify(value, null, 2);
+    const refreshReport = () => { if (projectId) $('report').click(); };
+    const pollRun = async (run, slot) => {
+      const runId = run.id;
+      activeRuns[slot] = runId;
+      show('status', run);
+      try {
+        while (activeRuns[slot] === runId && ['running','cancelling'].includes(run.status)) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+          const res = await fetch(`/api/runs/${runId}`); run = await res.json();
+          if (!res.ok) throw new Error(run.detail || `HTTP ${res.status}`);
+          if (activeRuns[slot] === run.id && projectId === run.project_id) show('status', run);
+        }
+      } catch (error) {
+        if (activeRuns[slot] === runId) show('status', `运行状态读取失败：${error.message}`);
+      } finally {
+        if (activeRuns[slot] === runId) activeRuns[slot] = null;
+        if (projectId === run.project_id && !['running','cancelling'].includes(run.status)) refreshReport();
+      }
+    };
+    const hydrateHardwareForm = (hardware) => {
+      const data = hardware?.data || {};
+      const servos = data.servos || {};
+      const valueOrEmpty = value => value === null || value === undefined ? '' : String(value);
+      $('servo-model').value = valueOrEmpty(servos.model);
+      $('servos').value = Array.isArray(servos.candidates) ? servos.candidates.join(',') : '';
+      $('servo-count').value = valueOrEmpty(servos.count);
+      $('controller-model').value = valueOrEmpty(data.controller?.model);
+      $('imu-model').value = valueOrEmpty(data.imu?.model);
+      $('power-voltage').value = valueOrEmpty(data.power?.voltage_v);
+      $('printed-version').value = valueOrEmpty(data.printed_parts?.version);
+      $('runtime-version').value = valueOrEmpty(data.runtime?.version);
+      $('training-repo').value = valueOrEmpty(data.training?.repo);
+      $('training-revision').value = valueOrEmpty(data.training?.revision);
+    };
+    const loadProjects = async () => {
+      const data = await (await fetch('/api/projects')).json(); const select = $('project-list');
+      select.innerHTML = '<option value="">选择已有项目</option>';
+      for (const item of data.projects) { const option = document.createElement('option'); option.value = item.id; option.textContent = `${item.name} · ${item.status}`; select.appendChild(option); }
+      if (projectId && data.projects.some(item => item.id === projectId)) { select.value = projectId; const item = data.projects.find(item => item.id === projectId); show('project', `已恢复 ${item.name}\n${item.id}`); $('report').click(); }
+      else { resetActiveRuns(); projectId = null; localStorage.removeItem('microduckStudioProjectId'); }
+    };
+    $('create').onclick = async () => {
+      const res = await fetch('/api/projects', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:$('name').value,root:$('root').value})});
+      const data = await res.json(); resetActiveRuns(); projectId = data.id; localStorage.setItem('microduckStudioProjectId', projectId); show('project', `已创建 ${data.name}\n${data.id}`); show('status', '项目已建立，硬件路线仍待确认。'); await loadProjects();
+    };
+    $('project-list').onchange = (event) => { resetActiveRuns(); projectId = event.target.value || null; if (projectId) { localStorage.setItem('microduckStudioProjectId', projectId); $('report').click(); } else { localStorage.removeItem('microduckStudioProjectId'); hydrateHardwareForm(null); show('report-body', '尚未创建项目'); } show('project', projectId ? `已选择 ${projectId}` : '尚未创建项目'); };
+    $('probe-ports').onclick = async () => {
+      const res = await fetch('/api/serial-ports');
+      const data = await res.json();
+      const select = $('probe-port-list');
+      select.replaceChildren(new Option(data.ports?.length ? '选择一个端口' : '未发现端口', ''));
+      for (const item of data.ports || []) select.appendChild(new Option(`${item.port} · ${item.description}`, item.port));
+      select.onchange = () => { if (select.value) $('probe-port').value = select.value; };
+      show('status', data);
+    };
+    $('save-hardware').onclick = async () => {
+      if (!projectId) return show('status','请先创建项目');
+      const candidates = $('servos').value.split(',').map(x=>x.trim()).filter(Boolean);
+      const model = $('servo-model').value.trim() || null;
+      const numberOrNull = value => value.trim() ? Number(value) : null;
+      const count = numberOrNull($('servo-count').value);
+      const res = await fetch(`/api/projects/${projectId}/hardware`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({data:{servos:{model,candidates,count},controller:{model:$('controller-model').value.trim()},imu:{model:$('imu-model').value.trim()},power:{voltage_v:numberOrNull($('power-voltage').value)},printed_parts:{version:$('printed-version').value.trim()},runtime:{version:$('runtime-version').value.trim()},training:{repo:$('training-repo').value.trim(),revision:$('training-revision').value.trim()}}})});
+      show('status', await res.json());
+      refreshReport();
+    };
+    $('probe-plan').onclick = async () => {
+      if (!projectId) return show('status','请先创建项目');
+      const ids = $('probe-ids').value.split(',').map(x=>Number(x.trim())).filter(Number.isInteger);
+      const body = {port:$('probe-port').value.trim(), ids, watch_seconds:Number($('probe-seconds').value), include_imu:$('probe-include-imu').checked};
+      const res = await fetch(`/api/projects/${projectId}/bench/probe-plan`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+      show('status', await res.json());
+    };
+    $('probe-run').onclick = async () => {
+      if (!projectId) return show('status','请先创建项目');
+      if (!window.confirm('只读探针会打开已确认的 HL-2915 串口，但不会写寄存器、开扭矩或移动舵机。继续？')) return;
+      const ids = $('probe-ids').value.split(',').map(x=>Number(x.trim())).filter(Number.isInteger);
+      const body = {port:$('probe-port').value.trim(), ids, watch_seconds:Number($('probe-seconds').value), include_imu:$('probe-include-imu').checked, confirm:true};
+      const res = await fetch(`/api/projects/${projectId}/bench/probe`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+      const run = await res.json();
+      if (run.id && run.status === 'running') pollRun(run, 'bench'); else show('status', run);
+    };
+    $('probe-cancel').onclick = async () => {
+      if (!activeRuns.bench) return show('status','当前没有可取消的探针');
+      const res = await fetch(`/api/runs/${activeRuns.bench}/cancel`, {method:'POST'});
+      show('status', await res.json());
+    };
+    $('preflight').onclick = async () => {
+      if (!projectId) return show('status','请先创建项目');
+      const res = await fetch(`/api/projects/${projectId}/preflight`, {method:'POST'}); show('status', await res.json()); refreshReport();
+    };
+    const controllerBody = () => ({host:$('controller-host').value.trim(), user:$('controller-user').value.trim(), port:Number($('controller-port').value)});
+    $('controller-plan').onclick = async () => {
+      if (!projectId) return show('status','请先创建项目');
+      const res = await fetch(`/api/projects/${projectId}/controller/diagnostic-plan`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(controllerBody())});
+      show('status', await res.json());
+    };
+    $('controller-run').onclick = async () => {
+      if (!projectId) return show('status','请先创建项目');
+      if (!window.confirm('只读诊断会通过 SSH 读取主控健康状态，不会写入主控。继续？')) return;
+      const res = await fetch(`/api/projects/${projectId}/controller/diagnostic`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...controllerBody(), confirm:true})});
+      show('status', await res.json());
+    };
+    $('bench-run').onclick = async () => {
+      if (!projectId) return show('status','请先创建项目');
+      let raw; try { raw = JSON.parse($('bench').value); } catch (e) { return show('status','JSON 格式错误'); }
+      const res = await fetch(`/api/projects/${projectId}/bench/continuous`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({raw,required_duration_s:60})});
+      show('status', await res.json()); refreshReport();
+    };
+    const trainingBody = () => ({training_dir:$('training-dir').value.trim()});
+    $('training-plan').onclick = async () => {
+      if (!projectId) return show('status','请先创建项目');
+      const res = await fetch(`/api/projects/${projectId}/training/smoke-plan`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(trainingBody())});
+      show('status', await res.json());
+    };
+    $('training-run').onclick = async () => {
+      if (!projectId) return show('status','请先创建项目');
+      if (!window.confirm('训练会在指定 checkout 中写入日志和模型，不会操作硬件。已完成预检并确认继续？')) return;
+      const res = await fetch(`/api/projects/${projectId}/training/smoke`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...trainingBody(), confirm:true})});
+      const run = await res.json();
+      if (run.id && run.status === 'running') pollRun(run, 'training'); else show('status', run);
+    };
+    $('training-cancel').onclick = async () => {
+      if (!activeRuns.training) return show('status','当前没有可取消的运行');
+      const res = await fetch(`/api/runs/${activeRuns.training}/cancel`, {method:'POST'});
+      show('status', await res.json());
+    };
+    const tensorboardBody = () => ({training_dir:$('tb-training-dir').value.trim(), run_dir:$('tb-run-dir').value.trim(), output_dir:$('tb-output-dir').value.trim()});
+    $('tb-plan').onclick = async () => {
+      if (!projectId) return show('status','请先创建项目');
+      const res = await fetch(`/api/projects/${projectId}/training/tensorboard-plan`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(tensorboardBody())});
+      show('status', await res.json());
+    };
+    $('tb-run').onclick = async () => {
+      if (!projectId) return show('status','请先创建项目');
+      if (!window.confirm('将读取 TensorBoard event 并在项目输出目录写入摘要和曲线，不会操作硬件。继续？')) return;
+      const res = await fetch(`/api/projects/${projectId}/training/tensorboard`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...tensorboardBody(), confirm:true})});
+      show('status', await res.json());
+    };
+    $('exp-create').onclick = async () => {
+      if (!projectId) return show('status','请先创建项目');
+      let baseline; try { baseline = JSON.parse($('exp-baseline').value); } catch (e) { return show('status','实验基线 JSON 格式错误'); }
+      let context; try { context = JSON.parse($('exp-context').value || '{}'); } catch (e) { return show('status','实验条件 JSON 格式错误'); }
+      if (!context || Array.isArray(context) || typeof context !== 'object') return show('status','实验条件必须是 JSON 对象');
+      const body = {title:$('exp-title').value, hypothesis:$('exp-hypothesis').value, variable:$('exp-variable').value, baseline, context, expected:$('exp-expected').value};
+      const res = await fetch(`/api/projects/${projectId}/experiments`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+      const created = await res.json();
+      if (created.id) $('exp-update-id').value = created.id;
+      show('status', created);
+      refreshReport();
+    };
+    $('exp-update').onclick = async () => {
+      if (!projectId) return show('status','请先创建项目');
+      const experimentId = $('exp-update-id').value.trim();
+      if (!experimentId) return show('status','请填写实验 ID');
+      let result; try { result = JSON.parse($('exp-update-result').value || 'null'); } catch (e) { return show('status','实验结果 JSON 格式错误'); }
+      let evidence; try { evidence = JSON.parse($('exp-update-evidence').value || '[]'); } catch (e) { return show('status','实验证据 JSON 格式错误'); }
+      if (!Array.isArray(evidence) || evidence.some(item => typeof item !== 'string' || !item.trim())) return show('status','实验证据必须是非空字符串数组');
+      const body = {status:$('exp-update-status').value, result, decision:$('exp-update-decision').value, evidence_refs:evidence};
+      const res = await fetch(`/api/experiments/${encodeURIComponent(experimentId)}`, {method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+      show('status', await res.json());
+      refreshReport();
+    };
+    $('exp-link-run').onclick = async () => {
+      if (!projectId) return show('status','请先创建项目');
+      const experimentId = $('exp-update-id').value.trim();
+      const runId = $('exp-link-run-id').value.trim();
+      if (!experimentId || !runId) return show('status','请填写实验 ID 和已完成运行 ID');
+      const res = await fetch(`/api/projects/${projectId}/experiments/${encodeURIComponent(experimentId)}/link-run/${encodeURIComponent(runId)}`, {method:'POST'});
+      const linked = await res.json();
+      if (!res.ok) return show('status', linked);
+      $('exp-update-evidence').value = JSON.stringify(linked.evidence_refs || [], null, 2);
+      const runRes = await fetch(`/api/runs/${encodeURIComponent(runId)}`);
+      const run = await runRes.json();
+      if (runRes.ok) {
+        $('exp-update-result').value = JSON.stringify({run_id: run.id, kind: run.kind, status: run.status, result: run.result}, null, 2);
+      }
+      show('status', {experiment: linked, loaded_run: runRes.ok ? run.id : null});
+      refreshReport();
+    };
+    $('exp-compare').onclick = async () => {
+      if (!projectId) return show('status','请先创建项目');
+      const body = {left_id:$('exp-left-id').value.trim(), right_id:$('exp-right-id').value.trim()};
+      const res = await fetch(`/api/projects/${projectId}/experiments/compare`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+      show('status', await res.json());
+    };
+    $('calibration-save').onclick = async () => {
+      if (!projectId) return show('status','请先创建项目');
+      let data; try { data = JSON.parse($('calibration-data').value); } catch (e) { return show('status','标定 JSON 格式错误'); }
+      const res = await fetch(`/api/projects/${projectId}/calibrations`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({data})});
+      show('status', await res.json()); refreshReport();
+    };
+    $('calibration-list').onclick = async () => {
+      if (!projectId) return show('status','请先创建项目');
+      const res = await fetch(`/api/projects/${projectId}/calibrations`);
+      show('status', await res.json());
+    };
+    $('assembly-save').onclick = async () => {
+      if (!projectId) return show('status','请先创建项目');
+      let data; try { data = JSON.parse($('assembly-data').value); } catch (e) { return show('status','装配 JSON 格式错误'); }
+      const res = await fetch(`/api/projects/${projectId}/assemblies`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({data})});
+      show('status', await res.json()); refreshReport();
+    };
+    $('assembly-list').onclick = async () => {
+      if (!projectId) return show('status','请先创建项目');
+      const res = await fetch(`/api/projects/${projectId}/assemblies`);
+      show('status', await res.json());
+    };
+    $('identification-save').onclick = async () => {
+      if (!projectId) return show('status','请先创建项目');
+      let data; try { data = JSON.parse($('identification-data').value); } catch (e) { return show('status','辨识 JSON 格式错误'); }
+      const res = await fetch(`/api/projects/${projectId}/identifications`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({data})});
+      show('status', await res.json()); refreshReport();
+    };
+    $('identification-list').onclick = async () => {
+      if (!projectId) return show('status','请先创建项目');
+      const res = await fetch(`/api/projects/${projectId}/identifications`);
+      show('status', await res.json());
+    };
+    $('bam-plan').onclick = async () => {
+      if (!projectId) return show('status','请先创建项目');
+      let data; try { data = JSON.parse($('bam-plan-data').value); } catch (e) { return show('status','BAM 计划 JSON 格式错误'); }
+      const res = await fetch(`/api/projects/${projectId}/bench/bam-plan`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+      show('status', await res.json());
+    };
+    $('bam-run').onclick = async () => {
+      if (!projectId) return show('status','请先创建项目');
+      let data; try { data = JSON.parse($('bam-plan-data').value); } catch (e) { return show('status','BAM 计划 JSON 格式错误'); }
+      if (!window.confirm('高风险动作：将使单只 HL-2915 按计划小幅运动。请确认输出轴卸载、周围无人、实体急停可用。继续？')) return;
+      data.confirm = true; data.confirm_motion = true;
+      const res = await fetch(`/api/projects/${projectId}/bench/bam`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+      const run = await res.json();
+      if (run.id && run.status === 'running') pollRun(run, 'bench'); else show('status', run);
+    };
+    $('issue-save').onclick = async () => {
+      if (!projectId) return show('status','请先创建项目');
+      let data; try { data = JSON.parse($('issue-data').value); } catch (e) { return show('status','问题 JSON 格式错误'); }
+      const res = await fetch(`/api/projects/${projectId}/issues`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+      const created = await res.json();
+      if (created.id) $('issue-update-id').value = created.id;
+      show('status', created); refreshReport();
+    };
+    $('issue-list').onclick = async () => {
+      if (!projectId) return show('status','请先创建项目');
+      const res = await fetch(`/api/projects/${projectId}/issues`);
+      show('status', await res.json());
+    };
+    $('issue-update').onclick = async () => {
+      if (!projectId) return show('status','请先创建项目');
+      const issueId = $('issue-update-id').value.trim();
+      if (!issueId) return show('status','请填写问题 ID');
+      let evidence; try { evidence = JSON.parse($('issue-update-evidence').value || '[]'); } catch (e) { return show('status','问题证据 JSON 格式错误'); }
+      if (!Array.isArray(evidence) || evidence.some(item => typeof item !== 'string' || !item.trim())) return show('status','问题证据必须是非空字符串数组');
+      const body = {status:$('issue-update-status').value, resolution:$('issue-update-resolution').value, evidence_refs:evidence};
+      const res = await fetch(`/api/issues/${encodeURIComponent(issueId)}`, {method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+      show('status', await res.json()); refreshReport();
+    };
+    $('issue-link-run').onclick = async () => {
+      if (!projectId) return show('status','请先创建项目');
+      const issueId = $('issue-update-id').value.trim();
+      const runId = $('issue-link-run-id').value.trim();
+      if (!issueId || !runId) return show('status','请填写问题 ID 和已完成运行 ID');
+      const res = await fetch(`/api/projects/${projectId}/issues/${encodeURIComponent(issueId)}/link-run/${encodeURIComponent(runId)}`, {method:'POST'});
+      const linked = await res.json();
+      if (res.ok) $('issue-update-evidence').value = JSON.stringify(linked.evidence_refs || [], null, 2);
+      show('status', linked); refreshReport();
+    };
+    $('issue-from-run').onclick = async () => {
+      if (!projectId) return show('status','请先创建项目');
+      const runId = $('issue-run-id').value.trim();
+      if (!runId) return show('status','请填写 run ID');
+      const res = await fetch(`/api/projects/${projectId}/issues/from-run/${encodeURIComponent(runId)}`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({})});
+      show('status', await res.json());
+    };
+    $('policy-inspect').onclick = async () => {
+      if (!projectId) return show('status','请先创建项目');
+      const body = {onnx_path:$('policy-onnx').value.trim(), manifest_path:$('policy-manifest').value.trim(), policy_name:$('policy-name').value.trim() || null};
+      const res = await fetch(`/api/projects/${projectId}/policy/inspect`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+      show('status', await res.json());
+    };
+    $('deployment-preflight').onclick = async () => {
+      if (!projectId) return show('status','请先创建项目');
+      let runtime; try { runtime = JSON.parse($('runtime-contract').value); } catch (e) { return show('status','运行时 JSON 格式错误'); }
+      const body = {onnx_path:$('policy-onnx').value.trim(), manifest_path:$('policy-manifest').value.trim(), runtime};
+      const res = await fetch(`/api/projects/${projectId}/deployment/preflight`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+      show('status', await res.json());
+    };
+    $('deployment-plan').onclick = async () => {
+      if (!projectId) return show('status','请先创建项目');
+      const target = controllerBody();
+      const body = {onnx_path:$('policy-onnx').value.trim(), manifest_path:$('policy-manifest').value.trim(), ...target};
+      const res = await fetch(`/api/projects/${projectId}/deployment/plan`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+      show('status', await res.json());
+    };
+    $('deployment-execute').onclick = async () => {
+      if (!projectId) return show('status','请先创建项目');
+      if (!window.confirm('高风险操作：加载当前 walk 槽策略可能触发机器人归位并重新驱动。请先架空或可靠约束机器人，确认实体急停可用且周围无人。是否继续？')) return;
+      const target = controllerBody();
+      const body = {onnx_path:$('policy-onnx').value.trim(), manifest_path:$('policy-manifest').value.trim(), ...target, confirm:true};
+      const res = await fetch(`/api/projects/${projectId}/deployment/execute`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+      show('status', await res.json());
+    };
+    $('source-save').onclick = async () => {
+      if (!projectId) return show('status','请先创建项目');
+      const body = {kind:$('source-kind').value, location:$('source-location').value, revision:$('source-revision').value, license_status:'unknown'};
+      const res = await fetch(`/api/projects/${projectId}/sources`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+      show('status', await res.json());
+    };
+    $('source-list').onclick = async () => {
+      if (!projectId) return show('status','请先创建项目');
+      const res = await fetch(`/api/projects/${projectId}/sources`);
+      show('status', await res.json());
+    };
+    $('search-run').onclick = async () => {
+      if (!projectId) return show('status','请先创建项目');
+      const query = $('search-query').value.trim();
+      if (!query) return show('search-body','请输入关键词');
+      const res = await fetch(`/api/projects/${projectId}/search?q=${encodeURIComponent(query)}`);
+      const data = await res.json();
+      if (!res.ok) return show('search-body', data);
+      const lines = [`关键词：${data.query}`, `结果数：${data.results.length}${data.truncated ? '（已达到上限）' : ''}`, '', ...data.results.map(item => `${item.path}:${item.line} ${item.text}`)];
+      show('search-body', lines.join('\n'));
+    };
+    $('record-search').onclick = async () => {
+      if (!projectId) return show('record-search-body','请先创建项目');
+      const query = $('record-search-query').value.trim();
+      if (!query) return show('record-search-body','请输入记录关键词');
+      const recordType = $('record-search-type').value;
+      const recordStatus = $('record-search-status').value;
+      let endpoint = `/api/projects/${projectId}/evidence-search?q=${encodeURIComponent(query)}`;
+      if (recordType) endpoint += `&type=${encodeURIComponent(recordType)}`;
+      if (recordStatus) endpoint += `&status=${encodeURIComponent(recordStatus)}`;
+      const res = await fetch(endpoint);
+      const data = await res.json();
+      if (!res.ok) return show('record-search-body', data);
+      if (data.results?.[0]) $('record-detail-id').value = data.results[0].id;
+      const lines = [`关键词：${data.query}`, `结果数：${data.results.length}${data.truncated ? '（已达到上限）' : ''}`, '', ...data.results.map(item => `${item.type} · ${item.id} · ${item.label}${item.status ? ` · ${item.status}` : ''} · 命中：${item.matched_fields.join('、')}`)];
+      show('record-search-body', lines.join('\n'));
+    };
+    $('record-detail').onclick = async () => {
+      if (!projectId) return show('record-detail-body','请先创建项目');
+      const evidenceId = $('record-detail-id').value.trim();
+      if (!evidenceId) return show('record-detail-body','请填写证据详情 ID');
+      const res = await fetch(`/api/projects/${projectId}/evidence/${encodeURIComponent(evidenceId)}`);
+      show('record-detail-body', await res.json());
+    };
+    const evidenceLabel = (item) => item.kind
+      ? `${item.kind}/${item.status}`
+      : item.artifact_kind
+        ? `${item.artifact_kind}/${item.integrity_status}`
+        : `${item.source_kind}@${item.revision || 'unknown'}`;
+    $('report').onclick = async () => {
+      if (!projectId) return show('report-body','请先创建项目');
+      const requestedProjectId = projectId;
+      const res = await fetch(`/api/projects/${requestedProjectId}/report`); const data = await res.json();
+      if (projectId !== requestedProjectId) return;
+      const reportEvidenceRefs = [...(data.experiments || []), ...(data.issues || [])].flatMap(item => Array.isArray(item.evidence_refs) ? item.evidence_refs : []);
+      if (!$('record-detail-id').value && reportEvidenceRefs[0]) $('record-detail-id').value = reportEvidenceRefs[0];
+      hydrateHardwareForm(data.hardware);
+      for (const run of data.runs.filter(item => item.status === 'running')) {
+        const slot = run.kind === 'training_smoke' ? 'training' : ['hl2915_read_only_probe','hl2915_bam_record'].includes(run.kind) ? 'bench' : null;
+        if (slot && !activeRuns[slot]) pollRun(run, slot);
+      }
+      const next = data.tasks.find(t => ['ready','needs_confirmation'].includes(t.status));
+      const blocked = data.tasks.filter(t => t.status === 'blocked').map(t => t.title);
+      const lines = [`项目：${data.project.name}`, `硬件：${data.hardware?.status || '未建立'}`, `下一步：${next ? next.title : '暂无'}`, `阻塞项：${blocked.length ? blocked.join('、') : '无'}`, '', '任务状态：', ...data.tasks.map(t => `- ${t.title}: ${t.status}${t.evidence_reasons?.length ? `（证据：${t.evidence_reasons.join('、')}）` : ''}`)];
+      if (data.hardware?.completeness) {
+        const completeness = data.hardware.completeness;
+        lines.splice(2, 0, `硬件档案完整性：${completeness.status}`, `缺失字段：${completeness.missing_fields?.length ? completeness.missing_fields.join('、') : '无'}`);
+      }
+      if (next?.card) {
+        lines.push('', '下一项任务卡：', `预计用时：约 ${next.card.estimated_minutes} 分钟`, `所需工具：${next.card.tools.join('；')}`, `执行步骤：${next.card.steps.map((step, index) => `${index + 1}. ${step}`).join('；')}`, `前置条件：${next.card.preconditions.join('；')}`, `操作范围：${next.card.operation_scope}`, `所需证据：${next.card.evidence_required.join('；')}`, `通过条件：${next.card.acceptance}`, `失败处理：${next.card.failure_handling}`, `结果产物：${next.card.outputs.join('；')}`);
+        if (next.evidence_reasons?.length) lines.push(`当前缺口：${next.evidence_reasons.join('；')}`);
+      }
+      if (data.runs.length) {
+        lines.push('', '最近运行证据范围：', ...data.runs.slice(0, 8).map(run => `- ${run.kind}: ${run.status} · ${run.result?.evidence_scope || 'unknown'}${run.result?.retry_of ? ` · 重试自 ${run.result.retry_of}` : ''}`));
+      }
+      const diagnostic = data.runs.find(run => run.kind === 'controller_diagnostic');
+      if (diagnostic) {
+        lines.push('', `最近主控诊断：${diagnostic.result?.category || 'unknown'} / ${diagnostic.status}`);
+        const guidance = diagnostic.result?.guidance || {};
+        if (guidance.current_facts?.length) lines.push(`事实：${guidance.current_facts.join('；')}`);
+        if (guidance.next_checks?.length) lines.push(`下一项检查：${guidance.next_checks.join('；')}`);
+      }
+      const tensorboard = data.runs.find(run => run.kind === 'tensorboard_summary');
+      if (tensorboard) {
+        lines.push('', `最近 TensorBoard 摘要：${tensorboard.status}`);
+        if (tensorboard.result?.expected_outputs?.length) lines.push(`产物：${tensorboard.result.expected_outputs.join('；')}`);
+      }
+      const deployment = data.runs.find(run => run.kind === 'deployment_preflight');
+      if (deployment) {
+        lines.push('', `最近部署前兼容性：${deployment.status}`);
+        if (deployment.result?.reasons?.length) lines.push(`原因：${deployment.result.reasons.join('；')}`);
+      }
+      const deployed = data.runs.find(run => run.kind === 'deployment');
+      if (deployed) {
+        lines.push('', `最近策略部署：${deployed.status}`);
+        if (deployed.result?.reasons?.length) lines.push(`原因：${deployed.result.reasons.join('；')}`);
+      }
+      if (data.experiments?.length) {
+        lines.push('', '实验记录：', ...data.experiments.slice(0, 8).map(exp => {
+          const evidence = exp.evidence_details?.length ? ` · 证据：${exp.evidence_details.map(evidenceLabel).join('、')}` : '';
+          return `- ${exp.id} · ${exp.title} · ${exp.status}${exp.decision ? ` · 结论：${exp.decision}` : ''}${evidence}`;
+        }));
+      }
+      if (data.issues?.length) {
+        lines.push('', '问题台账：', ...data.issues.slice(0, 8).map(issue => {
+          const evidence = issue.evidence_details?.length ? ` · 证据：${issue.evidence_details.map(evidenceLabel).join('、')}` : '';
+          return `- ${issue.id} · ${issue.title} · ${issue.status}${issue.resolution ? ` · 解决：${issue.resolution}` : ''}${evidence}`;
+        }));
+      }
+      if (data.assemblies?.length) {
+        const assembly = data.assemblies[0];
+        const materialSummary = assembly.material_summary || {};
+        const materialStatuses = Object.entries(materialSummary.status_counts || {}).map(([status, count]) => `${status} ${count}`).join('、') || '无物料记录';
+        lines.push('', `最近装配：${assembly.data?.title || '未命名'} · ${assembly.completion}`, `物料：${materialSummary.item_count ?? 0} 项 / ${materialSummary.quantity_total ?? 0} 件`, `物料状态：${materialStatuses}`);
+      }
+      const bench = data.runs.find(run => ['bench_continuous','hl2915_read_only_probe'].includes(run.kind));
+      if (bench) {
+        lines.push('', `最近台架测试：${bench.kind} / ${bench.status}`);
+        if (bench.result?.reasons?.length) lines.push(`原因：${bench.result.reasons.join('；')}`);
+        if (bench.result?.guidance?.next_checks?.length) lines.push(`下一项检查：${bench.result.guidance.next_checks.join('；')}`);
+      }
+      if (data.artifacts.length) {
+        lines.push('', '证据产物：', ...data.artifacts.map(item => `- ${item.kind}: ${item.integrity_status} · ${item.path}`));
+      }
+      show('report-body', lines.join('\n'));
+    };
+    $('retry-last-run').onclick = async () => {
+      if (!projectId) return show('status','请先创建项目');
+      const requestedProjectId = projectId;
+      const reportRes = await fetch(`/api/projects/${requestedProjectId}/report`);
+      const data = await reportRes.json();
+      if (projectId !== requestedProjectId) return;
+      const candidate = data.runs.find(run => ['failed','interrupted'].includes(run.status) && ['hl2915_read_only_probe','training_smoke'].includes(run.kind));
+      if (!candidate) return show('status','没有可自动重试的探针或训练运行');
+      if (!window.confirm(`将重试 ${candidate.kind}，仍会重新检查当前硬件/环境前置条件。继续？`)) return;
+      const res = await fetch(`/api/runs/${candidate.id}/retry`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({confirm:true})});
+      const run = await res.json();
+      if (!res.ok) return show('status', run);
+      const slot = candidate.kind === 'training_smoke' ? 'training' : 'bench';
+      if (run.id && run.status === 'running') pollRun(run, slot); else show('status', run);
+    };
+    $('issue-from-latest-run').onclick = async () => {
+      if (!projectId) return show('status','请先创建项目');
+      const requestedProjectId = projectId;
+      const reportRes = await fetch(`/api/projects/${requestedProjectId}/report`);
+      const data = await reportRes.json();
+      if (projectId !== requestedProjectId) return;
+      const candidate = data.runs.find(run => ['failed','interrupted'].includes(run.status));
+      if (!candidate) return show('status','没有可记录的问题运行');
+      if (!window.confirm(`确认将失败运行记录为问题草稿：${candidate.kind}？`)) return;
+      const res = await fetch(`/api/projects/${requestedProjectId}/issues/from-run/${candidate.id}`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({})});
+      show('status', await res.json());
+    };
+    $('support-bundle').onclick = async () => {
+      if (!projectId) return show('status','请先创建项目');
+      if (!window.confirm('将在项目目录内写入 ZIP，仅包含脱敏后的 JSON/Markdown 报告。请仍在分享前人工复核内容。继续？')) return;
+      const output_path = $('support-path').value.trim() || null;
+      const res = await fetch(`/api/projects/${projectId}/support-bundle`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({output_path,confirm:true})});
+      show('status', await res.json());
+    };
+    loadProjects();
+  </script>
+</body>
+</html>

@@ -47,6 +47,8 @@ SELF=/usr/local/sbin/robot-setup-gstreamer
 # Whether to install the -dev packages. Off by default: a shipped robot loads plugins, it does
 # not compile them, and the headers are the larger half of the install.
 WANT_DEV=0
+# Report-only mode: no apt, downloads, persistence, or udev writes.
+CHECK_ONLY=0
 
 # Where a hand-built out-of-tree plugin goes until `mediad` ships its own.
 #
@@ -151,6 +153,7 @@ Install the GStreamer stack mediad needs, and report what this board can encode.
 
   sudo sh /tmp/setup-gstreamer.sh          runtime packages, then the report
   sudo sh /tmp/setup-gstreamer.sh --dev    also the headers, to build against GStreamer
+  sh /tmp/setup-gstreamer.sh --check       report only; no apt/download/write
   sudo /usr/local/sbin/robot-setup-gstreamer    re-run later, to re-check the report
 
 Idempotent, and needs no reboot. The first run leaves the copy at that third path.
@@ -162,6 +165,7 @@ parse_args() {
     while [ $# -gt 0 ]; do
         case "$1" in
             --dev)  WANT_DEV=1 ;;
+            --check) CHECK_ONLY=1 ;;
             --help|-h) usage ;;
             *) die "unknown argument: $1
   Run with --help for what this takes." ;;
@@ -172,13 +176,17 @@ parse_args() {
 
 check_environment() {
     # No path in the message: whatever the operator just typed is what needs `sudo` in front.
-    [ "$(id -u)" = 0 ] || die "run as root — re-run that same command with sudo"
+    if [ "$CHECK_ONLY" = 0 ]; then
+        [ "$(id -u)" = 0 ] || die "run as root — re-run that same command with sudo"
+    fi
 
     arch="$(uname -m)"
     [ "$arch" = aarch64 ] || die "this targets aarch64 boards, and this box is ${arch}"
 
-    command -v apt-get >/dev/null 2>&1 \
-        || die "no apt-get — this expects a Debian/Armbian userland"
+    if [ "$CHECK_ONLY" = 0 ]; then
+        command -v apt-get >/dev/null 2>&1 \
+            || die "no apt-get — this expects a Debian/Armbian userland"
+    fi
 }
 
 # Leave a copy behind, so re-checking after a kernel change does not need a re-fetch.
@@ -633,6 +641,10 @@ report() {
 main() {
     parse_args "$@"
     check_environment
+    if [ "$CHECK_ONLY" = 1 ]; then
+        report
+        return 0
+    fi
     persist_self
     # shellcheck disable=SC2086  # word-splitting the package lists is the point
     install_missing $RUNTIME_PKGS

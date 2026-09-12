@@ -78,11 +78,21 @@ It also sits, kicks a ball, rolls forward on command, and quacks in a voice that
 
 ### You are building on it
 
+如果你是第一次接触电路、结构和舵机，只按下面顺序走，不要先启动完整 `robotd`：
+
+1. 先读[新手学习文档](docs/新手学习文档.md)，认识供电、半双工总线、Radxa、IMU 和结构件；
+2. 再按[两只舵机现场验收表](docs/HL2915两只舵机现场验收表.md)只接一只 HL-2915，完成 Ping 和改 ID；
+3. 然后按[HL2915 全链路落地手册](docs/HL2915全链路落地手册.md)依次通过双舵机、Radxa、IMU/HAT、相机、BAM 和训练门槛；
+4. 最后用[低成本舵机替换决策表](docs/低成本舵机替换决策表.md)评估更便宜的候选件，不要直接套原 ONNX。
+
 | | |
 |---|---|
 | [新手学习文档](docs/新手学习文档.md) | Hardware, circuit, structure, Radxa and first experiments for beginners. |
 | [代码解释与使用教程](docs/代码解释与使用教程.md) | 用一条真实控制链读懂 Rust workspace，并按层改参数、策略、IPC 和硬件。 |
 | [HL2915 全链路落地手册](docs/HL2915全链路落地手册.md) | Two-servo bench bring-up, Radxa/IMU/camera gates, and the retraining boundary. |
+| [HL2915 两只舵机现场验收表](docs/HL2915两只舵机现场验收表.md) | Print-ready wiring, COM-port, ID, read-only watch, CSV, and evidence checklist. |
+| [低成本舵机替换决策表](docs/低成本舵机替换决策表.md) | How to screen cheaper candidates without reusing an unsafe model or power assumption. |
+| [Microduck Studio](microduck-studio/README.md) | 本地复刻工作台：硬件档案、只读探针、证据、训练 smoke 和部署前检查。 |
 | [microduck_rl](https://github.com/pollen-robotics/microduck_rl) | Where the policies come from: MuJoCo, PPO, domain randomisation, and the ONNX export this repo loads. |
 | [How it works](docs/design/architecture.md) | The whole system on one page — the daemons, the bus, how an update reaches a robot — then a page per part. |
 | [Set up a dev board](docs/robot/install-dev.md) | From a blank board to a robot that takes branch builds. |

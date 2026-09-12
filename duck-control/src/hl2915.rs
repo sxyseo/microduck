@@ -6,6 +6,7 @@ use rustypot::DynamixelProtocolHandler;
 use rustypot::servo::feetech::sts3215::Sts3215Controller;
 use thiserror::Error;
 
+use crate::bus::StaleImuTracker;
 use crate::imu::{IMU_BLOCK_LEN, SflpDecoder};
 use crate::io::{
     ImuStale, IoError, JointTargets, Result as IoResult, RobotIo, Sensors, SlowSensors,
@@ -18,8 +19,15 @@ pub const PRESENT_STATE_ADDR: u8 = 56;
 pub const PRESENT_STATE_LEN: u8 = 8;
 pub const PRESENT_STATE_EXTENDED_LEN: u8 = 15;
 pub const POSITION_CENTER: u16 = 2048;
+/// ID reserved by this project for the protocol-v2 IMU board.
+pub const RESERVED_IMU_ID: u8 = 200;
 pub const DEFAULT_HL2915_IDS: [u8; NUM_JOINTS] =
     [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
+/// Conservative first-bring-up limits, lower than the servo's own protection settings.
+pub const BENCH_MIN_VOLTAGE_V: f32 = 9.0;
+pub const BENCH_MAX_VOLTAGE_V: f32 = 14.0;
+pub const BENCH_STOP_TEMPERATURE_C: u8 = 55;
+pub const BENCH_STOP_CURRENT_MA: f32 = 1_400.0;
 const GOAL_POSITION_ADDR: u8 = 42;
 const TORQUE_ENABLE_ADDR: u8 = 40;
 const P_GAIN_ADDR: u8 = 21;
@@ -29,21 +37,66 @@ const PRESENT_VOLTAGE_ADDR: u8 = 62;
 const IMU_ADDR: u8 = 124;
 const CURRENT_OFFSET: usize = 13;
 const CURRENT_MA_PER_COUNT: f64 = 6.5;
-const SPEED_RPM_PER_COUNT: f64 = 0.229;
+// HLS magnetic-servo memory table: present speed is 0.732 RPM per count.
+// This is deliberately not the XL330/Dynamixel 0.229 RPM tick.
+const SPEED_RPM_PER_COUNT: f64 = 0.732;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct PresentState {
     pub position_raw: u16,
     pub speed_raw: u16,
     pub load_raw: u16,
+    pub status: Option<u8>,
+    pub moving: Option<u8>,
     pub voltage_v: f32,
     pub temperature_c: u8,
+    pub current_raw: Option<u16>,
+    pub current_ma: Option<f32>,
+}
+
+/// Fault counters used by the read-only HL-2915 bench probes.
+///
+/// The limits are deliberately conservative for the first unloaded bring-up: this project gate
+/// accepts only 9–14 V, stops at 55 °C, and stops at 1.4 A. The C001 specification lists a higher
+/// internal overheat protection point and about 1.5 A stall current; the lower software limits are
+/// an early-warning gate, not a replacement for the servo's own protection. A real robot may later
+/// use measured per-joint limits, but a bench probe must not silently pass a motor already at the
+/// edge of stall.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub struct Hl2915WatchFaults {
+    pub status: u64,
+    pub voltage: u64,
+    pub temperature: u64,
+    pub current: u64,
+}
+
+impl Hl2915WatchFaults {
+    pub fn observe(&mut self, state: &PresentState) {
+        if state.status.unwrap_or_default() != 0 {
+            self.status += 1;
+        }
+        if !(BENCH_MIN_VOLTAGE_V..=BENCH_MAX_VOLTAGE_V).contains(&state.voltage_v) {
+            self.voltage += 1;
+        }
+        if state.temperature_c >= BENCH_STOP_TEMPERATURE_C {
+            self.temperature += 1;
+        }
+        if state.current_ma.unwrap_or_default() >= BENCH_STOP_CURRENT_MA {
+            self.current += 1;
+        }
+    }
+
+    pub fn any(self) -> bool {
+        self != Self::default()
+    }
 }
 
 #[derive(Debug, Error, PartialEq, Eq)]
 pub enum DecodeError {
     #[error("present state needs 8 bytes, got {0}")]
     Short(usize),
+    #[error("sync read returned {got} servo states, expected {expected}")]
+    Count { expected: usize, got: usize },
 }
 
 #[derive(Debug, Error, PartialEq, Eq)]
@@ -52,6 +105,8 @@ pub enum IdError {
     Empty,
     #[error("servo ID {0} is broadcast/reserved; use IDs 0..=253")]
     Broadcast(u8),
+    #[error("servo ID {0} is reserved for the project IMU")]
+    Reserved(u8),
     #[error("servo ID {0} appears more than once")]
     Duplicate(u8),
 }
@@ -132,10 +187,11 @@ impl FeetechCalibration {
     }
 }
 
-/// Decode the 8 bytes returned by a read starting at address 56.
+/// Decode the state bytes returned by a read starting at address 56.
 ///
-/// The protocol stores all multi-byte values little-endian:
-/// position(2), speed(2), load(2), voltage(1), temperature(1).
+/// The first 8 bytes are always present. A 15-byte read additionally supplies the status and
+/// moving flags plus the present-current register; the optional fields stay `None` for the short
+/// read so the bench decoder can be reused by a minimal device query.
 pub fn decode_present_state(data: &[u8]) -> Result<PresentState, DecodeError> {
     if data.len() < PRESENT_STATE_LEN as usize {
         return Err(DecodeError::Short(data.len()));
@@ -144,12 +200,53 @@ pub fn decode_present_state(data: &[u8]) -> Result<PresentState, DecodeError> {
         position_raw: u16::from_le_bytes([data[0], data[1]]),
         speed_raw: u16::from_le_bytes([data[2], data[3]]),
         load_raw: u16::from_le_bytes([data[4], data[5]]),
+        status: data.get(9).copied(),
+        moving: data.get(10).copied(),
         voltage_v: data[6] as f32 * 0.1,
         temperature_c: data[7],
+        current_raw: data
+            .get(CURRENT_OFFSET + 1)
+            .map(|_| u16::from_le_bytes([data[CURRENT_OFFSET], data[CURRENT_OFFSET + 1]]) & 0x7fff),
+        current_ma: data.get(CURRENT_OFFSET + 1).map(|_| {
+            f32::from(u16::from_le_bytes([data[CURRENT_OFFSET], data[CURRENT_OFFSET + 1]]) & 0x7fff)
+                * CURRENT_MA_PER_COUNT as f32
+        }),
     })
 }
 
-fn speed_to_rad_per_second(raw: u16) -> f64 {
+fn ensure_response_count(expected: usize, got: usize) -> Result<(), DecodeError> {
+    if expected == got {
+        Ok(())
+    } else {
+        Err(DecodeError::Count { expected, got })
+    }
+}
+
+/// Return a human-readable safety fault for one live actuator sample.
+///
+/// Keep the thresholds identical to [`Hl2915WatchFaults`], but return the first sample's reason
+/// so the runtime can stop immediately instead of waiting for an aggregate bench report.
+pub fn present_state_fault(state: &PresentState) -> Option<String> {
+    let mut reasons = Vec::new();
+    if let Some(status) = state.status.filter(|status| *status != 0) {
+        reasons.push(format!("status={status}"));
+    }
+    if !(BENCH_MIN_VOLTAGE_V..=BENCH_MAX_VOLTAGE_V).contains(&state.voltage_v) {
+        reasons.push(format!("voltage={:.1}V", state.voltage_v));
+    }
+    if state.temperature_c >= BENCH_STOP_TEMPERATURE_C {
+        reasons.push(format!("temperature={}C", state.temperature_c));
+    }
+    if let Some(current_ma) = state
+        .current_ma
+        .filter(|current| *current >= BENCH_STOP_CURRENT_MA)
+    {
+        reasons.push(format!("current={current_ma:.0}mA"));
+    }
+    (!reasons.is_empty()).then(|| reasons.join(", "))
+}
+
+pub fn speed_to_rad_per_second(raw: u16) -> f64 {
     let magnitude = f64::from(raw & 0x7fff) * SPEED_RPM_PER_COUNT;
     let sign = if raw & 0x8000 != 0 { -1.0 } else { 1.0 };
     sign * magnitude * 2.0 * PI / 60.0
@@ -174,6 +271,9 @@ pub fn validate_ids(ids: &[u8]) -> Result<(), IdError> {
     for &id in ids {
         if id == 254 || id == 255 {
             return Err(IdError::Broadcast(id));
+        }
+        if id == RESERVED_IMU_ID {
+            return Err(IdError::Reserved(id));
         }
         if !seen.insert(id) {
             return Err(IdError::Duplicate(id));
@@ -205,8 +305,7 @@ pub struct Hl2915RobotIo {
     imu_id: u8,
     calibration: FeetechCalibration,
     imu: SflpDecoder,
-    last_imu_block: Option<[u8; IMU_BLOCK_LEN]>,
-    stale_imu: ImuStale,
+    stale_imu: StaleImuTracker,
 }
 
 impl Hl2915RobotIo {
@@ -248,8 +347,7 @@ impl Hl2915RobotIo {
             imu_id,
             calibration,
             imu: SflpDecoder::default(),
-            last_imu_block: None,
-            stale_imu: ImuStale::default(),
+            stale_imu: StaleImuTracker::default(),
         })
     }
 
@@ -356,12 +454,7 @@ impl RobotIo for Hl2915RobotIo {
         }
         let mut raw_imu = [0u8; IMU_BLOCK_LEN];
         raw_imu.copy_from_slice(imu_block);
-        if self.last_imu_block.replace(raw_imu) == Some(raw_imu) {
-            self.stale_imu.total = self.stale_imu.total.saturating_add(1);
-            self.stale_imu.run = self.stale_imu.run.saturating_add(1);
-        } else {
-            self.stale_imu.run = 0;
-        }
+        self.stale_imu.observe(&raw_imu);
 
         let blocks = self
             .v1
@@ -392,13 +485,17 @@ impl RobotIo for Hl2915RobotIo {
                     got: block.len(),
                 });
             }
-            let position = u16::from_le_bytes([block[0], block[1]]);
-            let speed = u16::from_le_bytes([block[2], block[3]]);
-            let current =
-                u16::from_le_bytes([block[CURRENT_OFFSET], block[CURRENT_OFFSET + 1]]) & 0x7fff;
-            sensors.positions[joint] = self.calibration.raw_to_radians(joint, position);
-            sensors.velocities[joint] = speed_to_rad_per_second(speed);
-            sensors.currents_ma[joint] = f64::from(current) * CURRENT_MA_PER_COUNT;
+            let state = decode_present_state(block)
+                .map_err(|e| IoError::Bus(format!("decode HL-2915 joint {joint}: {e}")))?;
+            if let Some(reason) = present_state_fault(&state) {
+                return Err(IoError::ActuatorFault(format!(
+                    "HL-2915 joint {joint}: {reason}"
+                )));
+            }
+            sensors.positions[joint] = self.calibration.raw_to_radians(joint, state.position_raw);
+            sensors.velocities[joint] = speed_to_rad_per_second(state.speed_raw);
+            sensors.currents_ma[joint] =
+                f64::from(state.current_raw.unwrap_or_default()) * CURRENT_MA_PER_COUNT;
         }
         Ok(sensors)
     }
@@ -472,7 +569,7 @@ impl RobotIo for Hl2915RobotIo {
     }
 
     fn imu_stale(&self) -> ImuStale {
-        self.stale_imu
+        self.stale_imu.stale()
     }
 
     fn imu_ready(&self) -> bool {
@@ -514,9 +611,13 @@ impl Hl2915Bus {
     }
 
     pub fn read_states(&mut self) -> Result<Vec<PresentState>, Box<dyn std::error::Error>> {
-        let blocks =
-            self.controller
-                .sync_read_raw_data(&self.ids, PRESENT_STATE_ADDR, PRESENT_STATE_LEN)?;
+        let blocks = self.controller.sync_read_raw_data(
+            &self.ids,
+            PRESENT_STATE_ADDR,
+            PRESENT_STATE_EXTENDED_LEN,
+        )?;
+        ensure_response_count(self.ids.len(), blocks.len())
+            .map_err(|error| Box::new(error) as Box<dyn std::error::Error>)?;
         blocks
             .iter()
             .map(|block| decode_present_state(block).map_err(|e| Box::new(e) as _))
@@ -526,6 +627,16 @@ impl Hl2915Bus {
     pub fn set_torque(&mut self, on: bool) -> Result<(), Box<dyn std::error::Error>> {
         self.controller
             .sync_write_torque_enable(&self.ids, &vec![on; self.ids.len()])?;
+        Ok(())
+    }
+
+    pub fn set_pid_gains(&mut self, p: u8, i: u8, d: u8) -> Result<(), Box<dyn std::error::Error>> {
+        self.controller
+            .sync_write_p_coefficient(&self.ids, &vec![p; self.ids.len()])?;
+        self.controller
+            .sync_write_i_coefficient(&self.ids, &vec![i; self.ids.len()])?;
+        self.controller
+            .sync_write_d_coefficient(&self.ids, &vec![d; self.ids.len()])?;
         Ok(())
     }
 
@@ -562,19 +673,42 @@ mod tests {
     use super::*;
 
     #[test]
-    fn decodes_the_eight_byte_present_state_block() {
-        let state = decode_present_state(&[0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x79, 0x1e])
-            .expect("valid state block");
+    fn decodes_the_extended_present_state_block() {
+        let state = decode_present_state(&[
+            0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x79, 0x1e, 0, 0, 0, 0, 0, 0x0a, 0x00,
+        ])
+        .expect("valid state block");
         assert_eq!(state.position_raw, 2048);
         assert_eq!(state.speed_raw, 0);
         assert_eq!(state.load_raw, 0);
+        assert_eq!(state.status, Some(0));
+        assert_eq!(state.moving, Some(0));
         assert!((state.voltage_v - 12.1).abs() < f32::EPSILON);
         assert_eq!(state.temperature_c, 30);
+        assert_eq!(state.current_raw, Some(10));
+        assert_eq!(state.current_ma, Some(65.0));
+    }
+
+    #[test]
+    fn short_present_state_keeps_optional_fields_absent() {
+        let state = decode_present_state(&[0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x79, 0x1e])
+            .expect("valid short state block");
+        assert_eq!(state.position_raw, 2048);
+        assert_eq!(state.status, None);
+        assert_eq!(state.moving, None);
+        assert_eq!(state.current_raw, None);
+        assert_eq!(state.current_ma, None);
     }
 
     #[test]
     fn rejects_short_state_blocks() {
         assert!(decode_present_state(&[0; 7]).is_err());
+    }
+
+    #[test]
+    fn rejects_partial_sync_read_responses() {
+        assert!(ensure_response_count(2, 1).is_err());
+        assert!(ensure_response_count(2, 2).is_ok());
     }
 
     #[test]
@@ -594,6 +728,10 @@ mod tests {
         assert!(validate_ids(&[1, 2]).is_ok());
         assert!(validate_ids(&[1, 1]).is_err());
         assert!(validate_ids(&[1, 254]).is_err());
+        assert!(matches!(
+            validate_ids(&[RESERVED_IMU_ID]),
+            Err(IdError::Reserved(200))
+        ));
     }
 
     #[test]
@@ -616,5 +754,72 @@ mod tests {
             calibration.validate(),
             Err(CalibrationError::Direction(0))
         ));
+    }
+
+    #[test]
+    fn hls_speed_uses_feetech_scale_and_sign_bit() {
+        let one_count = speed_to_rad_per_second(1);
+        let reverse = speed_to_rad_per_second(0x8001);
+        let expected = 0.732 * 2.0 * PI / 60.0;
+        assert!((one_count - expected).abs() < 1e-12);
+        assert!((reverse + expected).abs() < 1e-12);
+    }
+
+    #[test]
+    fn watch_health_counts_each_motor_fault_category() {
+        let mut faults = Hl2915WatchFaults::default();
+        faults.observe(&PresentState {
+            position_raw: 2048,
+            speed_raw: 0,
+            load_raw: 0,
+            status: Some(4),
+            moving: Some(0),
+            voltage_v: 8.9,
+            temperature_c: 55,
+            current_raw: Some(216),
+            current_ma: Some(1_404.0),
+        });
+
+        assert_eq!(faults.status, 1);
+        assert_eq!(faults.voltage, 1);
+        assert_eq!(faults.temperature, 1);
+        assert_eq!(faults.current, 1);
+        assert!(faults.any());
+    }
+
+    #[test]
+    fn present_state_fault_matches_bench_stop_thresholds() {
+        let state = PresentState {
+            position_raw: 2048,
+            speed_raw: 0,
+            load_raw: 0,
+            status: Some(2),
+            moving: Some(0),
+            voltage_v: 8.9,
+            temperature_c: 55,
+            current_raw: Some(216),
+            current_ma: Some(1_404.0),
+        };
+        let reason = present_state_fault(&state).expect("fault must be reported");
+        assert!(reason.contains("status=2"));
+        assert!(reason.contains("voltage=8.9V"));
+        assert!(reason.contains("temperature=55C"));
+        assert!(reason.contains("current=1404mA"));
+    }
+
+    #[test]
+    fn present_state_fault_accepts_a_nominal_sample() {
+        let state = PresentState {
+            position_raw: 2048,
+            speed_raw: 0,
+            load_raw: 0,
+            status: Some(0),
+            moving: Some(0),
+            voltage_v: 12.0,
+            temperature_c: 30,
+            current_raw: Some(10),
+            current_ma: Some(65.0),
+        };
+        assert!(present_state_fault(&state).is_none());
     }
 }

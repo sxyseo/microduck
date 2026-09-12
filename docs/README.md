@@ -14,6 +14,10 @@ docs give the reasoning and point at it.
 | [`新手学习文档.md`](新手学习文档.md) | 面向硬件、电路、机械零基础的学习顺序、设备分工、读图和上电安全。 |
 | [`代码解释与使用教程.md`](代码解释与使用教程.md) | 从 `robotd` 控制链和 Rust workspace 地图入手，说明如何运行、阅读和改造代码。 |
 | [`HL2915全链路落地手册.md`](HL2915全链路落地手册.md) | HL-2915-C001 从两只台架、Radxa、IMU/HAT、相机到重训的验收门槛。 |
+| [`HL2915两只舵机现场验收表.md`](HL2915两只舵机现场验收表.md) | 打印后逐项勾选的接线、ID、读数、动作和证据记录表。 |
+| [`Microduck Studio`](../microduck-studio/README.md) | 本地复刻工作台：硬件档案、只读探针、证据、训练 smoke 和部署前检查。 |
+| [`低成本舵机替换决策表.md`](低成本舵机替换决策表.md) | 完成 HL-2915 基线后，如何评估更便宜舵机的替换风险。 |
+| [`BAM与URDF全流程小白教程.md`](BAM与URDF全流程小白教程.md) | 从关节命名、URDF、采集、BAM 处理到训练的入门路线。 |
 | [`cheatsheet.md`](robot/cheatsheet.md) | Every `robotctl` command. |
 | [`pair-a-gamepad.md`](robot/pair-a-gamepad.md) | Once per pad: pairing mode, `pad pair`, and what to do when it will not bond. |
 | [`cheatsheet-dev.md`](robot/cheatsheet-dev.md) | The commands that need a dev board: branch builds, candidates, dev pushes. |

@@ -29,6 +29,16 @@ Nothing media-related is installed on a provisioned board. `scripts/setup-gstrea
 it and reports what the hardware can do; that script is the executable form of this page, and it
 is where a command someone needs again should end up.
 
+已装好系统后只想查看状态时，不要重复执行安装流程。直接运行只读检查：
+
+```bash
+sh scripts/setup-gstreamer.sh --check
+```
+
+`--check` 不调用 `apt`、不下载插件、不写 udev、不重启；它只报告内核分支、
+`/dev/mpp_service`、`/dev/video*`、`mpph264enc`、`webrtcbin` 和 `webrtcsink`。
+它还会拒绝低于 `1.22` 的 GStreamer；例如 WSL Ubuntu 22.04 的 `1.20` 不能作为 Radxa 媒体链路通过证据。
+
 GStreamer comes from **plain Debian trixie** — `apt-cache policy` shows `deb.debian.org` and
 `security.debian.org` with no Armbian multimedia overlay, so the archive's versions apply
 exactly:

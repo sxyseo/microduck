@@ -1,11 +1,11 @@
 use std::error::Error;
 use std::time::{Duration, Instant};
 
-use duck_control::hl2915::{Hl2915Bus, POSITION_CENTER};
+use duck_control::hl2915::{Hl2915Bus, Hl2915WatchFaults, POSITION_CENTER};
 
 fn usage() {
     eprintln!(
-        "用法:\n  cargo run -p duck-control --bin hl2915_probe -- <串口> [ID ...] [选项]\n\n默认只 Ping + 读取，不会让舵机运动。\n选项:\n  --set-id 新ID       只接一只舵机时修改 ID\n  --move-center       显式回中，必须先确认机械安全\n  --watch-seconds 秒  连续只读，检查丢包/电压/温度\n示例:\n  ... COM3 1\n  ... COM3 1 --set-id 2     (总线上只能接这一只舵机)\n  ... COM3 1 2               (两只 ID 已分别设置为 1、2)\n  ... COM3 1 2 --watch-seconds 60\n  ... COM3 1 2 --move-center  (确认机械安全后才使用)"
+        "用法:\n  cargo run -p duck-control --bin hl2915_probe -- <串口> [ID ...] [选项]\n\n默认只 Ping + 读取，不会让舵机运动。\n选项:\n  --set-id 新ID       只接一只舵机时修改 ID\n  --move-center       显式回中，必须先确认机械安全\n  --watch-seconds 秒  连续只读，检查丢包/故障状态/电压/温度/电流\n示例:\n  ... COM3 1\n  ... COM3 1 --set-id 2     (总线上只能接这一只舵机)\n  ... COM3 1 2               (两只 ID 已分别设置为 1、2)\n  ... COM3 1 2 --watch-seconds 60\n  ... COM3 1 2 --move-center  (确认机械安全后才使用)"
     );
 }
 
@@ -81,7 +81,12 @@ fn main() -> Result<(), Box<dyn Error>> {
             Ok::<_, Box<dyn Error>>(())
         })();
         let torque_off = bus.set_torque(false);
-        result?;
+        if let Err(error) = result {
+            if let Err(off_error) = torque_off {
+                eprintln!("回中失败后关闭扭矩也失败：{off_error}");
+            }
+            return Err(error);
+        }
         torque_off?;
     }
 
@@ -89,6 +94,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         let deadline = Instant::now() + Duration::from_secs(seconds);
         let mut samples = 0u64;
         let mut errors = 0u64;
+        let mut faults = Hl2915WatchFaults::default();
         let mut min_voltage = f32::INFINITY;
         let mut max_temperature = f32::NEG_INFINITY;
         while Instant::now() < deadline {
@@ -96,6 +102,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 Ok(states) => {
                     samples += 1;
                     for state in states {
+                        faults.observe(&state);
                         min_voltage = min_voltage.min(state.voltage_v);
                         max_temperature = max_temperature.max(state.temperature_c as f32);
                     }
@@ -113,10 +120,18 @@ fn main() -> Result<(), Box<dyn Error>> {
             std::thread::sleep(Duration::from_millis(100));
         }
         println!(
-            "watch complete: samples={samples}, errors={errors}, min_voltage={min_voltage:.1}V, max_temperature={max_temperature:.0}°C"
+            "watch complete: samples={samples}, errors={errors}, status_faults={}, voltage_faults={}, temperature_faults={}, current_faults={}, min_voltage={min_voltage:.1}V, max_temperature={max_temperature:.0}°C",
+            faults.status, faults.voltage, faults.temperature, faults.current
         );
         if errors > 0 {
             return Err(format!("连续只读期间出现 {errors} 次通信错误").into());
+        }
+        if faults.any() {
+            return Err(format!(
+                "连续只读期间发现舵机异常：status={}, voltage={}, temperature={}, current={}",
+                faults.status, faults.voltage, faults.temperature, faults.current
+            )
+            .into());
         }
         return Ok(());
     }
@@ -124,11 +139,20 @@ fn main() -> Result<(), Box<dyn Error>> {
     let states = bus.read_states()?;
     for (id, state) in ids.iter().zip(states) {
         println!(
-            "ID {id}: position={} ({:.2}°), speed_raw={}, load_raw={}, voltage={:.1}V, temp={}°C",
+            "ID {id}: position={} ({:.2}°), speed_raw={}, load_raw={}, status={}, moving={}, current={}, voltage={:.1}V, temp={}°C",
             state.position_raw,
             duck_control::hl2915::raw_to_degrees(state.position_raw),
             state.speed_raw,
             state.load_raw,
+            state
+                .status
+                .map_or_else(|| "n/a".to_owned(), |value| value.to_string()),
+            state
+                .moving
+                .map_or_else(|| "n/a".to_owned(), |value| value.to_string()),
+            state
+                .current_ma
+                .map_or_else(|| "n/a".to_owned(), |current| format!("{current:.1}mA")),
             state.voltage_v,
             state.temperature_c
         );

@@ -310,7 +310,7 @@ fn error_line(id: Option<proto::Id>, error: proto::Error) -> String {
     serde_json::to_string(&proto::Response::err(id, error)).expect("Response serialises")
 }
 
-#[cfg(test)]
+#[cfg(all(test, unix))]
 mod tests {
     use super::*;
     use crate::upstream::Sockets;
