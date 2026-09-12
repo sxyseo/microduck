@@ -24,6 +24,7 @@ RULE_VERSIONS = {
     "continuous_test": "continuous-test-v1",
     "probe_process": "probe-process-v2",
     "training_smoke": "training-smoke-v1",
+    "training": "training-v1",
     "tensorboard_summary": "tensorboard-summary-v1",
     "controller_health": "controller-health-v1",
     "compatibility": "compatibility-v2",
@@ -38,6 +39,7 @@ EVIDENCE_SCOPES = {
     "deployment_preflight": "local_software",
     "support_bundle": "local_software",
     "training_smoke": "training_or_simulation",
+    "training": "training_or_simulation",
     "tensorboard_summary": "training_or_simulation",
     "bench_continuous": "bench_evidence",
     "continuous_test": "bench_evidence",
@@ -55,6 +57,7 @@ RUN_TASKS = {
     "hl2915_read_only_probe": "servo_read",
     "hl2915_bam_record": "identification",
     "training_smoke": "smoke",
+    "training": "training",
     "deployment_preflight": "deployment_preflight",
     "deployment": "deployment",
     "hardware_acceptance": "acceptance",
@@ -89,6 +92,19 @@ VISIBLE_METRICS = {
     "loss",
     "episode_length",
     "throughput",
+}
+TRAINING_RECIPES = {
+    "walk": {
+        "task": "Mjlab-Velocity-Flat-MicroDuck",
+        "defaults": {
+            "num_envs": 4096,
+            "steps_per_env": 24,
+            "max_iterations": 3000,
+            "gpu_ids": "[0]",
+            "seed": 42,
+            "run_name": "studio-walk",
+        },
+    },
 }
 
 
@@ -465,6 +481,8 @@ _PROBE_FAULT_SUMMARY = re.compile(
 _SSH_HOST = re.compile(r"[A-Za-z0-9_.:\-\[\]]{1,255}")
 _SSH_USER = re.compile(r"[A-Za-z0-9_.-]{1,64}")
 _EXECUTION_NAME = re.compile(r"[A-Za-z0-9_.-]{1,64}")
+_GPU_IDS = re.compile(r"(?:None|\[(?:\d+(?:,\s*\d+)*)?\])")
+_RUN_NAME = re.compile(r"[A-Za-z0-9_.-]{1,80}")
 _REMOTE_POLICY_PATH = re.compile(r"/(?:[A-Za-z0-9_.-]+/)*[A-Za-z0-9_.-]+")
 _PROBE_RUN_LOCK = threading.Lock()
 _ACTIVE_PROCESS_LOCK = threading.Lock()
@@ -517,6 +535,11 @@ def validate_project_settings(data: dict[str, Any]) -> dict[str, Any]:
         if not isinstance(distro, str) or not _EXECUTION_NAME.fullmatch(distro):
             raise ValueError("WSL distro is invalid")
         normalized_target["distro"] = distro
+        path = target.get("path")
+        if path is not None:
+            if not isinstance(path, str) or not path.startswith("/") or any(char in path for char in "\r\n\0"):
+                raise ValueError("WSL training path is invalid")
+            normalized_target["path"] = path
     if target["kind"] == "ssh":
         host = target.get("host")
         user = target.get("user", "rock")
@@ -533,6 +556,40 @@ def validate_project_settings(data: dict[str, Any]) -> dict[str, Any]:
         "alert_thresholds": {key: float(value) for key, value in thresholds.items()},
         "execution_target": normalized_target,
     }
+
+
+def training_recipes() -> list[dict[str, Any]]:
+    return [
+        {"id": name, "task": recipe["task"], "defaults": dict(recipe["defaults"])}
+        for name, recipe in TRAINING_RECIPES.items()
+    ]
+
+
+def validate_training_parameters(recipe_id: str, parameters: dict[str, Any]) -> dict[str, Any]:
+    recipe = TRAINING_RECIPES.get(recipe_id)
+    if not recipe:
+        raise ValueError("unknown training recipe")
+    if not isinstance(parameters, dict):
+        raise ValueError("training parameters must be an object")
+    defaults = dict(recipe["defaults"])
+    unknown = set(parameters) - set(defaults)
+    if unknown:
+        raise ValueError(f"unknown training parameter: {sorted(unknown)[0]}")
+    config = {**defaults, **parameters}
+    for key, lower, upper in (
+        ("num_envs", 1, 16384),
+        ("steps_per_env", 1, 4096),
+        ("max_iterations", 1, 50000),
+        ("seed", 0, 2_147_483_647),
+    ):
+        value = config[key]
+        if isinstance(value, bool) or not isinstance(value, int) or not lower <= value <= upper:
+            raise ValueError(f"training parameter {key} is invalid")
+    if not isinstance(config["gpu_ids"], str) or not _GPU_IDS.fullmatch(config["gpu_ids"]):
+        raise ValueError("training parameter gpu_ids is invalid")
+    if not isinstance(config["run_name"], str) or not _RUN_NAME.fullmatch(config["run_name"]):
+        raise ValueError("training parameter run_name is invalid")
+    return config
 
 
 def _terminate_active_processes() -> None:
@@ -1522,6 +1579,7 @@ TASKS = (
     ("calibration", "标定记录确认", ("hardware", "servo_read"), "blocked"),
     ("identification", "执行器辨识", ("hardware", "servo_read"), "blocked"),
     ("smoke", "训练 smoke test", ("preflight", "hardware"), "blocked"),
+    ("training", "模型训练与续训", ("smoke",), "blocked"),
     ("deployment_preflight", "部署前兼容性预检", ("hardware", "preflight", "smoke"), "blocked"),
     ("deployment", "部署策略与健康检查", ("deployment_preflight", "assembly", "calibration"), "blocked"),
     ("acceptance", "逐级实机验收", ("deployment",), "blocked"),
@@ -1630,6 +1688,19 @@ TASK_CARDS = {
         "acceptance": "命令成功且日志无 NaN、观测/动作维度错误",
         "failure_handling": "保留日志和运行 ID，可取消；不把 smoke 通过当作学会行走",
         "outputs": ["training_smoke_run", "training_logs", "onnx_contract_artifact", "onnx_external_hash"],
+        "risk": "writes_training_checkout",
+        "read_only": False,
+    },
+    "training": {
+        "preconditions": ["训练 smoke 已通过", "训练 checkout 与执行目标可用"],
+        "estimated_minutes": 180,
+        "tools": ["Linux/macOS/WSL2", "训练 checkout", "uv", "GPU（长训练）"],
+        "steps": ["选择受控配方", "核对生效参数和来源", "确认后运行", "检查 checkpoint 与指标", "按需显式续训"],
+        "operation_scope": "运行工作台内置训练配方；续训只加载明确且已校验的 checkpoint",
+        "evidence_required": ["代码和硬件契约", "生效参数", "训练日志", "checkpoint SHA-256", "父运行血缘"],
+        "acceptance": "训练进程成功且至少产生一个本次新 checkpoint",
+        "failure_handling": "保留日志和完整 checkpoint；中止后不自动续跑或部署",
+        "outputs": ["training_run", "checkpoint_hashes", "training_provenance"],
         "risk": "writes_training_checkout",
         "read_only": False,
     },
@@ -1970,16 +2041,16 @@ class StudioStore:
             if hardware_changed:
                 if physical_changed:
                     invalidated_tasks.update(
-                        {"controller_read", "servo_read", "assembly", "calibration", "identification", "smoke", "deployment_preflight", "deployment", "report"}
+                        {"controller_read", "servo_read", "assembly", "calibration", "identification", "smoke", "training", "deployment_preflight", "deployment", "report"}
                     )
                 else:
                     if previous_map.get("runtime") != data.get("runtime"):
                         invalidated_tasks.update({"controller_read", "deployment_preflight", "deployment", "report"})
                     if previous_map.get("training") != data.get("training"):
-                        invalidated_tasks.update({"smoke", "deployment_preflight", "deployment", "report"})
+                        invalidated_tasks.update({"smoke", "training", "deployment_preflight", "deployment", "report"})
                     if not invalidated_tasks:
                         invalidated_tasks.update(
-                            {"controller_read", "servo_read", "assembly", "calibration", "identification", "smoke", "deployment_preflight", "deployment", "report"}
+                            {"controller_read", "servo_read", "assembly", "calibration", "identification", "smoke", "training", "deployment_preflight", "deployment", "report"}
                         )
             conn.execute(
                 "INSERT INTO hardware_profiles VALUES (?, ?, ?, ?, ?)",
@@ -1998,6 +2069,165 @@ class StudioStore:
                 )
         self._refresh_task_statuses(project_id)
         return _with_schema(profile)
+
+    def build_training_plan(
+        self,
+        project_id: str,
+        training_dir: Path | str,
+        recipe: str,
+        parameters: dict[str, Any],
+        *,
+        target: dict[str, Any],
+        parent_run_id: str | None = None,
+        checkpoint: Path | str | None = None,
+    ) -> dict[str, Any]:
+        project = self.get_project(project_id)
+        if not project:
+            raise KeyError(project_id)
+        checkout = Path(training_dir).resolve()
+        if not checkout.is_dir():
+            raise ValueError("training checkout missing")
+        config = validate_training_parameters(recipe, parameters)
+        normalized_target = validate_project_settings({"execution_target": target})["execution_target"]
+        with self._connect() as conn:
+            hardware = conn.execute(
+                "SELECT id, data FROM hardware_profiles WHERE project_id = ? AND status = 'confirmed' "
+                "ORDER BY updated_at DESC LIMIT 1",
+                (project_id,),
+            ).fetchone()
+            preflight = conn.execute(
+                "SELECT status FROM tasks WHERE project_id = ? AND id = 'preflight'",
+                (project_id,),
+            ).fetchone()
+            smoke = conn.execute(
+                "SELECT status FROM tasks WHERE project_id = ? AND id = 'smoke'",
+                (project_id,),
+            ).fetchone()
+        if not hardware:
+            raise ValueError("hardware confirmation required")
+        if not preflight or preflight["status"] != "success":
+            raise ValueError("successful preflight required")
+        if not smoke or smoke["status"] != "success":
+            raise ValueError("successful training smoke required")
+        hardware_data = _loads(hardware["data"])
+        servos = hardware_data.get("servos") if isinstance(hardware_data.get("servos"), dict) else {}
+        training_contract = {
+            "task": TRAINING_RECIPES[recipe]["task"],
+            "servo_model": servos.get("model"),
+            "obs_len": 61,
+            "action_len": 14,
+            "control_hz": hardware_data.get("control_hz", 50),
+        }
+        target_kind = normalized_target["kind"]
+        if target_kind == "local":
+            uv = shutil.which("uv")
+            if not uv:
+                raise ValueError("uv executable not found")
+        else:
+            uv = "uv"
+        train_command = [
+            uv,
+            "run",
+            "train",
+            training_contract["task"],
+            "--gpu-ids",
+            config["gpu_ids"],
+            "--env.scene.num-envs",
+            str(config["num_envs"]),
+            "--agent.num-steps-per-env",
+            str(config["steps_per_env"]),
+            "--agent.max-iterations",
+            str(config["max_iterations"]),
+            "--agent.seed",
+            str(config["seed"]),
+            "--agent.logger",
+            "tensorboard",
+            "--agent.upload-model",
+            "False",
+            "--agent.run-name",
+            config["run_name"],
+        ]
+        resume_checkpoint: dict[str, Any] | None = None
+        if (parent_run_id is None) != (checkpoint is None):
+            raise ValueError("resume requires both parent run and checkpoint")
+        if parent_run_id is not None and checkpoint is not None:
+            parent = self.get_run(parent_run_id)
+            if (
+                parent["project_id"] != project_id
+                or parent["kind"] != "training"
+                or parent["status"] not in RUN_TERMINAL_STATUSES
+            ):
+                raise ValueError("resume parent run is invalid")
+            if parent["result"].get("training_contract") != training_contract:
+                raise ValueError("resume training contract does not match")
+            checkpoint_path = Path(checkpoint).resolve()
+            if (
+                checkpoint_path.suffix != ".pt"
+                or not checkpoint_path.is_file()
+                or not checkpoint_path.is_relative_to(checkout)
+            ):
+                raise ValueError("resume checkpoint is invalid")
+            digest, size = _file_sha256(checkpoint_path)
+            parent_outputs = parent["result"].get("training_outputs", {})
+            parent_checkpoints = parent_outputs.get("checkpoints", []) if isinstance(parent_outputs, dict) else []
+            if not any(
+                isinstance(item, dict)
+                and Path(str(item.get("path", ""))).resolve() == checkpoint_path
+                and item.get("sha256") == digest
+                for item in parent_checkpoints
+            ):
+                raise ValueError("resume checkpoint is not verified by parent run")
+            resume_checkpoint = {"path": str(checkpoint_path), "sha256": digest, "size": size}
+            train_command.extend([
+                "--agent.resume",
+                "True",
+                "--agent.load-run",
+                f"^{re.escape(checkpoint_path.parent.name)}$",
+                "--agent.load-checkpoint",
+                f"^{re.escape(checkpoint_path.name)}$",
+            ])
+        if target_kind == "local":
+            command = train_command
+            execution_supported = platform_module.system() in {"Linux", "Darwin"}
+            execution_note = None if execution_supported else "本机训练执行需要 Linux/macOS；Windows 请选择 WSL2。"
+        elif target_kind == "wsl":
+            wsl = shutil.which("wsl")
+            wsl_path = normalized_target.get("path")
+            if not wsl_path:
+                raise ValueError("WSL training path is required")
+            command = [wsl or "wsl", "-d", normalized_target["distro"], "--cd", wsl_path, "--", *train_command]
+            execution_supported = platform_module.system() == "Windows" and bool(wsl)
+            execution_note = None if execution_supported else "WSL2 executable is unavailable on this host."
+        else:
+            command = train_command
+            execution_supported = False
+            execution_note = "远程 GPU 当前仅保存配置；执行需先完成远程状态与 checkpoint 校验。"
+        log_root = checkout / "logs" / "rsl_rl" / "velocity"
+        candidates = list(log_root.rglob("model_*.pt")) + list(log_root.rglob("*.onnx")) if log_root.is_dir() else []
+        output_baseline = {str(path): _file_signature(path) for path in candidates}
+        return {
+            "kind": "training",
+            "recipe": recipe,
+            "uv": uv,
+            "mutates": True,
+            "hardware_profile_id": hardware["id"],
+            "cwd": str(checkout),
+            "training_dir": str(checkout),
+            "command": command,
+            "timeout_s": 604800,
+            "target": normalized_target,
+            "execution_supported": execution_supported,
+            "execution_note": execution_note,
+            "effective_config": config,
+            "training_contract": training_contract,
+            "training_outputs": {"log_root": str(log_root)},
+            "output_baseline": output_baseline,
+            "training_provenance": {
+                "source": capture_git_snapshot(checkout),
+                "parent_run_id": parent_run_id,
+                "checkpoint": resume_checkpoint,
+            },
+        }
 
     def build_training_smoke_plan(
         self, project_id: str, training_dir: Path | str
@@ -2627,19 +2857,21 @@ class StudioStore:
         ).start()
         return {**run, "status": "running", "result": initial}
 
-    def _start_training_run(self, project_id: str) -> dict[str, Any]:
+    def _start_training_run(self, project_id: str, kind: str = "training_smoke") -> dict[str, Any]:
+        if kind not in {"training_smoke", "training"}:
+            raise ValueError("invalid training run kind")
         with _TRAINING_RUN_LOCK:
             with self._connect() as conn:
                 conn.execute("BEGIN IMMEDIATE")
                 active = conn.execute(
-                    "SELECT id FROM runs WHERE kind = 'training_smoke' AND status = 'running' LIMIT 1"
+                    "SELECT id FROM runs WHERE kind IN ('training_smoke', 'training') AND status = 'running' LIMIT 1"
                 ).fetchone()
                 if active:
-                    raise RuntimeError("a training smoke run is already running")
+                    raise RuntimeError("a training run is already running")
                 run = {
                     "id": uuid.uuid4().hex,
                     "project_id": project_id,
-                    "kind": "training_smoke",
+                    "kind": kind,
                     "status": "running",
                     "started_at": _now(),
                     "ended_at": None,
@@ -2650,6 +2882,191 @@ class StudioStore:
                     (run["id"], project_id, run["kind"], run["status"], run["started_at"], None, _json({})),
                 )
                 return run
+
+    def start_training(
+        self,
+        project_id: str,
+        training_dir: Path | str,
+        recipe: str,
+        parameters: dict[str, Any],
+        *,
+        target: dict[str, Any],
+        confirm: bool,
+        parent_run_id: str | None = None,
+        checkpoint: Path | str | None = None,
+    ) -> dict[str, Any]:
+        if not confirm:
+            raise PermissionError("explicit confirmation required")
+        plan = self.build_training_plan(
+            project_id,
+            training_dir,
+            recipe,
+            parameters,
+            target=target,
+            parent_run_id=parent_run_id,
+            checkpoint=checkpoint,
+        )
+        if not plan["execution_supported"]:
+            raise ValueError(plan["execution_note"])
+        run = self._start_training_run(project_id, "training")
+        self.set_task_status(project_id, "training", "running")
+        initial = {
+            key: plan[key]
+            for key in (
+                "recipe",
+                "command",
+                "cwd",
+                "training_dir",
+                "hardware_profile_id",
+                "mutates",
+                "target",
+                "effective_config",
+                "training_contract",
+                "training_outputs",
+                "output_baseline",
+                "training_provenance",
+                "execution_supported",
+                "execution_note",
+            )
+        }
+        initial["status"] = "running"
+        self.update_run_result(run["id"], initial)
+        started = time.monotonic()
+        try:
+            process = subprocess.Popen(
+                plan["command"],
+                cwd=plan["cwd"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                shell=False,
+                start_new_session=True,
+            )
+        except OSError as exc:
+            result = evaluate_training_smoke(
+                returncode=None,
+                timed_out=False,
+                stdout="",
+                stderr=str(exc),
+                duration_s=time.monotonic() - started,
+            )
+            result["rule_version"] = RULE_VERSIONS["training"]
+            result.update({key: value for key, value in initial.items() if key != "status"})
+            self.finish_run(run["id"], result["status"], result)
+            self._set_hardware_bound_task_status(
+                project_id,
+                "training",
+                task_status_for_result(result["status"]),
+                plan["hardware_profile_id"],
+            )
+            return {**run, "status": result["status"], "result": result}
+        with _ACTIVE_PROCESS_LOCK:
+            _ACTIVE_PROCESSES[run["id"]] = process
+        threading.Thread(
+            target=self._collect_training,
+            args=(run, process, plan, started),
+            daemon=True,
+        ).start()
+        return {**run, "status": "running", "result": initial}
+
+    def _collect_training(
+        self,
+        run: dict[str, Any],
+        process: subprocess.Popen,
+        plan: dict[str, Any],
+        started: float,
+    ) -> None:
+        timed_out = False
+        stdout: Any = ""
+        stderr: Any = ""
+        try:
+            try:
+                stdout, stderr = process.communicate(timeout=plan["timeout_s"])
+            except subprocess.TimeoutExpired:
+                timed_out = True
+                _stop_process(process, force=True)
+                stdout, stderr = process.communicate()
+            result = evaluate_training_smoke(
+                returncode=process.returncode,
+                timed_out=timed_out,
+                stdout=stdout,
+                stderr=stderr,
+                duration_s=time.monotonic() - started,
+            )
+            result["rule_version"] = RULE_VERSIONS["training"]
+            with _ACTIVE_PROCESS_LOCK:
+                cancelled = run["id"] in _CANCELLED_RUNS
+            if cancelled:
+                result["status"] = "interrupted"
+                result["reasons"] = [reason for reason in result["reasons"] if reason != "process_exit"]
+                result["reasons"].append("cancelled")
+            log_root = Path(plan["training_outputs"]["log_root"])
+            baseline = plan["output_baseline"]
+            candidates = list(log_root.rglob("model_*.pt")) + list(log_root.rglob("*.onnx")) if log_root.is_dir() else []
+            fresh = [path for path in sorted(candidates) if _file_signature(path) != baseline.get(str(path))]
+
+            def describe(path: Path) -> dict[str, Any]:
+                digest, size = _file_sha256(path)
+                return {"path": str(path), "sha256": digest, "size": size}
+
+            outputs = {
+                "log_root": str(log_root),
+                "checkpoints": [describe(path) for path in fresh if path.suffix == ".pt"],
+                "onnx": [describe(path) for path in fresh if path.suffix == ".onnx"],
+            }
+            if result["status"] == "passed" and not outputs["checkpoints"]:
+                result["status"] = "insufficient_evidence"
+                result["reasons"].append("training_checkpoint_missing")
+            result.update({
+                "recipe": plan["recipe"],
+                "command": plan["command"],
+                "cwd": plan["cwd"],
+                "training_dir": plan["training_dir"],
+                "hardware_profile_id": plan["hardware_profile_id"],
+                "mutates": True,
+                "target": plan["target"],
+                "effective_config": plan["effective_config"],
+                "training_contract": plan["training_contract"],
+                "training_outputs": outputs,
+                "output_baseline": plan["output_baseline"],
+                "training_provenance": plan["training_provenance"],
+                "execution_supported": plan["execution_supported"],
+                "execution_note": plan["execution_note"],
+            })
+        except Exception as exc:
+            result = {
+                "status": "failed",
+                "returncode": process.poll(),
+                "timed_out": False,
+                "duration_s": time.monotonic() - started,
+                "stdout": _output_text(stdout),
+                "stderr": f"{_output_text(stderr)}\n{exc}".strip(),
+                "reasons": ["collector_error"],
+                "rule_version": RULE_VERSIONS["training"],
+                "recipe": plan["recipe"],
+                "command": plan["command"],
+                "cwd": plan["cwd"],
+                "training_dir": plan["training_dir"],
+                "hardware_profile_id": plan["hardware_profile_id"],
+                "mutates": True,
+                "target": plan["target"],
+                "effective_config": plan["effective_config"],
+                "training_contract": plan["training_contract"],
+                "training_outputs": plan["training_outputs"],
+                "output_baseline": plan["output_baseline"],
+                "training_provenance": plan["training_provenance"],
+            }
+        finally:
+            with _ACTIVE_PROCESS_LOCK:
+                _ACTIVE_PROCESSES.pop(run["id"], None)
+                _CANCELLED_RUNS.discard(run["id"])
+        self.finish_run(run["id"], result["status"], result)
+        self._set_hardware_bound_task_status(
+            run["project_id"],
+            "training",
+            task_status_for_result(result["status"]),
+            plan["hardware_profile_id"],
+        )
 
     def start_training_smoke(
         self, project_id: str, training_dir: Path | str, *, confirm: bool

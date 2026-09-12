@@ -3851,6 +3851,307 @@ def test_controller_execution_persists_health_evidence(
     assert saved["result"]["category"] == "healthy"
 
 
+def test_training_plan_uses_allowlisted_recipe_and_records_effective_config(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    store = StudioStore(tmp_path / "studio.db")
+    project = store.create_project("duck", tmp_path)
+    store.save_hardware(
+        project["id"],
+        {
+            "servos": {"model": "HL-2915", "candidates": ["HL-2915"]},
+            "control_hz": 50,
+        },
+    )
+    store.set_task_status(project["id"], "preflight", "success")
+    store.set_task_status(project["id"], "smoke", "success")
+    checkout = tmp_path / "microduck_rl"
+    checkout.mkdir()
+    monkeypatch.setattr("microduck_studio.core.platform_module.system", lambda: "Linux")
+    monkeypatch.setattr("microduck_studio.core.shutil.which", lambda name: f"/usr/bin/{name}")
+
+    plan = store.build_training_plan(
+        project["id"],
+        checkout,
+        "walk",
+        {"num_envs": 64, "max_iterations": 200, "gpu_ids": "[0]", "seed": 7},
+        target={"kind": "local"},
+    )
+
+    assert plan["recipe"] == "walk"
+    assert plan["effective_config"]["seed"] == 7
+    assert plan["command"][:3] == [plan["uv"], "run", "train"]
+    assert plan["command"][plan["command"].index("--agent.max-iterations") + 1] == "200"
+
+
+def test_resume_requires_explicit_matching_parent_and_checkpoint(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    store = StudioStore(tmp_path / "studio.db")
+    project = store.create_project("duck", tmp_path)
+    store.save_hardware(
+        project["id"],
+        {
+            "servos": {"model": "HL-2915", "candidates": ["HL-2915"]},
+            "control_hz": 50,
+        },
+    )
+    store.set_task_status(project["id"], "preflight", "success")
+    store.set_task_status(project["id"], "smoke", "success")
+    checkout = tmp_path / "microduck_rl"
+    checkpoint = checkout / "logs" / "rsl_rl" / "velocity" / "run-a" / "model_100.pt"
+    checkpoint.parent.mkdir(parents=True)
+    checkpoint.write_bytes(b"checkpoint")
+    parent = store.start_run(project["id"], "training")
+    contract = {
+        "task": "Mjlab-Velocity-Flat-MicroDuck",
+        "servo_model": "HL-2915",
+        "obs_len": 61,
+        "action_len": 14,
+        "control_hz": 50,
+    }
+    store.finish_run(
+        parent["id"],
+        "passed",
+        {
+            "training_contract": contract,
+            "training_outputs": {
+                "checkpoints": [
+                    {
+                        "path": str(checkpoint.resolve()),
+                        "sha256": hashlib.sha256(b"checkpoint").hexdigest(),
+                    }
+                ]
+            },
+        },
+    )
+    monkeypatch.setattr("microduck_studio.core.platform_module.system", lambda: "Linux")
+    monkeypatch.setattr("microduck_studio.core.shutil.which", lambda name: f"/usr/bin/{name}")
+
+    plan = store.build_training_plan(
+        project["id"],
+        checkout,
+        "walk",
+        {"num_envs": 64, "max_iterations": 50, "gpu_ids": "[0]", "seed": 7},
+        target={"kind": "local"},
+        parent_run_id=parent["id"],
+        checkpoint=checkpoint,
+    )
+
+    assert plan["training_provenance"]["parent_run_id"] == parent["id"]
+    assert plan["training_provenance"]["checkpoint"]["sha256"] == hashlib.sha256(b"checkpoint").hexdigest()
+    assert plan["command"][-6:] == [
+        "--agent.resume",
+        "True",
+        "--agent.load-run",
+        r"^run\-a$",
+        "--agent.load-checkpoint",
+        r"^model_100\.pt$",
+    ]
+
+
+def test_resume_rejects_checkpoint_not_verified_by_parent(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    store = StudioStore(tmp_path / "studio.db")
+    project = store.create_project("duck", tmp_path)
+    store.save_hardware(
+        project["id"],
+        {"servos": {"model": "HL-2915", "candidates": ["HL-2915"]}},
+    )
+    store.set_task_status(project["id"], "preflight", "success")
+    store.set_task_status(project["id"], "smoke", "success")
+    checkout = tmp_path / "microduck_rl"
+    checkpoint = checkout / "logs" / "rsl_rl" / "velocity" / "run-a" / "model_100.pt"
+    checkpoint.parent.mkdir(parents=True)
+    checkpoint.write_bytes(b"checkpoint")
+    parent = store.start_run(project["id"], "training")
+    store.finish_run(
+        parent["id"],
+        "passed",
+        {
+            "training_contract": {
+                "task": "Mjlab-Velocity-Flat-MicroDuck",
+                "servo_model": "HL-2915",
+                "obs_len": 61,
+                "action_len": 14,
+                "control_hz": 50,
+            },
+            "training_outputs": {
+                "checkpoints": [{"path": str(checkpoint.resolve()), "sha256": "wrong"}]
+            },
+        },
+    )
+    monkeypatch.setattr("microduck_studio.core.platform_module.system", lambda: "Linux")
+    monkeypatch.setattr("microduck_studio.core.shutil.which", lambda name: f"/usr/bin/{name}")
+
+    with pytest.raises(ValueError, match="not verified"):
+        store.build_training_plan(
+            project["id"],
+            checkout,
+            "walk",
+            {},
+            target={"kind": "local"},
+            parent_run_id=parent["id"],
+            checkpoint=checkpoint,
+        )
+
+
+def test_training_plan_wraps_fixed_command_for_wsl_target(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    store = StudioStore(tmp_path / "studio.db")
+    project = store.create_project("duck", tmp_path)
+    store.save_hardware(
+        project["id"],
+        {"servos": {"model": "HL-2915", "candidates": ["HL-2915"]}},
+    )
+    store.set_task_status(project["id"], "preflight", "success")
+    store.set_task_status(project["id"], "smoke", "success")
+    checkout = tmp_path / "microduck_rl"
+    checkout.mkdir()
+    monkeypatch.setattr("microduck_studio.core.platform_module.system", lambda: "Windows")
+    monkeypatch.setattr(
+        "microduck_studio.core.shutil.which",
+        lambda name: "C:/Windows/System32/wsl.exe" if name == "wsl" else None,
+    )
+
+    plan = store.build_training_plan(
+        project["id"],
+        checkout,
+        "walk",
+        {"num_envs": 64, "max_iterations": 20, "gpu_ids": "[0]", "seed": 7},
+        target={"kind": "wsl", "distro": "Ubuntu", "path": "/home/duck/microduck_rl"},
+    )
+
+    assert plan["execution_supported"] is True
+    assert plan["command"][:8] == [
+        "C:/Windows/System32/wsl.exe",
+        "-d",
+        "Ubuntu",
+        "--cd",
+        "/home/duck/microduck_rl",
+        "--",
+        "uv",
+        "run",
+    ]
+
+
+def test_full_training_requires_successful_smoke(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    store = StudioStore(tmp_path / "studio.db")
+    project = store.create_project("duck", tmp_path)
+    store.save_hardware(
+        project["id"],
+        {"servos": {"model": "HL-2915", "candidates": ["HL-2915"]}},
+    )
+    store.set_task_status(project["id"], "preflight", "success")
+    checkout = tmp_path / "microduck_rl"
+    checkout.mkdir()
+    monkeypatch.setattr("microduck_studio.core.platform_module.system", lambda: "Linux")
+    monkeypatch.setattr("microduck_studio.core.shutil.which", lambda name: f"/usr/bin/{name}")
+
+    with pytest.raises(ValueError, match="successful training smoke"):
+        store.build_training_plan(
+            project["id"],
+            checkout,
+            "walk",
+            {},
+            target={"kind": "local"},
+        )
+
+
+def test_training_run_persists_new_checkpoint_with_hash(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    store = StudioStore(tmp_path / "studio.db")
+    project = store.create_project("duck", tmp_path)
+    store.save_hardware(
+        project["id"],
+        {"servos": {"model": "HL-2915", "candidates": ["HL-2915"]}},
+    )
+    store.set_task_status(project["id"], "preflight", "success")
+    store.set_task_status(project["id"], "smoke", "success")
+    checkout = tmp_path / "microduck_rl"
+    checkout.mkdir()
+    checkpoint = checkout / "logs" / "rsl_rl" / "velocity" / "run-a" / "model_20.pt"
+    monkeypatch.setattr("microduck_studio.core.platform_module.system", lambda: "Linux")
+    monkeypatch.setattr("microduck_studio.core.shutil.which", lambda name: f"/usr/bin/{name}")
+    monkeypatch.setattr(
+        "microduck_studio.core.capture_git_snapshot",
+        lambda path: {"available": False, "commit": None, "branch": None, "dirty": None},
+    )
+
+    class FakeProcess:
+        returncode = 0
+
+        def communicate(self, timeout=None):
+            checkpoint.parent.mkdir(parents=True)
+            checkpoint.write_bytes(b"checkpoint-20")
+            return "training finished", ""
+
+        def poll(self):
+            return self.returncode
+
+    monkeypatch.setattr("microduck_studio.core.subprocess.Popen", lambda *args, **kwargs: FakeProcess())
+
+    run = store.start_training(
+        project["id"],
+        checkout,
+        "walk",
+        {"num_envs": 64, "max_iterations": 20, "gpu_ids": "[0]", "seed": 7},
+        target={"kind": "local"},
+        confirm=True,
+    )
+    for _ in range(100):
+        saved = store.get_run(run["id"])
+        if saved["status"] != "running":
+            break
+        time.sleep(0.01)
+
+    assert saved["status"] == "passed"
+    assert saved["result"]["training_outputs"]["checkpoints"] == [
+        {
+            "path": str(checkpoint.resolve()),
+            "sha256": hashlib.sha256(b"checkpoint-20").hexdigest(),
+            "size": len(b"checkpoint-20"),
+        }
+    ]
+
+
+def test_training_recipe_and_plan_api_use_store_contract(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    import microduck_studio.app as app_module
+
+    store = StudioStore(tmp_path / "studio.db")
+    project = store.create_project("duck", tmp_path)
+    store.save_hardware(
+        project["id"],
+        {"servos": {"model": "HL-2915", "candidates": ["HL-2915"]}},
+    )
+    store.set_task_status(project["id"], "preflight", "success")
+    store.set_task_status(project["id"], "smoke", "success")
+    checkout = tmp_path / "microduck_rl"
+    checkout.mkdir()
+    monkeypatch.setattr(app_module, "store", store)
+    monkeypatch.setattr("microduck_studio.core.platform_module.system", lambda: "Linux")
+    monkeypatch.setattr("microduck_studio.core.shutil.which", lambda name: f"/usr/bin/{name}")
+
+    recipes = app_module.list_training_recipes()
+    plan = app_module.training_plan(
+        project["id"],
+        app_module.TrainingIn(
+            training_dir=str(checkout),
+            recipe="walk",
+            parameters={"max_iterations": 10},
+            target={"kind": "local"},
+        ),
+    )
+
+    assert recipes["recipes"][0]["id"] == "walk"
+    assert plan["effective_config"]["max_iterations"] == 10
+
+
 def test_training_smoke_plan_is_fixed_and_requires_ready_inputs(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     script = tmp_path / "tools" / "microduck_learning"
     script.mkdir(parents=True)

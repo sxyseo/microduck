@@ -7,7 +7,14 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import FileResponse, PlainTextResponse
 from pydantic import BaseModel, Field
 
-from .core import StudioStore, evaluate_compatibility, list_serial_ports, preflight, task_status_for_result
+from .core import (
+    StudioStore,
+    evaluate_compatibility,
+    list_serial_ports,
+    preflight,
+    task_status_for_result,
+    training_recipes,
+)
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -72,6 +79,19 @@ class TrainingSmokeIn(BaseModel):
 
 
 class TrainingSmokeExecuteIn(TrainingSmokeIn):
+    confirm: bool = False
+
+
+class TrainingIn(BaseModel):
+    training_dir: str = Field(min_length=1)
+    recipe: str = Field(min_length=1)
+    parameters: dict = Field(default_factory=dict)
+    target: dict
+    parent_run_id: str | None = None
+    checkpoint: str | None = None
+
+
+class TrainingExecuteIn(TrainingIn):
     confirm: bool = False
 
 
@@ -427,6 +447,50 @@ def training_smoke_plan(project_id: str, body: TrainingSmokeIn):
         return store.build_training_smoke_plan(project_id, body.training_dir)
     except KeyError as exc:
         raise HTTPException(status_code=404, detail="project not found") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.get("/api/training/recipes")
+def list_training_recipes():
+    return {"recipes": training_recipes()}
+
+
+@app.post("/api/projects/{project_id}/training/plan")
+def training_plan(project_id: str, body: TrainingIn):
+    try:
+        return store.build_training_plan(
+            project_id,
+            body.training_dir,
+            body.recipe,
+            body.parameters,
+            target=body.target,
+            parent_run_id=body.parent_run_id,
+            checkpoint=body.checkpoint,
+        )
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="project or parent run not found") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/api/projects/{project_id}/training/run")
+def run_training(project_id: str, body: TrainingExecuteIn):
+    try:
+        return store.start_training(
+            project_id,
+            body.training_dir,
+            body.recipe,
+            body.parameters,
+            target=body.target,
+            parent_run_id=body.parent_run_id,
+            checkpoint=body.checkpoint,
+            confirm=body.confirm,
+        )
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="project or parent run not found") from exc
+    except (PermissionError, RuntimeError) as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
