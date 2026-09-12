@@ -5560,6 +5560,12 @@ class StudioStore:
                 f"- 缺失字段：{'；'.join(completeness.get('missing_fields', [])) or '无'}",
                 "",
             ]
+        if hardware and isinstance(hardware.get("stage_summary"), dict):
+            lines[6:6] = [
+                f"- 当前可调试能力：{'；'.join(hardware.get('capabilities', [])) or '无'}",
+                f"- 待推进部件：{'；'.join(hardware['stage_summary'].get('next_components', [])) or '无'}",
+                "",
+            ]
         lines.extend(
             f"| {task['title']} | `{task['status']}` | {'；'.join(task.get('evidence_reasons', [])) or '-'} |"
             for task in report["tasks"]
@@ -5638,6 +5644,22 @@ class StudioStore:
                     lines.append(
                         f"  - 策略证据：ONNX {len(onnx)} 个 · 合同：`{contract.get('path', 'missing')}`"
                     )
+        full_training_runs = [run for run in report["runs"] if run["kind"] == "training"]
+        if full_training_runs:
+            lines.extend(["", "## 模型训练与续训", ""])
+            for run in full_training_runs:
+                result = run["result"]
+                provenance = result.get("training_provenance") if isinstance(result.get("training_provenance"), dict) else {}
+                outputs = result.get("training_outputs") if isinstance(result.get("training_outputs"), dict) else {}
+                checkpoints = outputs.get("checkpoints") if isinstance(outputs.get("checkpoints"), list) else []
+                lines.append(
+                    f"- 状态：`{run['status']}` · 配方：`{result.get('recipe', 'unknown')}` · 父运行：`{provenance.get('parent_run_id') or 'none'}`"
+                )
+                for checkpoint in checkpoints:
+                    if isinstance(checkpoint, dict):
+                        lines.append(
+                            f"  - checkpoint：`{checkpoint.get('path', 'missing')}` · SHA-256：`{checkpoint.get('sha256', 'unknown')}`"
+                        )
         deployment_runs = [run for run in report["runs"] if run["kind"] == "deployment_preflight"]
         if deployment_runs:
             lines.extend(["", "## 部署前兼容性", ""])

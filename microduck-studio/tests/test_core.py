@@ -95,7 +95,7 @@ def test_frontend_uses_separate_bench_and_training_run_slots():
 
     assert "const activeRuns = {bench: null, training: null};" in html
     assert html.count("pollRun(run, 'bench')") == 2
-    assert html.count("pollRun(run, 'training')") == 1
+    assert html.count("pollRun(run, 'training')") == 2
     assert "activeRuns.bench" in html
     assert "activeRuns.training" in html
     assert "activeRunId" not in html
@@ -133,7 +133,7 @@ def test_frontend_hl2915_examples_do_not_claim_old_voltage_or_passed_data():
 def test_frontend_resumes_persisted_long_running_jobs_from_report():
     html = (Path(__file__).parents[1] / "web" / "index.html").read_text(encoding="utf-8")
 
-    assert "run.kind === 'training_smoke'" in html
+    assert "['training_smoke','training'].includes(run.kind)" in html
     assert "['hl2915_read_only_probe','hl2915_bam_record'].includes(run.kind)" in html
     assert "if (slot && !activeRuns[slot]) pollRun(run, slot);" in html
 
@@ -277,6 +277,19 @@ def test_frontend_exposes_records_only_hardware_acceptance():
     assert 'id="acceptance-save"' in html
     assert "只保存人工验收证据，不会触发机器人运动" in html
     assert "/acceptances" in html
+
+
+def test_frontend_exposes_staged_hardware_training_resume_and_timeline():
+    html = (Path(__file__).parents[1] / "web" / "index.html").read_text(encoding="utf-8")
+
+    assert 'id="hardware-components"' in html
+    assert 'id="training-recipe"' in html
+    assert 'id="training-parent-run"' in html
+    assert 'id="training-checkpoint"' in html
+    assert 'id="run-timeline"' in html
+    assert 'id="run-compare"' in html
+    assert "@media(max-width:700px)" in html.replace(" ", "")
+    assert 'class="dangerous-start"' in html
 
 
 def test_frontend_report_prefills_first_evidence_detail_id():
@@ -635,6 +648,33 @@ def test_run_timeline_and_comparison_api_expose_structured_data(
 
     assert events["events"][-1]["type"] == "finished"
     assert compared["metric_changes"][0]["delta"] == 1.0
+
+
+def test_markdown_report_includes_staged_hardware_and_full_training(tmp_path: Path):
+    store = StudioStore(tmp_path / "studio.db")
+    project = store.create_project("duck", tmp_path)
+    store.save_hardware(
+        project["id"],
+        {
+            "servos": {"model": "HL-2915", "candidates": ["HL-2915"]},
+            "components": {"servo_bench": {"state": "verified", "model": "HL-2915"}},
+        },
+    )
+    run = store.start_run(project["id"], "training")
+    store.finish_run(
+        run["id"],
+        "passed",
+        {
+            "recipe": "walk",
+            "training_outputs": {"checkpoints": [{"path": "model_20.pt", "sha256": "abc"}]},
+        },
+    )
+
+    markdown = store.project_report_markdown(project["id"])
+
+    assert "servo_bench_debug" in markdown
+    assert "## 模型训练与续训" in markdown
+    assert "model_20.pt" in markdown
 
 
 def test_next_task_exposes_evidence_and_failure_contract(tmp_path: Path):

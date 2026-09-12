@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Microduck Studio</title>
   <style>
-    :root{font:16px system-ui,sans-serif;color:#211a11;background:#f6f1e7}body{max-width:980px;margin:0 auto;padding:28px}h1{margin-bottom:4px}small,.muted{color:#6b6151}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}.card{background:#fff;border:1px solid #d9cdb9;border-radius:12px;padding:18px;box-shadow:4px 4px #e9dcc8}label{display:block;margin:10px 0 4px}input,textarea,select,button{font:inherit;padding:9px;border:1px solid #9c8e7b;border-radius:7px}input,textarea,select{width:100%;box-sizing:border-box}textarea{min-height:100px;font-family:ui-monospace,monospace}button{background:#211a11;color:#fff;cursor:pointer;margin-top:12px}.status{white-space:pre-wrap;font-family:ui-monospace,monospace;background:#211a11;color:#f6f1e7;padding:12px;border-radius:8px;min-height:90px}.ok{color:#17633a}.bad{color:#9d2d14}
+    :root{font:16px system-ui,sans-serif;color:#211a11;background:#f6f1e7}body{max-width:1180px;margin:0 auto;padding:28px}h1{margin-bottom:4px}small,.muted{color:#6b6151}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}.card{background:#fff;border:1px solid #d9cdb9;border-radius:12px;padding:18px;box-shadow:4px 4px #e9dcc8}label{display:block;margin:10px 0 4px}input,textarea,select,button{font:inherit;padding:9px;border:1px solid #9c8e7b;border-radius:7px}input,textarea,select{width:100%;box-sizing:border-box}textarea{min-height:100px;font-family:ui-monospace,monospace}button{background:#211a11;color:#fff;cursor:pointer;margin-top:12px}.status{white-space:pre-wrap;font-family:ui-monospace,monospace;background:#211a11;color:#f6f1e7;padding:12px;border-radius:8px;min-height:90px;overflow:auto}.metric-chart{width:100%;height:100px;background:#f6f1e7;border-radius:8px}.ok{color:#17633a}.bad{color:#9d2d14}
+    @media(max-width:700px){body{padding:12px}.grid{grid-template-columns:1fr}.card{padding:14px;box-shadow:2px 2px #e9dcc8}button{width:100%;min-height:44px}.dangerous-start{display:none}}
   </style>
 </head>
 <body>
@@ -33,7 +34,18 @@
       <label>运行时版本<input id="runtime-version" placeholder="commit 或版本号"></label>
       <label>训练仓库<input id="training-repo" placeholder="例如 microduck_rl"></label>
       <label>训练仓版本<input id="training-revision" placeholder="commit 或版本号"></label>
+      <label>分阶段部件（JSON）<textarea id="hardware-components">{"controller":{"state":"planned"},"servo_bench":{"state":"owned","model":"HL-2915"},"imu":{"state":"planned"},"camera":{"state":"planned"},"whole_robot":{"state":"planned"}}</textarea></label>
       <button id="save-hardware">保存硬件档案</button>
+    </section>
+    <section class="card">
+      <h2>工作台配置</h2>
+      <p class="muted">按项目保存默认执行位置、可见指标和告警阈值；每次运行仍会记录实际生效值。</p>
+      <label>可见指标（逗号分隔）<input id="settings-metrics" value="reward,episode_length,temperature_c,latency_ms"></label>
+      <label>告警阈值（JSON）<textarea id="settings-thresholds">{"temperature_c":65,"latency_ms":50}</textarea></label>
+      <label>默认执行位置<select id="settings-target"><option value="local">本机 Linux/macOS</option><option value="wsl">本机 WSL2</option><option value="ssh">远程 GPU（计划模式）</option></select></label>
+      <label>WSL 发行版<input id="settings-wsl-distro" value="Ubuntu"></label>
+      <label>WSL 训练路径<input id="settings-wsl-path" placeholder="/home/duck/microduck_rl"></label>
+      <button id="settings-save">保存工作台配置</button>
     </section>
     <section class="card">
       <h2>HL-2915 只读探针计划</h2>
@@ -78,6 +90,24 @@
       <button id="training-cancel">取消当前运行</button>
     </section>
     <section class="card">
+      <h2>模型训练与续训</h2>
+      <p class="muted">只执行内置配方。续训必须同时填写父运行 ID 和已由该运行登记的 checkpoint。</p>
+      <label>训练配方<select id="training-recipe"><option value="walk">Microduck 平地行走</option></select></label>
+      <label>执行位置<select id="training-target"><option value="local">本机 Linux/macOS</option><option value="wsl">本机 WSL2</option><option value="ssh">远程 GPU（计划模式）</option></select></label>
+      <label>训练 checkout 路径<input id="training-full-dir" placeholder="例如 ..\microduck_rl"></label>
+      <label>WSL 发行版<input id="training-wsl-distro" value="Ubuntu"></label>
+      <label>WSL 内 checkout 路径<input id="training-wsl-path" placeholder="/home/duck/microduck_rl"></label>
+      <label>并行环境数<input id="training-num-envs" type="number" min="1" max="16384" value="4096"></label>
+      <label>新增迭代数<input id="training-iterations" type="number" min="1" max="50000" value="3000"></label>
+      <label>GPU IDs<input id="training-gpus" value="[0]"></label>
+      <label>随机种子<input id="training-seed" type="number" min="0" value="42"></label>
+      <label>运行名<input id="training-run-name" value="studio-walk"></label>
+      <label>父训练运行 ID（新训练留空）<input id="training-parent-run"></label>
+      <label>checkpoint 路径（新训练留空）<input id="training-checkpoint"></label>
+      <button id="training-full-plan">生成受控计划</button>
+      <button id="training-full-run">启动训练／续训（需确认）</button>
+    </section>
+    <section class="card">
       <h2>TensorBoard 指标摘要</h2>
       <p class="muted">读取已完成训练的 event 文件，生成 scalars.csv、summary.md 和 metrics.png；输出目录必须在项目根目录内。</p>
       <label>训练 checkout 路径<input id="tb-training-dir" placeholder="例如 ..\microduck_rl"></label>
@@ -85,6 +115,17 @@
       <label>输出目录<input id="tb-output-dir" value="artifacts/tensorboard/latest"></label>
       <button id="tb-plan">生成摘要计划</button>
       <button id="tb-run">生成摘要（需确认）</button>
+    </section>
+    <section class="card">
+      <h2>运行时间线与数据对比</h2>
+      <label>时间线运行 ID<input id="run-timeline-id" placeholder="运行开始后自动填入"></label>
+      <button id="run-timeline">刷新运行时间线</button>
+      <div id="run-timeline-body" class="status">尚未选择运行</div>
+      <label>左侧运行 ID<input id="run-left-id"></label>
+      <label>右侧运行 ID<input id="run-right-id"></label>
+      <button id="run-compare">比较运行</button>
+      <svg id="run-compare-chart" class="metric-chart" viewBox="0 0 300 100" role="img" aria-label="运行指标变化图"></svg>
+      <div id="run-compare-body" class="status">尚未比较</div>
     </section>
     <section class="card">
       <h2>实验记录</h2>
@@ -129,7 +170,7 @@
       <button id="identification-list">查看辨识记录</button>
       <label>BAM 采样计划（JSON）<textarea id="bam-plan-data">{"port":"","servo_id":1,"mass_kg":0.05,"arm_length_m":0.1,"output_path":"artifacts/bam/raw/test.json","amplitude_deg":10,"duration_s":6,"hz":100,"confirm_motion":false}</textarea></label>
       <button id="bam-plan">生成辨识采样计划（不执行）</button>
-      <button id="bam-run">启动 BAM 采样（双重确认）</button>
+      <button id="bam-run" class="dangerous-start">启动 BAM 采样（双重确认）</button>
     </section>
     <section class="card">
       <h2>问题台账</h2>
@@ -161,7 +202,7 @@
       <label>运行时约定（JSON）<textarea id="runtime-contract">{"obs_len":61,"action_dim":14,"control_hz":50,"action_filter":false,"servo_model":"HL-2915"}</textarea></label>
       <button id="deployment-preflight">执行部署前预检</button>
       <button id="deployment-plan">生成部署计划</button>
-      <button id="deployment-execute">部署 walk 策略（高风险）</button>
+      <button id="deployment-execute" class="dangerous-start">部署 walk 策略（高风险）</button>
     </section>
     <section class="card">
       <h2>逐级实机验收（只记录）</h2>
@@ -205,19 +246,36 @@
   <script>
     let projectId = localStorage.getItem('microduckStudioProjectId');
     const activeRuns = {bench: null, training: null};
+    const timelineSequences = {};
     const resetActiveRuns = () => { activeRuns.bench = null; activeRuns.training = null; };
     const $ = (id) => document.getElementById(id);
     const show = (id, value) => $(id).textContent = typeof value === 'string' ? value : JSON.stringify(value, null, 2);
     const refreshReport = () => { if (projectId) $('report').click(); };
+    const loadRunTimeline = async (runId, append = false) => {
+      if (!runId) return show('run-timeline-body', '请填写运行 ID');
+      const after = append ? (timelineSequences[runId] || 0) : 0;
+      const res = await fetch(`/api/runs/${encodeURIComponent(runId)}/events?after=${after}`);
+      const data = await res.json();
+      if (!res.ok) return show('run-timeline-body', data);
+      const events = data.events || [];
+      if (events.length) timelineSequences[runId] = events[events.length - 1].sequence;
+      const text = events.map(event => `${event.sequence}. ${event.timestamp} · ${event.type}\n${JSON.stringify(event.data)}`).join('\n');
+      if (!append) show('run-timeline-body', text || '暂无事件');
+      else if (text) $('run-timeline-body').textContent += `\n${text}`;
+    };
     const pollRun = async (run, slot) => {
       const runId = run.id;
       activeRuns[slot] = runId;
+      $('run-timeline-id').value = runId;
+      timelineSequences[runId] = 0;
+      loadRunTimeline(runId);
       show('status', run);
       try {
         while (activeRuns[slot] === runId && ['running','cancelling'].includes(run.status)) {
           await new Promise(resolve => setTimeout(resolve, 500));
           const res = await fetch(`/api/runs/${runId}`); run = await res.json();
           if (!res.ok) throw new Error(run.detail || `HTTP ${res.status}`);
+          loadRunTimeline(runId, true);
           if (activeRuns[slot] === run.id && projectId === run.project_id) show('status', run);
         }
       } catch (error) {
@@ -241,6 +299,19 @@
       $('runtime-version').value = valueOrEmpty(data.runtime?.version);
       $('training-repo').value = valueOrEmpty(data.training?.repo);
       $('training-revision').value = valueOrEmpty(data.training?.revision);
+      $('hardware-components').value = JSON.stringify(data.components || {}, null, 2);
+    };
+    const hydrateSettings = (settings) => {
+      const data = settings?.data || {};
+      $('settings-metrics').value = (data.visible_metrics || []).join(',');
+      $('settings-thresholds').value = JSON.stringify(data.alert_thresholds || {}, null, 2);
+      const target = data.execution_target || {kind:'local'};
+      $('settings-target').value = target.kind || 'local';
+      $('settings-wsl-distro').value = target.distro || 'Ubuntu';
+      $('settings-wsl-path').value = target.path || '';
+      $('training-target').value = target.kind || 'local';
+      $('training-wsl-distro').value = target.distro || 'Ubuntu';
+      $('training-wsl-path').value = target.path || '';
     };
     const loadProjects = async () => {
       const data = await (await fetch('/api/projects')).json(); const select = $('project-list');
@@ -248,6 +319,13 @@
       for (const item of data.projects) { const option = document.createElement('option'); option.value = item.id; option.textContent = `${item.name} · ${item.status}`; select.appendChild(option); }
       if (projectId && data.projects.some(item => item.id === projectId)) { select.value = projectId; const item = data.projects.find(item => item.id === projectId); show('project', `已恢复 ${item.name}\n${item.id}`); $('report').click(); }
       else { resetActiveRuns(); projectId = null; localStorage.removeItem('microduckStudioProjectId'); }
+    };
+    const loadTrainingRecipes = async () => {
+      const res = await fetch('/api/training/recipes');
+      const data = await res.json();
+      if (!res.ok || !Array.isArray(data.recipes)) return;
+      const select = $('training-recipe');
+      select.replaceChildren(...data.recipes.map(recipe => new Option(`${recipe.id} · ${recipe.task}`, recipe.id)));
     };
     $('create').onclick = async () => {
       const res = await fetch('/api/projects', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:$('name').value,root:$('root').value})});
@@ -265,13 +343,29 @@
     };
     $('save-hardware').onclick = async () => {
       if (!projectId) return show('status','请先创建项目');
+      let components; try { components = JSON.parse($('hardware-components').value || '{}'); } catch (e) { return show('status','分阶段部件 JSON 格式错误'); }
+      if (!components || Array.isArray(components) || typeof components !== 'object') return show('status','分阶段部件必须是 JSON 对象');
       const candidates = $('servos').value.split(',').map(x=>x.trim()).filter(Boolean);
       const model = $('servo-model').value.trim() || null;
       const numberOrNull = value => value.trim() ? Number(value) : null;
       const count = numberOrNull($('servo-count').value);
-      const res = await fetch(`/api/projects/${projectId}/hardware`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({data:{servos:{model,candidates,count},controller:{model:$('controller-model').value.trim()},imu:{model:$('imu-model').value.trim()},power:{voltage_v:numberOrNull($('power-voltage').value)},printed_parts:{version:$('printed-version').value.trim()},runtime:{version:$('runtime-version').value.trim()},training:{repo:$('training-repo').value.trim(),revision:$('training-revision').value.trim()}}})});
+      const res = await fetch(`/api/projects/${projectId}/hardware`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({data:{servos:{model,candidates,count},controller:{model:$('controller-model').value.trim()},imu:{model:$('imu-model').value.trim()},power:{voltage_v:numberOrNull($('power-voltage').value)},printed_parts:{version:$('printed-version').value.trim()},runtime:{version:$('runtime-version').value.trim()},training:{repo:$('training-repo').value.trim(),revision:$('training-revision').value.trim()},components}})});
       show('status', await res.json());
       refreshReport();
+    };
+    $('settings-save').onclick = async () => {
+      if (!projectId) return show('status','请先创建项目');
+      let alert_thresholds; try { alert_thresholds = JSON.parse($('settings-thresholds').value || '{}'); } catch (e) { return show('status','告警阈值 JSON 格式错误'); }
+      const visible_metrics = $('settings-metrics').value.split(',').map(value => value.trim()).filter(Boolean);
+      const kind = $('settings-target').value;
+      const execution_target = kind === 'wsl'
+        ? {kind, distro:$('settings-wsl-distro').value.trim(), path:$('settings-wsl-path').value.trim() || undefined}
+        : kind === 'ssh'
+          ? {kind, ...controllerBody()}
+          : {kind};
+      const res = await fetch(`/api/projects/${projectId}/settings`, {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({data:{visible_metrics,alert_thresholds,execution_target}})});
+      show('status', await res.json());
+      if (res.ok) refreshReport();
     };
     $('probe-plan').onclick = async () => {
       if (!projectId) return show('status','请先创建项目');
@@ -329,6 +423,40 @@
       const run = await res.json();
       if (run.id && run.status === 'running') pollRun(run, 'training'); else show('status', run);
     };
+    const fullTrainingBody = () => {
+      const kind = $('training-target').value;
+      const target = kind === 'wsl'
+        ? {kind, distro:$('training-wsl-distro').value.trim(), path:$('training-wsl-path').value.trim()}
+        : kind === 'ssh'
+          ? {kind, ...controllerBody()}
+          : {kind};
+      return {
+        training_dir:$('training-full-dir').value.trim(),
+        recipe:$('training-recipe').value,
+        parameters:{
+          num_envs:Number($('training-num-envs').value),
+          max_iterations:Number($('training-iterations').value),
+          gpu_ids:$('training-gpus').value.trim(),
+          seed:Number($('training-seed').value),
+          run_name:$('training-run-name').value.trim(),
+        },
+        target,
+        parent_run_id:$('training-parent-run').value.trim() || null,
+        checkpoint:$('training-checkpoint').value.trim() || null,
+      };
+    };
+    $('training-full-plan').onclick = async () => {
+      if (!projectId) return show('status','请先创建项目');
+      const res = await fetch(`/api/projects/${projectId}/training/plan`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(fullTrainingBody())});
+      show('status', await res.json());
+    };
+    $('training-full-run').onclick = async () => {
+      if (!projectId) return show('status','请先创建项目');
+      if (!window.confirm('训练会写入 checkpoint 和日志。续训将只加载明确校验过的父运行 checkpoint；不会操作硬件。继续？')) return;
+      const res = await fetch(`/api/projects/${projectId}/training/run`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...fullTrainingBody(),confirm:true})});
+      const run = await res.json();
+      if (run.id && run.status === 'running') pollRun(run, 'training'); else show('status', run);
+    };
     $('training-cancel').onclick = async () => {
       if (!activeRuns.training) return show('status','当前没有可取消的运行');
       const res = await fetch(`/api/runs/${activeRuns.training}/cancel`, {method:'POST'});
@@ -345,6 +473,38 @@
       if (!window.confirm('将读取 TensorBoard event 并在项目输出目录写入摘要和曲线，不会操作硬件。继续？')) return;
       const res = await fetch(`/api/projects/${projectId}/training/tensorboard`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...tensorboardBody(), confirm:true})});
       show('status', await res.json());
+    };
+    $('run-timeline').onclick = () => loadRunTimeline($('run-timeline-id').value.trim());
+    const renderRunComparison = (data) => {
+      const changes = data.metric_changes || [];
+      const lines = [
+        `${data.left?.id || '左侧'} → ${data.right?.id || '右侧'}`,
+        '',
+        '配置变化：',
+        ...(data.config_changes || []).map(item => `- ${item.field}: ${item.before ?? '不可用'} → ${item.after ?? '不可用'}`),
+        '',
+        '指标变化：',
+        ...changes.map(item => `- ${item.field}: ${item.before ?? '不可用'} → ${item.after ?? '不可用'}（Δ ${item.delta ?? '不可用'}）`),
+      ];
+      show('run-compare-body', lines.join('\n'));
+      const chart = $('run-compare-chart');
+      chart.replaceChildren();
+      const values = changes.flatMap(item => [item.before, item.after]).filter(value => typeof value === 'number' && Number.isFinite(value));
+      if (values.length < 2) return;
+      const low = Math.min(...values), high = Math.max(...values), span = high - low || 1;
+      const points = values.map((value, index) => `${10 + index * 280 / (values.length - 1)},${90 - (value - low) * 80 / span}`).join(' ');
+      const line = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+      line.setAttribute('points', points); line.setAttribute('fill', 'none'); line.setAttribute('stroke', '#17633a'); line.setAttribute('stroke-width', '3');
+      chart.appendChild(line);
+    };
+    $('run-compare').onclick = async () => {
+      if (!projectId) return show('run-compare-body','请先创建项目');
+      const body = {left_id:$('run-left-id').value.trim(), right_id:$('run-right-id').value.trim()};
+      if (!body.left_id || !body.right_id) return show('run-compare-body','请填写两个运行 ID');
+      const res = await fetch(`/api/projects/${projectId}/runs/compare`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+      const data = await res.json();
+      if (!res.ok) return show('run-compare-body', data);
+      renderRunComparison(data);
     };
     $('exp-create').onclick = async () => {
       if (!projectId) return show('status','请先创建项目');
@@ -573,8 +733,9 @@
       const reportEvidenceRefs = [...(data.experiments || []), ...(data.issues || [])].flatMap(item => Array.isArray(item.evidence_refs) ? item.evidence_refs : []);
       if (!$('record-detail-id').value && reportEvidenceRefs[0]) $('record-detail-id').value = reportEvidenceRefs[0];
       hydrateHardwareForm(data.hardware);
+      hydrateSettings(data.settings);
       for (const run of data.runs.filter(item => item.status === 'running')) {
-        const slot = run.kind === 'training_smoke' ? 'training' : ['hl2915_read_only_probe','hl2915_bam_record'].includes(run.kind) ? 'bench' : null;
+        const slot = ['training_smoke','training'].includes(run.kind) ? 'training' : ['hl2915_read_only_probe','hl2915_bam_record'].includes(run.kind) ? 'bench' : null;
         if (slot && !activeRuns[slot]) pollRun(run, slot);
       }
       const next = data.tasks.find(t => ['ready','needs_confirmation'].includes(t.status));
@@ -584,11 +745,15 @@
         const completeness = data.hardware.completeness;
         lines.splice(2, 0, `硬件档案完整性：${completeness.status}`, `缺失字段：${completeness.missing_fields?.length ? completeness.missing_fields.join('、') : '无'}`);
       }
+      if (data.hardware?.stage_summary) {
+        lines.splice(2, 0, `当前可调试能力：${data.hardware.capabilities?.length ? data.hardware.capabilities.join('、') : '暂无'}`, `待推进部件：${data.hardware.stage_summary.next_components?.length ? data.hardware.stage_summary.next_components.join('、') : '无'}`);
+      }
       if (next?.card) {
         lines.push('', '下一项任务卡：', `预计用时：约 ${next.card.estimated_minutes} 分钟`, `所需工具：${next.card.tools.join('；')}`, `执行步骤：${next.card.steps.map((step, index) => `${index + 1}. ${step}`).join('；')}`, `前置条件：${next.card.preconditions.join('；')}`, `操作范围：${next.card.operation_scope}`, `所需证据：${next.card.evidence_required.join('；')}`, `通过条件：${next.card.acceptance}`, `失败处理：${next.card.failure_handling}`, `结果产物：${next.card.outputs.join('；')}`);
         if (next.evidence_reasons?.length) lines.push(`当前缺口：${next.evidence_reasons.join('；')}`);
       }
       if (data.runs.length) {
+        if (!$('run-timeline-id').value) $('run-timeline-id').value = data.runs[0].id;
         lines.push('', '最近运行证据范围：', ...data.runs.slice(0, 8).map(run => `- ${run.kind}: ${run.status} · ${run.result?.evidence_scope || 'unknown'}${run.result?.retry_of ? ` · 重试自 ${run.result.retry_of}` : ''}`));
       }
       const diagnostic = data.runs.find(run => run.kind === 'controller_diagnostic');
@@ -602,6 +767,12 @@
       if (tensorboard) {
         lines.push('', `最近 TensorBoard 摘要：${tensorboard.status}`);
         if (tensorboard.result?.expected_outputs?.length) lines.push(`产物：${tensorboard.result.expected_outputs.join('；')}`);
+      }
+      const training = data.runs.find(run => run.kind === 'training');
+      if (training) {
+        const outputs = training.result?.training_outputs || {};
+        lines.push('', `最近模型训练：${training.status} · ${training.result?.recipe || 'unknown'}`, `checkpoint：${outputs.checkpoints?.length ?? 0} 个`);
+        if (training.result?.training_provenance?.parent_run_id) lines.push(`续训自：${training.result.training_provenance.parent_run_id}`);
       }
       const deployment = data.runs.find(run => run.kind === 'deployment_preflight');
       if (deployment) {
@@ -677,6 +848,7 @@
       show('status', await res.json());
     };
     loadProjects();
+    loadTrainingRecipes();
   </script>
 </body>
 </html>
