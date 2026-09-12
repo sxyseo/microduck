@@ -26,6 +26,10 @@ class HardwareIn(BaseModel):
     data: dict
 
 
+class ProjectSettingsIn(BaseModel):
+    data: dict
+
+
 class BenchIn(BaseModel):
     raw: dict
     required_duration_s: float = Field(default=60, gt=0)
@@ -317,6 +321,24 @@ def hardware(project_id: str, body: HardwareIn):
     if not store.get_project(project_id):
         raise HTTPException(status_code=404, detail="project not found")
     return store.save_hardware(project_id, body.data)
+
+
+@app.get("/api/projects/{project_id}/settings")
+def get_project_settings(project_id: str):
+    try:
+        return store.get_project_settings(project_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="project not found") from exc
+
+
+@app.put("/api/projects/{project_id}/settings")
+def save_project_settings(project_id: str, body: ProjectSettingsIn):
+    try:
+        return store.save_project_settings(project_id, body.data)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="project not found") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @app.post("/api/projects/{project_id}/preflight")

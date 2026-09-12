@@ -426,6 +426,79 @@ def test_hardware_conflict_stays_unresolved(tmp_path: Path):
     assert malformed_candidates["status"] == "needs_confirmation"
 
 
+def test_partial_hardware_exposes_only_available_debug_capabilities(tmp_path: Path):
+    store = StudioStore(tmp_path / "studio.db")
+    project = store.create_project("duck", tmp_path)
+
+    store.save_hardware(
+        project["id"],
+        {
+            "servos": {"model": "HL-2915", "candidates": ["HL-2915"], "count": 2},
+            "components": {
+                "controller": {"state": "planned"},
+                "servo_bench": {"state": "installed", "model": "HL-2915"},
+                "imu": {"state": "owned", "model": "BMI270"},
+            },
+        },
+    )
+
+    hardware = store.project_report(project["id"])["hardware"]
+
+    assert hardware["capabilities"] == ["servo_bench_debug"]
+    assert hardware["stage_summary"]["next_components"] == ["controller", "imu"]
+
+
+def test_hardware_rejects_unknown_component_state(tmp_path: Path):
+    store = StudioStore(tmp_path / "studio.db")
+    project = store.create_project("duck", tmp_path)
+
+    with pytest.raises(ValueError, match="component state"):
+        store.save_hardware(
+            project["id"],
+            {
+                "servos": {"model": "HL-2915", "candidates": ["HL-2915"]},
+                "components": {"camera": {"state": "maybe"}},
+            },
+        )
+
+
+def test_project_settings_validate_and_persist_dashboard_preferences(tmp_path: Path):
+    store = StudioStore(tmp_path / "studio.db")
+    project = store.create_project("duck", tmp_path)
+
+    saved = store.save_project_settings(
+        project["id"],
+        {
+            "visible_metrics": ["reward", "temperature_c"],
+            "alert_thresholds": {"temperature_c": 65.0},
+            "execution_target": {"kind": "wsl", "distro": "Ubuntu"},
+        },
+    )
+
+    reopened = StudioStore(tmp_path / "studio.db")
+    assert reopened.get_project_settings(project["id"])["data"] == saved["data"]
+    with pytest.raises(ValueError, match="visible metric"):
+        store.save_project_settings(project["id"], {"visible_metrics": ["unknown"]})
+
+
+def test_project_settings_api_round_trips_preferences(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    import microduck_studio.app as app_module
+
+    store = StudioStore(tmp_path / "studio.db")
+    project = store.create_project("duck", tmp_path)
+    monkeypatch.setattr(app_module, "store", store)
+    body = app_module.ProjectSettingsIn(
+        data={"visible_metrics": ["reward"], "execution_target": {"kind": "local"}}
+    )
+
+    saved = app_module.save_project_settings(project["id"], body)
+
+    assert saved["data"]["visible_metrics"] == ["reward"]
+    assert app_module.get_project_settings(project["id"])["data"] == saved["data"]
+
+
 def test_hardware_profile_reports_completeness_without_changing_route_status(tmp_path: Path):
     store = StudioStore(tmp_path / "studio.db")
     project = store.create_project("档案显示", tmp_path)

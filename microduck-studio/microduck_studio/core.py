@@ -69,6 +69,27 @@ ACCEPTANCE_STAGES = (
     "supported_step",
     "free_walk",
 )
+COMPONENT_STATES = {"planned", "owned", "installed", "detected", "verified", "failed"}
+DEBUG_CAPABILITIES = {
+    "controller": "controller_debug",
+    "servo_bench": "servo_bench_debug",
+    "joint_group": "joint_group_debug",
+    "imu": "imu_debug",
+    "camera": "camera_debug",
+    "whole_robot": "whole_robot_debug",
+}
+VISIBLE_METRICS = {
+    "position",
+    "voltage_v",
+    "current_a",
+    "temperature_c",
+    "latency_ms",
+    "packet_loss",
+    "reward",
+    "loss",
+    "episode_length",
+    "throughput",
+}
 
 
 def _now() -> str:
@@ -131,6 +152,32 @@ def hardware_completeness(data: dict[str, Any]) -> dict[str, Any]:
     ):
         missing.append("power.voltage_v")
     return {"status": "complete" if not missing else "incomplete", "missing_fields": missing}
+
+
+def hardware_stage_summary(data: dict[str, Any]) -> dict[str, Any]:
+    components = data.get("components", {})
+    if not isinstance(components, dict):
+        raise ValueError("hardware components must be an object")
+    normalized: dict[str, dict[str, Any]] = {}
+    capabilities: list[str] = []
+    for name, component in components.items():
+        if name not in DEBUG_CAPABILITIES or not isinstance(component, dict):
+            raise ValueError("hardware component is invalid")
+        state = component.get("state")
+        if state not in COMPONENT_STATES:
+            raise ValueError("hardware component state is invalid")
+        normalized[name] = {**component, "state": state}
+        if state in {"installed", "detected", "verified"}:
+            capabilities.append(DEBUG_CAPABILITIES[name])
+    return {
+        "components": normalized,
+        "capabilities": sorted(capabilities),
+        "next_components": sorted(
+            name
+            for name, component in normalized.items()
+            if component["state"] in {"planned", "owned", "failed"}
+        ),
+    }
 
 
 def hardware_physical_contract(data: dict[str, Any] | None) -> dict[str, Any]:
@@ -417,6 +464,7 @@ _PROBE_FAULT_SUMMARY = re.compile(
 )
 _SSH_HOST = re.compile(r"[A-Za-z0-9_.:\-\[\]]{1,255}")
 _SSH_USER = re.compile(r"[A-Za-z0-9_.-]{1,64}")
+_EXECUTION_NAME = re.compile(r"[A-Za-z0-9_.-]{1,64}")
 _REMOTE_POLICY_PATH = re.compile(r"/(?:[A-Za-z0-9_.-]+/)*[A-Za-z0-9_.-]+")
 _PROBE_RUN_LOCK = threading.Lock()
 _ACTIVE_PROCESS_LOCK = threading.Lock()
@@ -437,6 +485,54 @@ _GITHUB_TOKEN = re.compile(r"\b(?:gh[pousr]_[A-Za-z0-9_]{6,}|github_pat_[A-Za-z0
 _SECRET_ENV = re.compile(
     r"(?im)^(\s*[A-Za-z_][A-Za-z0-9_]*(?:TOKEN|PASSWORD|PASSPHRASE|PSK|PIN|SECRET|PRIVATE_KEY)\s*=\s*).+$"
 )
+
+
+def validate_project_settings(data: dict[str, Any]) -> dict[str, Any]:
+    if not isinstance(data, dict):
+        raise ValueError("project settings must be an object")
+    unknown = set(data) - {"visible_metrics", "alert_thresholds", "execution_target"}
+    if unknown:
+        raise ValueError(f"unknown project setting: {sorted(unknown)[0]}")
+    metrics = data.get("visible_metrics", [])
+    if (
+        not isinstance(metrics, list)
+        or any(not isinstance(metric, str) or metric not in VISIBLE_METRICS for metric in metrics)
+        or len(metrics) != len(set(metrics))
+    ):
+        raise ValueError("visible metric is invalid")
+    thresholds = data.get("alert_thresholds", {})
+    if not isinstance(thresholds, dict):
+        raise ValueError("alert thresholds must be an object")
+    for metric, value in thresholds.items():
+        if metric not in VISIBLE_METRICS:
+            raise ValueError("alert threshold metric is invalid")
+        if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(float(value)):
+            raise ValueError("alert threshold must be finite")
+    target = data.get("execution_target", {"kind": "local"})
+    if not isinstance(target, dict) or target.get("kind") not in {"local", "wsl", "ssh"}:
+        raise ValueError("execution target is invalid")
+    normalized_target: dict[str, Any] = {"kind": target["kind"]}
+    if target["kind"] == "wsl":
+        distro = target.get("distro")
+        if not isinstance(distro, str) or not _EXECUTION_NAME.fullmatch(distro):
+            raise ValueError("WSL distro is invalid")
+        normalized_target["distro"] = distro
+    if target["kind"] == "ssh":
+        host = target.get("host")
+        user = target.get("user", "rock")
+        port = target.get("port", 22)
+        if not isinstance(host, str) or not _SSH_HOST.fullmatch(host):
+            raise ValueError("SSH host is invalid")
+        if not isinstance(user, str) or not _SSH_USER.fullmatch(user):
+            raise ValueError("SSH user is invalid")
+        if isinstance(port, bool) or not isinstance(port, int) or not 1 <= port <= 65535:
+            raise ValueError("SSH port is invalid")
+        normalized_target.update({"host": host, "user": user, "port": port})
+    return {
+        "visible_metrics": list(metrics),
+        "alert_thresholds": {key: float(value) for key, value in thresholds.items()},
+        "execution_target": normalized_target,
+    }
 
 
 def _terminate_active_processes() -> None:
@@ -1717,6 +1813,11 @@ class StudioStore:
                     updated_at TEXT NOT NULL,
                     UNIQUE(project_id, kind)
                 );
+                CREATE TABLE IF NOT EXISTS project_settings (
+                    project_id TEXT PRIMARY KEY,
+                    data TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                );
                 """
             )
             columns = {row[1] for row in conn.execute("PRAGMA table_info(tasks)")}
@@ -1792,9 +1893,43 @@ class StudioStore:
             rows = conn.execute("SELECT * FROM projects ORDER BY created_at DESC").fetchall()
         return [_with_schema(dict(row)) for row in rows]
 
+    def save_project_settings(self, project_id: str, data: dict[str, Any]) -> dict[str, Any]:
+        if not self.get_project(project_id):
+            raise KeyError(project_id)
+        normalized = validate_project_settings(data)
+        record = _with_schema({
+            "project_id": project_id,
+            "data": normalized,
+            "updated_at": _now(),
+        })
+        with self._connect() as conn:
+            conn.execute(
+                "INSERT INTO project_settings VALUES (?, ?, ?) "
+                "ON CONFLICT(project_id) DO UPDATE SET data = excluded.data, updated_at = excluded.updated_at",
+                (project_id, _json(normalized), record["updated_at"]),
+            )
+        return record
+
+    def get_project_settings(self, project_id: str) -> dict[str, Any]:
+        if not self.get_project(project_id):
+            raise KeyError(project_id)
+        with self._connect() as conn:
+            row = conn.execute(
+                "SELECT project_id, data, updated_at FROM project_settings WHERE project_id = ?",
+                (project_id,),
+            ).fetchone()
+        if not row:
+            return _with_schema({
+                "project_id": project_id,
+                "data": validate_project_settings({}),
+                "updated_at": None,
+            })
+        return _with_schema({**dict(row), "data": _loads(row["data"])})
+
     def save_hardware(self, project_id: str, data: dict[str, Any]) -> dict[str, Any]:
         if not self.get_project(project_id):
             raise KeyError(project_id)
+        hardware_stage_summary(data)
         servos = data.get("servos") if isinstance(data.get("servos"), dict) else {}
         raw_model = servos.get("model")
         model = raw_model.strip() if isinstance(raw_model, str) and raw_model.strip() else None
@@ -4689,16 +4824,23 @@ class StudioStore:
             sources = conn.execute(
                 "SELECT * FROM sources WHERE project_id = ? ORDER BY kind", (project_id,)
             ).fetchall()
+            settings = conn.execute(
+                "SELECT project_id, data, updated_at FROM project_settings WHERE project_id = ?",
+                (project_id,),
+            ).fetchone()
         if not project:
             raise KeyError(project_id)
-        hardware_history = [
-            _with_schema({
+        hardware_history = []
+        for row in hardware_rows:
+            data = _loads(row["data"])
+            stages = hardware_stage_summary(data)
+            hardware_history.append(_with_schema({
                 **dict(row),
-                "data": _loads(row["data"]),
-                "completeness": hardware_completeness(_loads(row["data"])),
-            })
-            for row in hardware_rows
-        ]
+                "data": data,
+                "completeness": hardware_completeness(data),
+                "stage_summary": stages,
+                "capabilities": stages["capabilities"],
+            }))
         current_hardware_id = hardware_history[0]["id"] if hardware_history else None
         current_hardware_data = hardware_history[0]["data"] if hardware_history else None
         hardware_profiles = {item["id"]: item["data"] for item in hardware_history}
@@ -4861,6 +5003,9 @@ class StudioStore:
             ],
             "issues": report_issues,
             "sources": report_sources,
+            "settings": _with_schema({**dict(settings), "data": _loads(settings["data"])})
+            if settings
+            else self.get_project_settings(project_id),
         }
 
     def project_report_markdown(self, project_id: str) -> str:
