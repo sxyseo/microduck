@@ -29,6 +29,7 @@ RULE_VERSIONS = {
     "compatibility": "compatibility-v2",
     "bam_record_plan": "bam-record-plan-v1",
     "bam_record_run": "bam-record-run-v1",
+    "hardware_acceptance": "hardware-acceptance-v1",
 }
 
 EVIDENCE_SCOPES = {
@@ -44,6 +45,7 @@ EVIDENCE_SCOPES = {
     "hl2915_bam_record": "real_hardware",
     "controller_diagnostic": "real_hardware",
     "deployment": "real_hardware",
+    "hardware_acceptance": "real_hardware",
 }
 
 RUN_TASKS = {
@@ -55,10 +57,18 @@ RUN_TASKS = {
     "training_smoke": "smoke",
     "deployment_preflight": "deployment_preflight",
     "deployment": "deployment",
+    "hardware_acceptance": "acceptance",
 }
 RUN_TERMINAL_STATUSES = {"passed", "failed", "insufficient_evidence", "interrupted"}
 
 SCHEMA_VERSION = 1
+ACCEPTANCE_STAGES = (
+    "lifted_enable",
+    "supported_stand",
+    "free_stand",
+    "supported_step",
+    "free_walk",
+)
 
 
 def _now() -> str:
@@ -1222,6 +1232,54 @@ def validate_assembly(data: dict[str, Any]) -> tuple[dict[str, Any], str]:
     return normalized, completion
 
 
+def validate_hardware_acceptance(data: dict[str, Any]) -> tuple[dict[str, Any], str, list[str]]:
+    if not isinstance(data, dict) or data.get("stage") not in ACCEPTANCE_STAGES:
+        raise ValueError("hardware acceptance stage is invalid")
+    operator = data.get("operator")
+    if not isinstance(operator, str) or not operator.strip():
+        raise ValueError("hardware acceptance requires operator")
+    checks = data.get("checks")
+    if not isinstance(checks, list) or not checks:
+        raise ValueError("hardware acceptance checks must be a non-empty list")
+    normalized_checks: list[dict[str, Any]] = []
+    check_ids: set[str] = set()
+    for index, check in enumerate(checks):
+        if not isinstance(check, dict):
+            raise ValueError(f"hardware acceptance check {index} must be an object")
+        check_id = str(check.get("id", "")).strip()
+        title = str(check.get("title", "")).strip()
+        if not check_id or not title:
+            raise ValueError(f"hardware acceptance check {index} requires id and title")
+        if check_id in check_ids:
+            raise ValueError("hardware acceptance check ids must be unique")
+        check_ids.add(check_id)
+        status = check.get("status")
+        if status not in {"passed", "failed"}:
+            raise ValueError(f"hardware acceptance check {index} status is invalid")
+        evidence = check.get("evidence")
+        if not isinstance(evidence, list) or not evidence or any(
+            not isinstance(ref, str) or not ref.strip() for ref in evidence
+        ):
+            raise ValueError(f"hardware acceptance check {index} requires evidence")
+        normalized_checks.append({
+            "id": check_id,
+            "title": title,
+            "status": status,
+            "evidence": [ref.strip() for ref in evidence],
+        })
+    failed = [check["id"] for check in normalized_checks if check["status"] == "failed"]
+    normalized = {
+        "stage": data["stage"],
+        "operator": operator.strip(),
+        "checks": normalized_checks,
+    }
+    if "notes" in data:
+        if not isinstance(data["notes"], str):
+            raise ValueError("hardware acceptance notes must be a string")
+        normalized["notes"] = data["notes"].strip()
+    return normalized, "failed" if failed else "passed", [f"check_failed:{check_id}" for check_id in failed]
+
+
 def summarize_assembly_materials(materials: list[dict[str, Any]]) -> dict[str, Any]:
     status_counts: dict[str, int] = {}
     quantity_total = 0.0
@@ -1370,6 +1428,7 @@ TASKS = (
     ("smoke", "训练 smoke test", ("preflight", "hardware"), "blocked"),
     ("deployment_preflight", "部署前兼容性预检", ("hardware", "preflight", "smoke"), "blocked"),
     ("deployment", "部署策略与健康检查", ("deployment_preflight", "assembly", "calibration"), "blocked"),
+    ("acceptance", "逐级实机验收", ("deployment",), "blocked"),
     ("report", "生成复刻报告", ("hardware", "preflight"), "blocked"),
 )
 
@@ -1503,6 +1562,20 @@ TASK_CARDS = {
         "outputs": ["deployment_run", "rollback_evidence"],
         "risk": "confirmed_remote_mutation",
         "read_only": False,
+    },
+    "acceptance": {
+        "preconditions": ["当前硬件上的最新部署成功", "每一级均具备实体急停、规定约束和操作者"],
+        "estimated_minutes": 45,
+        "tools": ["实体急停", "支撑/约束装置", "照片或视频和运行日志"],
+        "steps": ["按固定顺序选择当前阶段", "执行应用外的人工验收", "逐项记录通过或失败及证据", "失败时停止升级并复测"],
+        "operation_scope": "仅保存人工实机验收证据；工作台不会从此任务触发机器人运动",
+        "evidence_required": ["操作者", "每项检查结论", "每项照片、视频或日志证据", "对应部署运行"],
+        "acceptance": "五个阶段按顺序全部通过，且仍对应当前硬件和最新成功部署",
+        "failure_handling": "任一级失败即停止升级；保留证据，修复后从失败级重新记录",
+        "outputs": ["hardware_acceptance_runs"],
+        "risk": "manual_real_hardware_evidence",
+        "read_only": False,
+        "stages": list(ACCEPTANCE_STAGES),
     },
     "report": {
         "preconditions": ["项目和预检记录存在"],
@@ -3567,6 +3640,73 @@ class StudioStore:
         )
         return {**run, "status": result["status"], "result": result}
 
+    def record_hardware_acceptance(self, project_id: str, data: dict[str, Any]) -> dict[str, Any]:
+        if not self.get_project(project_id):
+            raise KeyError(project_id)
+        normalized, status, reasons = validate_hardware_acceptance(data)
+        self._refresh_task_statuses(project_id)
+        with self._connect() as conn:
+            hardware = conn.execute(
+                "SELECT id, status, data FROM hardware_profiles WHERE project_id = ? ORDER BY updated_at DESC LIMIT 1",
+                (project_id,),
+            ).fetchone()
+            profiles = {
+                row["id"]: _loads(row["data"])
+                for row in conn.execute(
+                    "SELECT id, data FROM hardware_profiles WHERE project_id = ?", (project_id,)
+                ).fetchall()
+            }
+            deployment = conn.execute(
+                "SELECT id, status, result FROM runs WHERE project_id = ? AND kind = 'deployment' ORDER BY started_at DESC, rowid DESC LIMIT 1",
+                (project_id,),
+            ).fetchone()
+            deployment_task = conn.execute(
+                "SELECT status FROM tasks WHERE project_id = ? AND id = 'deployment'", (project_id,)
+            ).fetchone()
+            acceptance_rows = conn.execute(
+                "SELECT status, result FROM runs WHERE project_id = ? AND kind = 'hardware_acceptance' ORDER BY started_at DESC, rowid DESC",
+                (project_id,),
+            ).fetchall()
+        if not hardware or hardware["status"] != "confirmed":
+            raise ValueError("confirmed hardware required before hardware acceptance")
+        if not deployment or deployment["status"] != "passed" or not deployment_task or deployment_task["status"] != "success":
+            raise ValueError("latest successful deployment required before hardware acceptance")
+        deployment_result = _loads(deployment["result"])
+        if not hardware_records_match(
+            deployment_result.get("hardware_profile_id"), hardware["id"], _loads(hardware["data"]), profiles
+        ):
+            raise ValueError("deployment hardware evidence is stale")
+
+        latest_stage_status: dict[str, str] = {}
+        for row in acceptance_rows:
+            result = _loads(row["result"])
+            stage = result.get("stage")
+            if result.get("deployment_run_id") == deployment["id"] and stage in ACCEPTANCE_STAGES and stage not in latest_stage_status:
+                latest_stage_status[stage] = row["status"]
+        stage_index = ACCEPTANCE_STAGES.index(normalized["stage"])
+        missing = [stage for stage in ACCEPTANCE_STAGES[:stage_index] if latest_stage_status.get(stage) != "passed"]
+        if missing:
+            raise ValueError(f"hardware acceptance stages must be completed in order; missing: {', '.join(missing)}")
+        run = self.start_run(project_id, "hardware_acceptance")
+        result = {
+            **normalized,
+            "status": status,
+            "rule_version": RULE_VERSIONS["hardware_acceptance"],
+            "reasons": reasons,
+            "hardware_profile_id": hardware["id"],
+            "deployment_run_id": deployment["id"],
+            "hardware_action": False,
+        }
+        self.finish_run(run["id"], status, result)
+        latest_stage_status[normalized["stage"]] = status
+        task_status = (
+            "success" if all(latest_stage_status.get(stage) == "passed" for stage in ACCEPTANCE_STAGES)
+            else "failed" if any(value == "failed" for value in latest_stage_status.values())
+            else "ready"
+        )
+        self.set_task_status(project_id, "acceptance", task_status)
+        return {**run, "status": status, "result": result}
+
     def create_experiment(self, project_id: str, data: dict[str, Any]) -> dict[str, Any]:
         if not self.get_project(project_id):
             raise KeyError(project_id)
@@ -4587,6 +4727,16 @@ class StudioStore:
         latest_deployment_run = next(
             (run for run in runs if run["kind"] == "deployment_preflight"), None
         )
+        latest_deployment = next((run for run in runs if run["kind"] == "deployment"), None)
+        acceptance_stage_status: dict[str, str] = {}
+        if latest_deployment and latest_deployment["status"] == "passed":
+            for run in runs:
+                if run["kind"] != "hardware_acceptance":
+                    continue
+                result = _loads(run["result"])
+                stage = result.get("stage")
+                if result.get("deployment_run_id") == latest_deployment["id"] and stage in ACCEPTANCE_STAGES and stage not in acceptance_stage_status:
+                    acceptance_stage_status[stage] = run["status"]
 
         def evidence_reasons(task_id: str) -> list[str]:
             if task_id == "assembly":
@@ -4606,6 +4756,13 @@ class StudioStore:
                         else "deployment_preflight_run_required"
                     )
                 return reasons
+            if task_id == "acceptance":
+                if not latest_deployment or latest_deployment["status"] != "passed":
+                    return ["successful_deployment_required"]
+                next_stage = next(
+                    (stage for stage in ACCEPTANCE_STAGES if acceptance_stage_status.get(stage) != "passed"), None
+                )
+                return [f"next_acceptance_stage:{next_stage}"] if next_stage else []
             return []
 
         report_runs = [self._run_dict(run) for run in runs]
@@ -4817,6 +4974,17 @@ class StudioStore:
                 lines.append(
                     f"- 状态：`{run['status']}` · 原因：{', '.join(result.get('reasons', [])) or 'none'} · 策略：`{policy.get('name', 'unknown')}`"
                 )
+        acceptance_runs = [run for run in report["runs"] if run["kind"] == "hardware_acceptance"]
+        if acceptance_runs:
+            lines.extend(["", "## 逐级实机验收", ""])
+            for run in acceptance_runs:
+                result = run["result"]
+                lines.append(
+                    f"- `{result.get('stage', 'unknown')}` → `{run['status']}` · 操作者：`{result.get('operator', 'unknown')}` · 部署：`{result.get('deployment_run_id', 'unknown')}`"
+                )
+                for check in result.get("checks", []):
+                    evidence = "；".join(check.get("evidence", [])) or "无"
+                    lines.append(f"  - {check.get('title', check.get('id', '未命名'))}：`{check.get('status', 'unknown')}` · 证据：{evidence}")
         if report["calibrations"]:
             lines.extend(["", "## 标定记录", ""])
             for calibration in report["calibrations"]:

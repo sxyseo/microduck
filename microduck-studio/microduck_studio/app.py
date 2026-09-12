@@ -119,6 +119,10 @@ class DeploymentExecuteIn(DeploymentPlanIn):
     confirm: bool = False
 
 
+class HardwareAcceptanceIn(BaseModel):
+    data: dict
+
+
 class CompatibilityIn(BaseModel):
     hardware: dict
     policy: dict
@@ -566,6 +570,16 @@ def deployment_execute(project_id: str, body: DeploymentExecuteIn):
         raise HTTPException(status_code=404, detail="project not found") from exc
     except PermissionError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/api/projects/{project_id}/acceptances")
+def save_hardware_acceptance(project_id: str, body: HardwareAcceptanceIn):
+    try:
+        return store.record_hardware_acceptance(project_id, body.data)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="project not found") from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 

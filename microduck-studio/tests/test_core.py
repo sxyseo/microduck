@@ -42,6 +42,41 @@ def _complete_deployment_evidence(store: StudioStore, project_id: str) -> None:
     store.set_task_status(project_id, "servo_read", "success")
 
 
+def _deploy_for_acceptance(
+    store: StudioStore, project_id: str, root: Path, monkeypatch: pytest.MonkeyPatch
+) -> dict:
+    manifest = root / "manifest.json"
+    policy = root / "policy.onnx"
+    manifest.write_text(
+        json.dumps({"obs_len": 61, "action_len": 14, "action_filter": False, "robot": {"servos": "HL-2915", "control_hz": 50}}),
+        encoding="utf-8",
+    )
+    policy.write_bytes(b"fake-onnx")
+    store.save_hardware(project_id, {"servos": {"model": "HL-2915", "candidates": ["HL-2915"]}, "control_hz": 50})
+    store.set_task_status(project_id, "preflight", "success")
+    store.set_task_status(project_id, "smoke", "success")
+    _complete_deployment_evidence(store, project_id)
+    store.deployment_preflight(
+        project_id,
+        policy,
+        manifest,
+        {"obs_len": 61, "action_dim": 14, "control_hz": 50, "action_filter": False, "servo_model": "HL-2915"},
+    )
+    monkeypatch.setattr("microduck_studio.core.shutil.which", lambda name: f"/usr/bin/{name}")
+
+    def fake_run(command, **kwargs):
+        if command[-4:] == ["robotctl", "policy", "list", "--json"]:
+            return subprocess.CompletedProcess(command, 0, stdout=json.dumps({"policies": {"slots": []}}), stderr="")
+        if "sha256sum" in command:
+            return subprocess.CompletedProcess(command, 0, stdout=f"{hashlib.sha256(b'fake-onnx').hexdigest()}  remote.onnx\n", stderr="")
+        if command[-3:] == ["robotctl", "health", "--json"]:
+            return subprocess.CompletedProcess(command, 0, stdout=json.dumps({"robot": {"healthy": True}, "software": {"warnings": [], "services": []}}), stderr="")
+        return subprocess.CompletedProcess(command, 0, stdout="{}", stderr="")
+
+    monkeypatch.setattr("microduck_studio.core.subprocess.run", fake_run)
+    return store.execute_deployment(project_id, policy, manifest, "duck.local", "rock", 22, confirm=True)
+
+
 def test_serial_port_listing_is_read_only_and_never_claims_servo_identity():
     ports = list_serial_ports()
 
@@ -233,6 +268,15 @@ def test_frontend_exposes_structured_evidence_search():
     assert "&status=${encodeURIComponent(recordStatus)}" in html
     assert 'id="record-detail-id"' in html
     assert "/evidence/${encodeURIComponent(evidenceId)}" in html
+
+
+def test_frontend_exposes_records_only_hardware_acceptance():
+    html = (Path(__file__).parents[1] / "web" / "index.html").read_text(encoding="utf-8")
+
+    assert 'id="acceptance-data"' in html
+    assert 'id="acceptance-save"' in html
+    assert "只保存人工验收证据，不会触发机器人运动" in html
+    assert "/acceptances" in html
 
 
 def test_frontend_report_prefills_first_evidence_detail_id():
@@ -1389,6 +1433,242 @@ def test_deployment_health_failure_restores_previous_policy(
     assert "health_gate" in result["result"]["reasons"]
     assert result["result"]["stages"]["rollback"]["returncode"] == 0
     assert any(command[-3:] == ["walk", "/opt/old.onnx", "--json"] for command in calls)
+
+
+def test_first_hardware_acceptance_stage_records_evidence_and_advances_task(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    store = StudioStore(tmp_path / "studio.db")
+    project = store.create_project("逐级验收", tmp_path)
+    deployment = _deploy_for_acceptance(store, project["id"], tmp_path, monkeypatch)
+
+    saved = store.record_hardware_acceptance(
+        project["id"],
+        {
+            "stage": "lifted_enable",
+            "operator": "abel",
+            "checks": [
+                {
+                    "id": "estop",
+                    "title": "实体急停可用且机器人已架空",
+                    "status": "passed",
+                    "evidence": ["photo://lifted-estop"],
+                }
+            ],
+        },
+    )
+
+    assert saved["status"] == "passed"
+    assert saved["result"]["deployment_run_id"] == deployment["id"]
+    assert saved["result"]["hardware_action"] is False
+    task = next(item for item in store.project_report(project["id"])["tasks"] if item["id"] == "acceptance")
+    assert task["status"] == "ready"
+    assert task["card"]["stages"][1] == "supported_stand"
+    assert task["evidence_reasons"] == ["next_acceptance_stage:supported_stand"]
+
+
+def test_hardware_acceptance_rejects_skipped_stage(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    store = StudioStore(tmp_path / "studio.db")
+    project = store.create_project("禁止跳级", tmp_path)
+    _deploy_for_acceptance(store, project["id"], tmp_path, monkeypatch)
+
+    with pytest.raises(ValueError, match="in order"):
+        store.record_hardware_acceptance(
+            project["id"],
+            {
+                "stage": "supported_stand",
+                "operator": "abel",
+                "checks": [
+                    {
+                        "id": "support",
+                        "title": "保护支撑持续有效",
+                        "status": "passed",
+                        "evidence": ["video://supported-stand"],
+                    }
+                ],
+            },
+        )
+
+
+def test_hardware_acceptance_rejects_pass_without_evidence(tmp_path: Path):
+    store = StudioStore(tmp_path / "studio.db")
+    project = store.create_project("证据门", tmp_path)
+
+    with pytest.raises(ValueError, match="requires evidence"):
+        store.record_hardware_acceptance(
+            project["id"],
+            {
+                "stage": "lifted_enable",
+                "operator": "abel",
+                "checks": [
+                    {
+                        "id": "estop",
+                        "title": "实体急停可用",
+                        "status": "passed",
+                        "evidence": [],
+                    }
+                ],
+            },
+        )
+
+
+def test_all_hardware_acceptance_stages_complete_task(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    store = StudioStore(tmp_path / "studio.db")
+    project = store.create_project("完成验收", tmp_path)
+    _deploy_for_acceptance(store, project["id"], tmp_path, monkeypatch)
+
+    for stage in ["lifted_enable", "supported_stand", "free_stand", "supported_step", "free_walk"]:
+        saved = store.record_hardware_acceptance(
+            project["id"],
+            {
+                "stage": stage,
+                "operator": "abel",
+                "checks": [
+                    {
+                        "id": f"{stage}-check",
+                        "title": f"{stage} 人工核验",
+                        "status": "passed",
+                        "evidence": [f"video://{stage}"],
+                    }
+                ],
+            },
+        )
+
+    task = next(item for item in store.project_report(project["id"])["tasks"] if item["id"] == "acceptance")
+    assert saved["result"]["stage"] == "free_walk"
+    assert task["status"] == "success"
+
+
+def test_failed_hardware_acceptance_stage_requires_passing_retry(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    store = StudioStore(tmp_path / "studio.db")
+    project = store.create_project("失败复测", tmp_path)
+    _deploy_for_acceptance(store, project["id"], tmp_path, monkeypatch)
+    record = {
+        "stage": "lifted_enable",
+        "operator": "abel",
+        "checks": [
+            {
+                "id": "estop",
+                "title": "实体急停验证",
+                "status": "failed",
+                "evidence": ["video://estop-failure"],
+            }
+        ],
+    }
+
+    failed = store.record_hardware_acceptance(project["id"], record)
+    failed_task = next(item for item in store.project_report(project["id"])["tasks"] if item["id"] == "acceptance")
+    record["checks"][0].update({"status": "passed", "evidence": ["video://estop-retry"]})
+    passed = store.record_hardware_acceptance(project["id"], record)
+    retried_task = next(item for item in store.project_report(project["id"])["tasks"] if item["id"] == "acceptance")
+
+    assert failed["status"] == "failed"
+    assert failed_task["status"] == "failed"
+    assert passed["status"] == "passed"
+    assert retried_task["status"] == "ready"
+
+
+def test_new_deployment_invalidates_completed_hardware_acceptance(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    store = StudioStore(tmp_path / "studio.db")
+    project = store.create_project("重新部署", tmp_path)
+    first_deployment = _deploy_for_acceptance(store, project["id"], tmp_path, monkeypatch)
+    for stage in ["lifted_enable", "supported_stand", "free_stand", "supported_step", "free_walk"]:
+        store.record_hardware_acceptance(
+            project["id"],
+            {
+                "stage": stage,
+                "operator": "abel",
+                "checks": [{"id": stage, "title": stage, "status": "passed", "evidence": [f"video://{stage}"]}],
+            },
+        )
+
+    second_deployment = _deploy_for_acceptance(store, project["id"], tmp_path, monkeypatch)
+    task = next(item for item in store.project_report(project["id"])["tasks"] if item["id"] == "acceptance")
+
+    assert second_deployment["id"] != first_deployment["id"]
+    assert task["status"] == "ready"
+
+
+def test_hardware_acceptance_api_records_stage(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    import importlib
+
+    app_module = importlib.import_module("microduck_studio.app")
+    store = StudioStore(tmp_path / "studio.db")
+    project = store.create_project("验收接口", tmp_path)
+    _deploy_for_acceptance(store, project["id"], tmp_path, monkeypatch)
+    monkeypatch.setattr(app_module, "store", store)
+    endpoint = next(
+        route.endpoint
+        for route in app_module.app.routes
+        if getattr(route, "path", None) == "/api/projects/{project_id}/acceptances"
+        and "POST" in getattr(route, "methods", set())
+    )
+
+    response = endpoint(
+        project["id"],
+        app_module.HardwareAcceptanceIn(
+            data={
+                "stage": "lifted_enable",
+                "operator": "abel",
+                "checks": [{"id": "estop", "title": "急停", "status": "passed", "evidence": ["photo://estop"]}],
+            }
+        ),
+    )
+
+    assert response["status"] == "passed"
+    assert response["result"]["stage"] == "lifted_enable"
+
+
+def test_hardware_acceptance_markdown_keeps_stage_operator_and_deployment(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    store = StudioStore(tmp_path / "studio.db")
+    project = store.create_project("验收报告", tmp_path)
+    deployment = _deploy_for_acceptance(store, project["id"], tmp_path, monkeypatch)
+    store.record_hardware_acceptance(
+        project["id"],
+        {
+            "stage": "lifted_enable",
+            "operator": "abel",
+            "checks": [{"id": "estop", "title": "急停", "status": "passed", "evidence": ["photo://estop"]}],
+        },
+    )
+
+    markdown = store.project_report_markdown(project["id"])
+
+    assert "## 逐级实机验收" in markdown
+    assert "`lifted_enable`" in markdown
+    assert "操作者：`abel`" in markdown
+    assert f"部署：`{deployment['id']}`" in markdown
+
+
+def test_hardware_acceptance_requires_latest_successful_deployment(tmp_path: Path):
+    store = StudioStore(tmp_path / "studio.db")
+    project = store.create_project("部署门", tmp_path)
+    store.save_hardware(
+        project["id"],
+        {"servos": {"model": "HL-2915", "candidates": ["HL-2915"]}, "control_hz": 50},
+    )
+
+    with pytest.raises(ValueError, match="latest successful deployment"):
+        store.record_hardware_acceptance(
+            project["id"],
+            {
+                "stage": "lifted_enable",
+                "operator": "abel",
+                "checks": [{"id": "estop", "title": "急停", "status": "passed", "evidence": ["photo://estop"]}],
+            },
+        )
 
 
 def test_report_round_trip_keeps_run_evidence(tmp_path: Path):

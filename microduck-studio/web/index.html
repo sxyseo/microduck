@@ -164,6 +164,12 @@
       <button id="deployment-execute">部署 walk 策略（高风险）</button>
     </section>
     <section class="card">
+      <h2>逐级实机验收（只记录）</h2>
+      <p class="muted">顺序：架空启用 → 支撑站立 → 自由站立 → 支撑迈步 → 自由行走。这里只保存人工验收证据，不会触发机器人运动。</p>
+      <label>验收数据（JSON）<textarea id="acceptance-data">{"stage":"lifted_enable","operator":"","checks":[{"id":"estop","title":"实体急停可用且机器人已架空","status":"passed","evidence":[]}]}</textarea></label>
+      <button id="acceptance-save">保存本级验收</button>
+    </section>
+    <section class="card">
       <h2>来源与版本</h2>
       <label>类型<input id="source-kind" value="training"></label>
       <label>位置<input id="source-location" value="microduck_rl"></label>
@@ -502,6 +508,13 @@
       const body = {onnx_path:$('policy-onnx').value.trim(), manifest_path:$('policy-manifest').value.trim(), ...target, confirm:true};
       const res = await fetch(`/api/projects/${projectId}/deployment/execute`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
       show('status', await res.json());
+    };
+    $('acceptance-save').onclick = async () => {
+      if (!projectId) return show('status','请先创建项目');
+      let data; try { data = JSON.parse($('acceptance-data').value); } catch (e) { return show('status','验收 JSON 格式错误'); }
+      const res = await fetch(`/api/projects/${projectId}/acceptances`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({data})});
+      show('status', await res.json());
+      if (res.ok) refreshReport();
     };
     $('source-save').onclick = async () => {
       if (!projectId) return show('status','请先创建项目');
