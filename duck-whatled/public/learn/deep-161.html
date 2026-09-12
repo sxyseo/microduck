@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>解读 161 · 打印参数:层高/填充/方向 · 什么鸭 WhatDuck</title>
+<meta name="description" content="概念课 · 以 microduck-replica/docs/打印工艺调整表.md + microduck-replica/构建日志.md(打印记录节)为教材">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="解读 161 · 打印参数:层高/填充/方向">
+<meta property="og:description" content="概念课 · 以 microduck-replica/docs/打印工艺调整表.md + microduck-replica/构建日志.md(打印记录节)为教材">
+<meta property="og:url" content="https://duck.whatled.com/learn/deep-161">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/deep-161">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">DEEP 161 · 第十四辑 · 小白机械课 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="解读-161-打印参数层高填充方向">解读 161 · 打印参数:层高/填充/方向</h1>
+<blockquote>
+<p><strong>解读对象</strong>:概念课 · 以 <code>microduck-replica/docs/打印工艺调整表.md</code> + <code>microduck-replica/构建日志.md</code>(打印记录节)为教材<br />
+<strong>需要的前置</strong>:<a href="/learn/deep-160">解读 160</a>;知道 FDM 打印是把熔化塑料一层层堆成零件。</p>
+</blockquote>
+<h2 id="项目不给万能参数">项目不给"万能参数"</h2>
+<p>调整表开篇先把数据分成两类,这个习惯本身就是第一课:【已验证】的,来自 <code>hole_analysis.json</code> 的 STL 反推数据加试装经验;【推测】的,是 FDM 工艺经验值,"必须用测试片在你的打印机上实测校准后才是你自己的数据"。层高、填充这类切片参数,项目文档没有替你规定具体数字——构建日志的"打印记录"表(零件/材料/层高/填充/耗时/结果)现在还空着,打印机与切片软件一栏写的是"<em>(待填)</em>"。这不是文档偷懒,而是诚实:换一台机器、换一种材料,最优值就变了。文档能给的是<strong>纪律</strong>,不是数值。</p>
+<h2 id="两条已经写死的纪律">两条已经写死的纪律</h2>
+<p>其一,全机 30 种 / 41 件用<strong>同一台机器、同一材料、同一层高</strong>打——"别让补偿值跨机器失效"。其二,材料不许偷换:PLA 收缩小、PETG 略大、ABS 最大,"换材料 = 重测补偿值"。构建日志 09-06 的代打经历把这条变成了真金白银:¥99 按重代打店只做 PLA,TPU 两件(软下巴 18.6cm³ + 软嘴 2.7cm³)被拒,只能单独补打;日志特别提醒"<strong>勿让店家降填充冒充软料</strong>"——填充上省下的钱,买单的是装配公差。</p>
+<p>耗材账目是文档里少数能算死的数字:结构件 241cm³ ≈ 299g PLA(密度 1.24),软性件 21.3cm³ ≈ 26g TPU(密度 1.21);加损耗备一卷 1kg PLA 足够,最贵的是头壳(上壳 29.9 + 下壳 23.8cm³)。已经发生的打印也有记录:首批件里头部总成是<strong>多色打印</strong>(白/黑/红),表面质量良好——多色不是计划,是已验证的现实。</p>
+<h2 id="方向每个零件都要回答哪面朝上">方向:每个零件都要回答"哪面朝上"</h2>
+<p>调整表第四节是全篇最接近"工艺"的部分,摆放规则逐条可执行:</p>
+<ul>
+<li><strong>竖直孔会变椭圆</strong>(每层圆弧两端靠桥接成型),所以过孔类尽量<strong>孔轴垂直于打印平面</strong>摆放——原文注明这是"牺牲强度换装配";</li>
+<li>壳体类(下壳与左右壳 20970 面,上壳 16120 面)大平面朝上,边缘加裙边防翘曲;</li>
+<li>薄板件(上腿加固板 1.0mm、颈部 2.0mm)冷却风扇全开加减速,防薄壁抖纹;加固板建议立印或加裙板;</li>
+<li>支撑能免则免:孔轴垂直的摆法本身就是免支撑的摆法。</li>
+</ul>
+<h2 id="你带走的收获">你带走的收获</h2>
+<ul>
+<li>切片参数没有项目权威值:文档给纪律(同机同料同层高、换料重测),数值靠测试片自标定。</li>
+<li>"打印记录"表的四列(材料/层高/填充/耗时)是留给你的作业,回填它就是复刻的一部分。</li>
+<li>摆放方向是隐藏参数:同一零件换个朝向,强度、支撑、孔精度全变。</li>
+<li>填充率不是成本问题的全部:该 TPU 的件用 PLA 顶,公差与功能都要还债。</li>
+<li>全机结构件加软性件约 325g(299+26),打印的难点从来不是量,而是一致性。</li>
+</ul>
+<h2 id="延伸">延伸</h2>
+<ul>
+<li><a href="/learn/deep-162">解读 162</a>:方向摆对了,孔还有收缩问题(<code>docs/deep-dive/162-公差与配合.md</code>)</li>
+<li><a href="/learn/deep-168">解读 168</a>:"牺牲强度换装配"换掉了什么(<code>docs/deep-dive/168-强度入门.md</code>)</li>
+<li>体检与记录:<code>microduck-replica/docs/打印就绪检查.md</code>(30 种 / 41 件全部水密可直接切片);构建日志的打印记录表等你回填。</li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

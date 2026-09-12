@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>解读 142 · testbench 双脚本函数级 · 什么鸭 WhatDuck</title>
+<meta name="description" content="microduck-replica/upstream/microduck_rl/scripts/testbench_sim2real.py(611 行)+ scripts/vali">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="解读 142 · testbench 双脚本函数级">
+<meta property="og:description" content="microduck-replica/upstream/microduck_rl/scripts/testbench_sim2real.py(611 行)+ scripts/vali">
+<meta property="og:url" content="https://duck.whatled.com/learn/deep-142">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/deep-142">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">DEEP 142 · 第十二辑 · 任务配置与脚本逐文件 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="解读-142-testbench-双脚本函数级">解读 142 · testbench 双脚本函数级</h1>
+<blockquote>
+<p><strong>解读对象</strong>:<code>microduck-replica/upstream/microduck_rl/scripts/testbench_sim2real.py</code>(611 行)+ <code>scripts/validate_bam_testbench.py</code>(277 行),函数级全走<br />
+<strong>需要的前置</strong>:<a href="/learn/deep-60">解读 60</a>(导览:双脚本在验证流程的位置)、<a href="/learn/deep-56">解读 56</a>(M6 六参数)</p>
+</blockquote>
+<p>导览(60 篇)讲了动机;本篇逐函数下钻。<code>testbench_sim2real.py</code> 验<strong>策略</strong>(同一 ONNX 跑两世界),<code>validate_bam_testbench.py</code> 验<strong>执行器内核</strong>(同一实测轨迹喂两个仿真器)。</p>
+<h2 id="底盘testbench-sim2realpy39-96">底盘(testbench_sim2real.py:39-96)</h2>
+<p><code>CONTROL_DT = 0.02</code>(50 Hz = decimation 4 × 0.005)、<code>SIM_DT = 0.005</code>(200 Hz)、<code>DXL_VEL_TICK_TO_RAD_S = 0.229·2π/60</code>(:47;速度原始 tick,每 tick = 0.229 RPM)。<code>make_target_schedule</code>(:55-71)用种子化 rng 每 4 秒在 ±80° 采一个新目标;同一 seed 保证两世界<strong>同一条</strong>轨迹。<code>PolicyRunner</code>(:74-96)是薄包装:<code>step</code>(:87-96)拼 4 维观测 <code>[q - DEFAULT_POS, qd, last_action, target]</code>(:90-93),缓存 <code>last_action</code>(:95),返回 <code>DEFAULT_POS + action·action_scale</code>。</p>
+<h2 id="两个仿真后端104-291">两个仿真后端(104-291)</h2>
+<p><code>rollout_sim_bam</code>(:104-210):200 Hz、无 torch,但执行器非训练时那份(:105-109)。载入 xl330 的 m6 json(:118-121),设 <code>VIN = 7.4</code>、<code>KP_FW = 200.0</code>(:123-124)。细节(:143-155):position actuator 转 motor(<code>act.set_to_motor()</code>,限幅 <code>±VIN·kt/R</code>),铰链 damping/frictionloss 清零——摩擦归 BAM 管。主循环(:183-208)外层 50 Hz、内层 <code>decim=4</code>:每内步先 200 Hz 记录六元组,再 <code>set_q_target</code> + <code>update()</code>(写力矩、推摩擦进 dof)+ <code>mj_step</code>。</p>
+<p><code>rollout_sim_mjlab</code>(:213-291)用<strong>真正的</strong>训练环境:<code>resampling_time_range = (1e6, 1e6)</code>(:232)关自动重采样、<code>enable_corruption = False</code>(:236)公平对照,每拍写 <code>cmd_term._target[0, 0]</code> 注入目标(:258)。讲究处在 <code>observation_manager.compute(update_history=True)</code>(:262):joint_vel 观测带 1 拍延迟,历史缓冲必须每拍推进,否则速度陈旧。再手动复刻 decimation 循环(:272-288)以 200 Hz 采样。</p>
+<h2 id="实物路径与分析器299-533">实物路径与分析器(299-533)</h2>
+<p><code>rollout_real</code>(:299-413)先配舵机(position 模式、P=kp、I/D=0)并<strong>回读确认</strong>(:322-325,固件会静默钳位)。主循环(:349-409)每 20 ms 开头读一次、跑一次、写一次;速度读失败用 <code>(q - prev_q) / CONTROL_DT</code> 差分兜底(:357-358);deadline 定时凑足 200 Hz(:376-379);结束关扭矩(:412)。注意 :362 有行被注释掉的 <code>np.clip</code>——策略输出限幅被有意放开。分析侧:<code>_mae</code>(:421);<code>npz_to_bam_log</code>(:426-472)把 .npz 转回 BAM 日志格式(load/temp 为占位,dt 取实测均值(:441)),喂 <code>bam.plot</code>;<code>compare_and_plot</code>(:475-533)出四联图。<code>main</code>(:541-607)分派 <code>--compare</code>/<code>--to-bam</code>/rollout 三模式。</p>
+<h2 id="validate-bam-testbenchpy内核的三方对质">validate_bam_testbench.py:内核的三方对质</h2>
+<p>模块头(:22-41)钉死路径与固件常数:<code>ERROR_GAIN = (4096/2π)/(256·885)</code>(:39,位置误差→PWM 增益)、<code>VIN = 7.4</code>。<code>bam_python_rollout</code>(:44-58)调 BAM 官方 <code>Simulator.rollout_log(simulate_control=True)</code> 当参照。<code>compute_m6_friction</code>(:61-83)复刻 M6 摩擦:stribeck 项(:64)、两路负载摩擦(:66-73)、<code>friction_base</code>+粘性阻尼,合成 <code>friction_budget</code>;二次项被注释跳过(:79)。</p>
+<p><code>mujoco_rollout</code>(:86-178)是核心,每 entry 走六步链:①<code>duty = clip(误差·kp·ERROR_GAIN, ±1)</code>,电压 = VIN·duty(:151-153);②电机力矩 <code>kt·V/R − kt²·dq/R</code>(:156);③外力矩取 <code>-qfrc_bias</code>(:161,符号约定相反);④摩擦预算(:164);⑤静摩擦裁剪 <code>min(|τ_stop|, budget)</code>(:167-171);⑥<code>ctrl = motor + friction</code>(:174,bias 由 MuJoCo 加回)。arm 质量/惯量按日志缩放(:112-120)。<code>main</code>(:181-273)对每条录音算三个 MAE(bam_vs_real / mj_vs_real / bam_vs_mj),判定(:241-246):<code>avg_diff &gt; 0.01</code> 即内核有 bug;<code>avg_mj &gt; 1.5×avg_bam</code> 即动力学差异;否则 ✓。</p>
+<h2 id="你带走的收获">你带走的收获</h2>
+<ul>
+<li>对照的前提被代码化:同 seed 目标序列+一致观测与 50/200 Hz 节拍,差一项 MAE 不可信。</li>
+<li>实物数据质量在细节:增益回读、tick 换算、差分兜底、deadline 定时采样。</li>
+<li>内核验证要三方对质(你的实现/官方参考/实物),两两 MAE 定位分歧。</li>
+<li><code>npz_to_bam_log</code> 让产物回流辨识工具链,而非一次性图片。</li>
+</ul>
+<h2 id="延伸">延伸</h2>
+<ul>
+<li>导览与流程位置:<a href="/learn/deep-60">解读 60</a>;台架物理:<a href="/learn/deep-55">解读 55</a>;M6 参数含义:<a href="/learn/deep-56">解读 56</a></li>
+<li>训练配置:<a href="/learn/deep-137">解读 137</a>;参数写回:<a href="/learn/deep-57">解读 57</a></li>
+<li>本地路径:<code>microduck-replica/upstream/microduck_rl/scripts/testbench_sim2real.py</code>、<code>scripts/validate_bam_testbench.py</code></li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

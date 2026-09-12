@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>解读 170 · xl320 案例研究 · 什么鸭 WhatDuck</title>
+<meta name="description" content="bam/bam/params/xl320/(m1.json–m6.json 六档,m6.json 共 17 个字段)">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="解读 170 · xl320 案例研究">
+<meta property="og:description" content="bam/bam/params/xl320/(m1.json–m6.json 六档,m6.json 共 17 个字段)">
+<meta property="og:url" content="https://duck.whatled.com/learn/deep-170">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/deep-170">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">DEEP 170 · 第十五辑 · 其他舵机案例库 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="解读-170-xl320-案例研究">解读 170 · xl320 案例研究</h1>
+<blockquote>
+<p><strong>解读对象</strong>:<code>bam/bam/params/xl320/</code>(m1.json–m6.json 六档,m6.json 共 17 个字段)<br />
+<strong>需要的前置</strong>:<a href="/learn/deep-169">解读 169</a>(xl330 逐字段基准)· <a href="/learn/deep-80">解读 80</a>(字段含义速查)</p>
+</blockquote>
+<h2 id="1-型号是谁">1. 型号是谁</h2>
+<p>Robotis Dynamixel XL-320,<code>bam/README.md</code> 已辨识模型库里的"上一代小球形舵机"——XL330 的<br />
+前辈。BAM 侧是 <code>dynamixel/actuator.py</code> 的 <code>XL320Actuator</code>:台架电压 vin=7.5 V、固件 P 增益<br />
+kp=32(xl330 是 400,口径完全不同)、error_gain=0.05048199(注释:示波器实测)、max_pwm=1.0。<br />
+它的辨识范围也为它单独定制:R 上限放宽到 40 Ω(其他电压舵机 ≤10),<code>max_load_friction</code><br />
+放宽到 1.0(默认 0.5)。额定电压窗口、尺寸、重量等规格:参数库外信息,待验证。</p>
+<h2 id="2-m6json-逐字段-与-xl330-基准对比">2. m6.json 逐字段 + 与 xl330 基准对比</h2>
+<p>17 个字段(xl330 有 18——<strong>xl320 没有 <code>command_delay</code></strong>,缺的字段加载时回落初始值 0.0,<br />
+即拟合时没辨识延迟;是当年流水线版本差异还是刻意为之,待验证):</p>
+<table>
+<thead>
+<tr>
+<th>字段</th>
+<th>xl320</th>
+<th>xl330</th>
+<th>对比</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>kt</code></td>
+<td>1.009</td>
+<td>0.346</td>
+<td>×2.9</td>
+</tr>
+<tr>
+<td><code>R</code></td>
+<td><strong>31.59</strong></td>
+<td>2.50</td>
+<td><strong>×12.6,一整个量级</strong>(范围 3–40)</td>
+</tr>
+<tr>
+<td><code>armature</code></td>
+<td>0.00116</td>
+<td>0.00157</td>
+<td>×0.74</td>
+</tr>
+<tr>
+<td><code>q_offset</code></td>
+<td>−0.0212</td>
+<td>0.0150</td>
+<td>台架误差,只说明它家台架装偏方向相反</td>
+</tr>
+<tr>
+<td><code>friction_base</code></td>
+<td><strong>4.3e-07</strong></td>
+<td>0.0119</td>
+<td>几乎为零:库仑底没了</td>
+</tr>
+<tr>
+<td><code>friction_stribeck</code></td>
+<td>0.0163</td>
+<td>0.00085</td>
+<td>×19:停转阻力全走 Stribeck 通道</td>
+</tr>
+<tr>
+<td><code>load_friction_motor</code></td>
+<td><strong>3.1e-06</strong></td>
+<td>0.228</td>
+<td>≈0:电机侧载荷摩擦消失</td>
+</tr>
+<tr>
+<td><code>load_friction_external</code></td>
+<td>0.158</td>
+<td>0.107</td>
+<td>外载侧扛大旗</td>
+</tr>
+<tr>
+<td><code>load_friction_*_stribeck</code></td>
+<td>6.0e-09 / 0.245</td>
+<td>1.5e-08 / 0.142</td>
+<td>同上,外载侧主导</td>
+</tr>
+<tr>
+<td><code>load_friction_*_quad</code></td>
+<td>0.00362 / 0.00471</td>
+<td>0.00527 / 0.00299</td>
+<td>同量级</td>
+</tr>
+<tr>
+<td><code>dtheta_stribeck</code></td>
+<td><strong>2.30</strong></td>
+<td>0.261</td>
+<td>×8.8,"多慢算慢"门槛宽 9 倍</td>
+</tr>
+<tr>
+<td><code>alpha</code></td>
+<td>1.71</td>
+<td>8.53</td>
+<td>峰又宽又平</td>
+</tr>
+<tr>
+<td><code>friction_viscous</code></td>
+<td>0.00723</td>
+<td>0.00579</td>
+<td>×1.25</td>
+</tr>
+</tbody>
+</table>
+<p>画像:XL-320 的 R=31.6 Ω 意味着堵转电流只有 7.5/31.6≈0.24 A,kt·vin/R≈<strong>0.24 N·m</strong><br />
+的电压堵转力矩——比 xl330 的 1.04 N·m 弱 4 倍,和"上一代更弱"的直觉自洽。摩擦结构则<br />
+<strong>整个换了形状</strong>:xl330 是"有库仑底 + 电机侧载荷摩擦主导",xl320 是"无库仑底 + 外载侧<br />
+主导 + 宽而平的 Stribeck"。同一套 M6 模型,两组参数形状完全不同——这就是为什么不能拿<br />
+一颗舵机的 json 改个文件名冒充另一颗。存疑点:<code>dtheta_stribeck</code>=2.30 超出当前代码上限 1.0,<br />
+应是拟合时旧版范围不同所致(推断,待验证)。</p>
+<h2 id="3-如果用它换掉-xl330五落点具体值">3. 如果用它换掉 xl330:五落点具体值</h2>
+<p>按 <a href="/learn/deep-79">解读 79</a> 的落点:① <code>microduck_constants.py</code> 改<br />
+<code>motor_name="xl320"</code>;kp_fw 口径换到 32 一族(不能照抄 200);vin_range 按实测窗口填<br />
+(额定值待验证,BAM 台架口径 7.5 V);延迟按 json 缺失回落 0.0 或台架重测。②<br />
+<code>friction_dr_bam.py</code>:forcerange 按 0.24 N·m 量级重估——低于决策树"0.5 N·m 量级"的<br />
+第二道门(<a href="/learn/deep-73">解读 73</a>),<strong>力矩先行一票否决</strong>,大概率走不到重训那步;<br />
+摩擦辨识值直接指向 <code>params/xl320/m6.json</code>。③ 回差角台架实测。④ 随机化范围按自己台架<br />
+离散度。⑤ assets 质量(单只重量:参数库外,待验证)。</p>
+<h2 id="你带走的收获">你带走的收获</h2>
+<ul>
+<li>xl320 的字段集比 xl330 少一个 <code>command_delay</code>:json 里缺什么也是信息,缺的字段加载时回落初始值。</li>
+<li>R=31.6 Ω / kt·vin/R≈0.24 N·m:用两个电机参数就能算出"这颗舵机弱不弱",先过力矩门再谈别的。</li>
+<li>同一 M6 模型下,两代舵机的摩擦预算"形状"完全不同(库仑底有无、电机侧 vs 外载侧)——<br />
+  参数不能跨型号照抄的最硬证据。</li>
+<li>辨识值超出当前代码上限(dtheta_stribeck 2.30 &gt; 1.0)提示 json 出自旧版流水线,读参数库<br />
+  要连着 git 历史读。</li>
+</ul>
+<h2 id="延伸">延伸</h2>
+<ul>
+<li><a href="/learn/deep-169">解读 169</a>:基准型号逐字段 · <a href="/learn/deep-73">解读 73</a>:四道门</li>
+<li><a href="/learn/deep-77">解读 77</a>:Dynamixel 系协议适配</li>
+<li><code>bam/bam/params/xl320/m6.json</code> · <code>bam/bam/dynamixel/actuator.py</code>(<code>XL320Actuator</code>)</li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

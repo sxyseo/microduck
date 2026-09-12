@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>解读 100 · obs.rs(一):61 维观测逐位 · 什么鸭 WhatDuck</title>
+<meta name="description" content="duck-control/src/obs.rs(406 行)">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="解读 100 · obs.rs(一):61 维观测逐位">
+<meta property="og:description" content="duck-control/src/obs.rs(406 行)">
+<meta property="og:url" content="https://duck.whatled.com/learn/deep-100">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/deep-100">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">DEEP 100 · 第十辑 · duck-control 逐函数精读 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="解读-100-obsrs一61-维观测逐位">解读 100 · obs.rs(一):61 维观测逐位</h1>
+<blockquote>
+<p><strong>解读对象</strong>:<code>duck-control/src/obs.rs</code>(406 行)<br />
+<strong>需要的前置</strong>:<a href="/learn/deep-02">解读 02</a>(布局与命令块导览)、<a href="/learn/deep-06">解读 06</a>(gyro/gravity 从哪来)</p>
+</blockquote>
+<p>导览见解读 02,本篇逐函数下钻:先看输入端的三个类型,再进 <code>build</code> 看缓冲区怎么被切成六块,最后是三个生命周期小函数。</p>
+<h2 id="1-输入端commandbodypose-与模长">1. 输入端:<code>Command</code>、<code>BodyPose</code> 与模长</h2>
+<p><code>Command</code>(obs.rs:76-83)是"客户端想让机器人做什么"的结构化形式:<code>twist</code> 三元组、<code>head</code> 四元组、<code>body</code> 三个 <code>f64</code>。文档点明它的身份(obs.rs:73-74):按物理单位持有,到扁平命令块的换算只发生在 <code>build</code> 里,"nowhere else"——换算只写一处,就不会有两处各错各的。<code>twist_magnitude</code>(obs.rs:87-89)三行算速度指令模长:</p>
+<pre><code class="language-rust">self.twist.iter().map(|v| v * v).sum::&lt;f64&gt;().sqrt()
+</code></pre>
+<p>它只看 twist:测试 <code>twist_magnitude_ignores_head_and_body</code>(obs.rs:391-405)把 head 与 body 全填 1.0,断言模长仍是 0——因为模长是走/站切换的唯一判据(见解读 97 的 <code>will_stand</code>),抬头不能被当成走路。<code>BodyPose</code>(obs.rs:95-99)只有 z/roll/pitch 三个字段,注释坦白 slice 2 尚不可指令(obs.rs:92-93):先占位,等 <code>pose</code> 意图落地,布局图先画完整。</p>
+<h2 id="2-build把-61-个-f32-切成六块">2. <code>build</code>:把 61 个 f32 切成六块</h2>
+<p>签名(obs.rs:174-181)六个参数:IMU、绝对关节角、关节速度、home 位、上次动作(14 维 f32)、命令。核心手法是把缓冲区按布局表逐块"劈"出来(obs.rs:189-194):</p>
+<pre><code class="language-rust">let (gyro, rest) = data.split_first_chunk_mut::&lt;3&gt;().expect(LAYOUT);
+let (gravity, rest) = rest.split_first_chunk_mut::&lt;3&gt;().expect(LAYOUT);
+</code></pre>
+<p><code>split_first_chunk_mut::&lt;N&gt;()</code> 劈出前 N 个可变元素,返回 <code>Option</code>(劈不动即 <code>None</code>);这里各块宽度全是常量、总和恰为 61,<code>expect</code> 不会触发,还有测试 <code>the_layout_widths_sum_to_the_declared_input</code>(obs.rs:288)钉着总和。劈完每块都是定长数组,宽度进了类型,<code>fill</code>(obs.rs:134)就只可能收到同宽的源;它内部一行 <code>values.map(|value| value as f32)</code>(obs.rs:135)完成 f64→f32 收窄。位置块要过一道减法:关节角与 home 位各自压成 14 维,再逐项相减(obs.rs:199-201)——策略训练时看的是相对角。上一动作块连 <code>fill</code> 都不用(obs.rs:204-206):已是 f32、同宽,<code>*previous_action = *last_action</code> 纯拷贝。命令块是唯一"照文档手写"的段落:13 个字面量按布局表顺序排进数组字面量(obs.rs:210-227),注释说这正是目的——"这个块没有第二真相来源,所以它应该能对着文档用眼睛核对"(obs.rs:208-209)。</p>
+<h2 id="3-三个生命周期小函数">3. 三个生命周期小函数</h2>
+<p><code>Observation</code> 本体是 <code>[f32; 61]</code> 而非 <code>Vec</code>(obs.rs:139-145):它每秒重建 50 次,不该访问堆分配器。围绕它的三个小函数:<code>as_slice</code>(obs.rs:155-157)把内部数组以切片借出,给 <code>policy.rs</code> 的有限性检查用;<code>zeroed</code>(obs.rs:163-167)造全零观测,注释强调它"不是有效机器人状态",只用于预热推理(obs.rs:160-162,见解读 03);<code>From&lt;[f32; 61]&gt;</code>(obs.rs:148-152)把一份已拼好的观测原样灌回来,文档标注用于离线策略回放(obs.rs:147)。三个函数合起来划出边界:观测要么由 <code>build</code> 从真实传感器造,要么由测试/回放显式注入,没有第三条路。</p>
+<h2 id="你带走的收获">你带走的收获</h2>
+<ul>
+<li>命令按物理单位持有、扁平化只写一处;模长只取速度三元组,别的通道不得污染走/站判据。</li>
+<li>用 <code>split_first_chunk_mut</code> 把缓冲区按表劈成定长块:宽度进类型,块宽错了编译不过。</li>
+<li>没有第二真相来源的段落写成"照文档可核对"的字面量——可读性本身就是正确性手段。</li>
+<li>热路径数据结构避开堆:定长数组每秒重建 50 次不碰分配器。</li>
+<li>类型还可以表达"来路":build 产出、From 注入,两条构造路径都写在明面上。</li>
+</ul>
+<h2 id="延伸">延伸</h2>
+<ul>
+<li>布局表与命令块的三个坑:<a href="/learn/deep-02">解读 02</a></li>
+<li>build 的产物喂给谁、切换阈值怎么用:<a href="/learn/deep-97">解读 97</a></li>
+<li>14 维怎么摊回 15 个关节:<a href="/learn/deep-101">解读 101</a></li>
+<li>课程对照:<code>/Volumes/dev/dev/microduck/docs/course/04-61到14-鸭子的神经回路.md</code></li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

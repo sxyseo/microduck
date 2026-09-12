@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>解读 195 · 什么是 MuJoCo · 什么鸭 WhatDuck</title>
+<meta name="description" content="microduck-replica/upstream/microduck_rl/scripts/infer_policy.py(1525 行,文件头自述"Run ONNX poli">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="解读 195 · 什么是 MuJoCo">
+<meta property="og:description" content="microduck-replica/upstream/microduck_rl/scripts/infer_policy.py(1525 行,文件头自述"Run ONNX poli">
+<meta property="og:url" content="https://duck.whatled.com/learn/deep-195">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/deep-195">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">DEEP 195 · 第十六辑 · 小白基础课 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="解读-195-什么是-mujoco">解读 195 · 什么是 MuJoCo</h1>
+<blockquote>
+<p><strong>解读对象</strong>:<code>microduck-replica/upstream/microduck_rl/scripts/infer_policy.py</code>(1525 行,文件头自述"Run ONNX policy inference in MuJoCo with rendering")<br />
+<strong>需要的前置</strong>:<a href="/learn/deep-130">解读 130</a>(回放主流程);<a href="/learn/deep-181">解读 181</a>(策略是怎么训练出来的)。</p>
+</blockquote>
+<h2 id="物理引擎给机器人一个练习场">物理引擎:给机器人一个"练习场"</h2>
+<p>让鸭子真摔真坏地学走路,代价太大。<strong>MuJoCo</strong>(Multi-Joint dynamics with Contact,带接触的多关节动力学,通用背景)是一个物理引擎:你告诉它"机器人长什么样、多重、关节怎么连、地面多滑",它就能按物理定律一步步算出"接下来会发生什么"——重力拉它、脚底踩地、关节互相较劲。训练(在 mjlab/GPU 里)和回放(在 MuJoCo 里)都在这个练习场里进行,鸭子一百万次摔倒都不用买零件。</p>
+<p>infer_policy.py 开头第一行就是练习场的入场券:</p>
+<pre><code class="language-python">MICRODUCK_XML = &quot;src/mjlab_microduck/robot/microduck/scene.xml&quot;
+</code></pre>
+<h2 id="infer-policypy-用它做什么">infer_policy.py 用它做什么</h2>
+<p>这个脚本把"训练好的 ONNX 策略"放回物理引擎里开卷考试,五步全是 MuJoCo 的典型用法:</p>
+<ol>
+<li><strong>加载模型</strong>:<code>mujoco.MjSpec.from_file(xml_path)</code> / <code>MjModel.from_xml_path</code> 读入鸭子的 MJCF 描述;<code>MjData</code> 是这场仿真的"当前状态"(所有东西在哪、速度多少)。</li>
+<li><strong>设置时钟</strong>:<code>model.opt.timestep = 0.005</code>——物理每 5 毫秒推进一步;<code>decimation = 4</code> 即策略每 4 步才想一次,<code>control_dt = 0.02</code>,所以启动横幅打印 <code>Control frequency: 50 Hz (decimation: 4)</code>。</li>
+<li><strong>读传感器</strong>:策略要的观测不凭空给,而是从引擎"传感器"里取——<code>mj_name2id(..., "imu_ang_vel")</code> 找到 IMU 传感器,再从 <code>data.sensordata</code> 读数;关节位置/速度读 <code>data.qpos</code>/<code>data.qvel</code>。</li>
+<li><strong>推理与施令</strong>:61 维观测喂 ONNX,拿回 14 维动作,算出目标位置写进 <code>data.ctrl</code>(或 BAM 控制器的 <code>q_target</code>)。</li>
+<li><strong>前进一步</strong>:<code>mj_forward(model, data)</code> 更新状态;循环 1 秒约 50 次,配合 <code>mujoco.viewer</code> 你就能在屏幕上看鸭子走路(native 窗口 / viser 浏览器两条路)。</li>
+</ol>
+<p>一个佐证"仿真不是儿戏"的细节:脚本还有 <code>--foot-friction</code>/<code>--foot-solref</code> 参数,专门调脚底接触的摩擦与软硬,用来排查"真机为什么前摔"——物理引擎里连鞋底都是一个可调的物理参数。</p>
+<h2 id="为什么仿真先行">为什么仿真先行</h2>
+<p>构建日志给了最硬的证据。一句判断:"<strong>仿真 STL 不是可打印工程件</strong>——仿真只保证外形与惯量,不保证配合公差、螺纹、埋件座和走线空间",所以这只鸭子的机械件要按打印工艺重做;反过来,动作能力又是仿真里练出来的:用户问"3 万步为什么不会走",诊断是"回放是冻结权重的重放,不产生学习;真正差距是训练量"——CPU 续训 2000 迭代后 reward 从 0.80 涨到 12.77,回放 240 步零摔倒。<strong>先仿真、后实机</strong>,不是偷懒,是把会摔的试错放在便宜的世界里做完,再把幸存的策略(和验证过的模型文件)交给现实。</p>
+<h2 id="你带走的收获">你带走的收获</h2>
+<ul>
+<li>物理引擎 = 可编程的练习场:模型(MJCF)+ 状态(MjData)+ 步进(mj_forward)三件套。</li>
+<li>回放五步:载模型 → 定时钟(0.005s × 4 = 50Hz)→ 读传感器 → ONNX 推理 → 写 ctrl。</li>
+<li>策略的观测来自仿真传感器,不是魔法:imu 角速度、qpos、qvel 都是引擎按物理算出来的。</li>
+<li>仿真先行的价值:试错免费;但仿真模型(外形/惯量)与工程件(公差/螺纹)是两回事。</li>
+<li>"不会走"的答案常常是训练量,不是模型坏了——冻结权重回放不产生学习。</li>
+</ul>
+<h2 id="延伸">延伸</h2>
+<ul>
+<li>回放主流程逐段:<a href="/learn/deep-130">解读 130</a> · ONNX 是什么:<a href="/learn/deep-194">解读 194</a></li>
+<li>仿真里策略"看到"的世界:观测函数库 <a href="/learn/deep-25">解读 25</a></li>
+<li>本地:<code>scripts/infer_policy.py</code>(头部常量、<code>load_mujoco_with_bam</code>、<code>decimation = 4</code>)、<code>microduck-replica/构建日志.md</code>(expC 各条)</li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

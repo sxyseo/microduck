@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>解读 179 · 端到端推演:换成 STS3215 · 什么鸭 WhatDuck</title>
+<meta name="description" content="bam/bam/params/feetech_sts3215_7_4V/m6.json + 换舵机方法论([解读 73](73-换舵机决策树.md)–[84](84-案例复盘HL1">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="解读 179 · 端到端推演:换成 STS3215">
+<meta property="og:description" content="bam/bam/params/feetech_sts3215_7_4V/m6.json + 换舵机方法论([解读 73](73-换舵机决策树.md)–[84](84-案例复盘HL1">
+<meta property="og:url" content="https://duck.whatled.com/learn/deep-179">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/deep-179">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">DEEP 179 · 第十五辑 · 其他舵机案例库 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="解读-179-端到端推演换成-sts3215">解读 179 · 端到端推演:换成 STS3215</h1>
+<blockquote>
+<p><strong>解读对象</strong>:<code>bam/bam/params/feetech_sts3215_7_4V/m6.json</code> + 换舵机方法论(<a href="/learn/deep-73">解读 73</a>–<a href="/learn/deep-84">84</a>)<br />
+<strong>需要的前置</strong>:<a href="/learn/deep-79">解读 79</a>(训练侧五个落点)· <a href="/learn/deep-85">解读 85</a>(三代舵机电压窗)</p>
+</blockquote>
+<p>这是方法论(73–84 课)的第一次实弹演习:把 Microduck 的 15 只 XL330 换成飞特 STS3215——<br />
+单价约 ¥60–70(约 XL330 的 1/5),力矩还更大(1.86 N·m vs XL330 仿真限 0.96 N·m,厂商标称口径见选型文档)。看起来是送分题,<br />
+推演完你会发现它是一道"换机器人"题。</p>
+<h2 id="1-机械重量预算第一秒就爆">1. 机械:重量预算第一秒就爆</h2>
+<p>STS3215 约 55–60 g,是 18 g XL330 的三倍多。15 只合计多出约 <strong>585 g</strong>——737 g 的鸭子<br />
+背上 585 g 纯增重,重心、关节力矩需求、结构强度全部推倒。而且 XL330 的舵机腔按实测<br />
+29×20×34 mm 挖出,M2 孔位是照 XL330 反推的,STS3215 大一档,<strong>塞不进去</strong>——打印件全部<br />
+重画。这推演不用猜:同一工程师的 Open Duck Mini v2 就是"STS3215 版答案"——整机做成<br />
+42 cm、2107.1 g,是 Microduck 的 2.86 倍。</p>
+<h2 id="2-电气74-v-撞上-2s-母线">2. 电气:7.4 V 撞上 2S 母线</h2>
+<p>BAM 库里这颗是 7.4 V 版(目录名 <code>feetech_sts3215_7_4V</code>,actuator 类 <code>vin=7.4</code>)。<br />
+官方电压窗口宽窄未在本仓核对,<strong>待验证</strong>;Microduck 的 2S 母线是 6.6–8.2 V(满电 8.4 V),<br />
+直接挂上大概率超压。保守改法:加一级 buck 降到 7.4 V 级(85–91 课套路);<br />
+插头、线序按 <a href="/learn/deep-76">解读 76</a> 核对。<code>_BAM_ACTUATOR_KWARGS</code> 里的<br />
+<code>vin_range=(6.5, 8.2)</code> 是 XL330 超压特例,<strong>绝不能照抄</strong>,要按你实测的窗口重填。</p>
+<h2 id="3-协议最顺的一环">3. 协议:最顺的一环</h2>
+<p>STS3215 走飞特 STS 半双工 TTL 协议——与项目已选的 HL-1910/HL-2915 是同门,<br />
+寄存器思路(<a href="/learn/deep-64">解读 64</a>)通用。更好的消息在选型文档里:Open Duck Mini 用<br />
+<code>rustypot.feetech(port, 1000000)</code>——同一个 rustypot 库换协议模块,波特率同样 1 Mbps,<br />
+通信层"换模块"而不是"重写"。固件行为也别忽略:BAM 的 <code>STS3215Actuator</code> 是 stateful 的——<br />
+固件对目标位置做限速(<code>max_velocity≈5.096 rad/s</code>)再进 P 控制器(kp=32、<code>error_gain=0.166</code>),<br />
+仿真里不复现这个限速,阶跃响应就对不上。</p>
+<h2 id="4-参数与重训五落点逐个落">4. 参数与重训:五落点逐个落</h2>
+<p><a href="/learn/deep-79">解读 79</a> 的五个落点,对照 json 与 xl330 的真实数字:</p>
+<table>
+<thead>
+<tr>
+<th>落点</th>
+<th>STS3215 值</th>
+<th>对比 xl330</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>motor_name</code></td>
+<td><code>sts3215</code>(json <code>actuator</code> 键,目录名随意)</td>
+<td>改一处,三处同步</td>
+</tr>
+<tr>
+<td>力矩常数 kt</td>
+<td>1.275</td>
+<td>0.346 → <strong>3.7 倍</strong></td>
+</tr>
+<tr>
+<td>armature</td>
+<td>0.0216</td>
+<td>0.0016 → <strong>13.7 倍</strong></td>
+</tr>
+<tr>
+<td>friction_base / viscous</td>
+<td>0.0533 / 0.0282</td>
+<td>0.0119 / 0.0058 → <strong>4.5 / 4.9 倍</strong></td>
+</tr>
+<tr>
+<td>独有字段</td>
+<td><code>error_gain_ratio</code>=1.162</td>
+<td>xl330 没有</td>
+</tr>
+<tr>
+<td><code>command_delay</code></td>
+<td>0.0050 s</td>
+<td>0.0102 s——<strong>反而短</strong></td>
+</tr>
+</tbody>
+</table>
+<p>延迟那条是个好提醒:0.0050 与 0.0102 是两颗舵机<strong>两次台架</strong>的实测,不能推广成<br />
+"飞特比 Dynamixel 快",只能填进自己那次辨识的结果。其余照 <a href="/learn/deep-79">解读 79</a>:<br />
+回差角重测(ODMv2 建模 ±0.5°,XL330 是 ±1°)、MJCF 质量惯量全重算、域随机化范围按新台架<br />
+离散度重填;61 维观测、14 维动作、reward 结构<strong>一律不动</strong>。</p>
+<h2 id="5-结论官方-onnx-全部作废换来一只更大的鸭">5. 结论:官方 ONNX 全部作废,换来一只更大的鸭</h2>
+<p>执行器选型文档的原话:"这不是「换个舵机」,是「换一台机器人」。"五落点里机械最重、<br />
+电气次之、协议最轻。真要走通,答案是去做 Open Duck Mini v2(BOM、CAD、走路策略全套开源)<br />
+——保留的是 61/14 契约、台架六课、辨识流水线这套方法论。</p>
+<h2 id="你带走的收获">你带走的收获</h2>
+<ul>
+<li>换 STS3215 的瓶颈按重量排序:机械(重 3 倍、腔体不装)&gt; 电气(2S 超压)&gt; 协议(同库换模块)。</li>
+<li><code>sts3215</code> 的 m6.json 每项都比 xl330 "重"一个台阶:armature 13.7 倍、摩擦预算 4–5 倍。</li>
+<li><code>vin_range</code> 是官方超压特例,不是公式;你的范围只能来自你的供电与台架实测。</li>
+<li>单价 1/5 的诱惑要用整机成本结算:打印件全重画、策略全重训、机器人变成另一台。</li>
+</ul>
+<h2 id="延伸">延伸</h2>
+<ul>
+<li><a href="/learn/deep-77">解读 77</a>:飞特协议怎么映射进代码</li>
+<li><a href="/learn/deep-80">解读 80</a>:json 字段含义</li>
+<li><code>microduck-replica/docs/执行器选型.md</code>(换成 STS3215 会怎样一节,本文多数数字出处)</li>
+<li><code>bam/bam/feetech/actuator.py</code>(<code>STS3215Actuator</code> 的限速 P 控制器)</li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

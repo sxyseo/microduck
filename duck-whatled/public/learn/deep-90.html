@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>解读 90 · buck 降压:5V 逻辑从哪来 · 什么鸭 WhatDuck</title>
+<meta name="description" content="microduck-replica/docs/硬件方案逆向.md §四(按官方 HAT 原理图 dynamixel.kicad_sch 核对)">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="解读 90 · buck 降压:5V 逻辑从哪来">
+<meta property="og:description" content="microduck-replica/docs/硬件方案逆向.md §四(按官方 HAT 原理图 dynamixel.kicad_sch 核对)">
+<meta property="og:url" content="https://duck.whatled.com/learn/deep-90">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/deep-90">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">DEEP 90 · 第九辑 · 电压专项 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="解读-90-buck-降压5v-逻辑从哪来">解读 90 · buck 降压:5V 逻辑从哪来</h1>
+<blockquote>
+<p><strong>解读对象</strong>:<code>microduck-replica/docs/硬件方案逆向.md</code> §四(按官方 HAT 原理图 <code>dynamixel.kicad_sch</code> 核对)<br />
+<strong>需要的前置</strong>:<a href="/learn/deep-45">解读 45</a>(整机电源树)、<a href="/learn/deep-89">解读 89</a>(LDO 那条路)</p>
+</blockquote>
+<p>如果说 LDO 是水管中间的减压阀(把多余压力变成热),buck 就是<strong>高速开关的水泵</strong>:开关每秒通断上百万次,配合一个电感(飞轮)储能释能,把电压"斩"出来——开关的占空比决定输出电压,能量几乎不浪费。官方 HAT 上那颗 buck 回答的问题是:主控吃的 5V 从哪来。</p>
+<h2 id="1-电源链六个符号从左到右">1. 电源链:六个符号从左到右</h2>
+<p>逆向文档按原理图符号的 X 坐标把这条链排出来(§四,勘误 2026-09-04):</p>
+<pre><code>+BATT(153) → C19(219) → U9 AP63205(302) → L4(392) → Q2(558) → U10 LM5050-1(568) → +5V(635)
+</code></pre>
+<p>从左到右就是电流方向。U9 = <strong>AP63205</strong>(降压变换器,2 A,开关频率 1.1 MHz),L4 = 6.8 µH 储能电感,C19 = 10 µF/63V 输入电容。buck 之后的 +5V 一路再经 Q2/U10(LM5050-1,理想二极管控制器,OR-ing + 配合 IO_06 的关机检测)送到三个去处:树莓派 40 针 J4、音频功放 PAM8406D、以及 U3 XC6206P182 再降到 +1V8 给音频 codec。</p>
+<p>这次勘误本身就是教材:U10 曾被画在电池输入端当防反接,按 X 坐标重排才发现它在 buck <strong>之后</strong>——"读原理图先排电源链"是本仓用一次真实纠错换来的方法论。</p>
+<h2 id="2-为什么这一路必须是-buck">2. 为什么这一路必须是 buck</h2>
+<p>算例:给 5 V 的负载供 1 A。用 LDO 从 8.4 V 降:效率 ≈ 5/8.4 ≈ 60%,耗散 (8.4−5)×1 = 3.4 W——小板上散不出去;用 buck(按九成效率量级估算):耗散不到 0.6 W。<strong>压差越大、电流越大,buck 越是唯一现实解。</strong> 树莓派功耗表(出自 <code>docs/执行器选型.md</code>):Pi 5 是 9–10 W、Pi 4B 是 6–7.6 W、Pi Zero 2W 是 1.5 W——这种瓦数用 LDO 降压等于在板上装暖气。</p>
+<p>而 2 A 这颗 buck 也<strong>带不动舵机</strong>:单个 XL330 堵转约 1.5 A,15 个理论峰值 22.5 A(逆向文档 §四)。所以架构是"舵机吃电池原压 +BATT,buck 只喂逻辑"——不是偷懒,是分工。</p>
+<h2 id="3-输入侧按高压设计">3. 输入侧按高压设计</h2>
+<p>HAT 不是 Microduck 专用板(§四):输入电容 C19 用 63 V、C20 用 100 nF/50 V,原理图注释原文写着 "Power 24V 5A i.e. 7s/25c, from 21V to 29V"——Pollen 按通用机器人留足输入窗。给复刻者的余量是:换 3S(满 12.6 V)这条 buck 路不用动;要重算的反而是 LDO 那头(<a href="/learn/deep-89">解读 89</a>)和舵机窗(<a href="/learn/deep-93">解读 93</a>)。AP63205 自身数据手册的输入范围本仓未记录,待验证。</p>
+<h2 id="你带走的收获">你带走的收获</h2>
+<ul>
+<li>buck = 高频开关 + 电感储能,效率与压差基本无关(九成量级);LDO = 可调电阻,多余压差全变热。</li>
+<li>选择公式:电流大或压差大 → buck;几十 mA 的小负载 → LDO 便宜省事。</li>
+<li>读电源链按符号坐标从源到载排一遍,保护器件的位置才不会张冠李戴。</li>
+<li>"带不动"要会算:稳压器电流预算对照负载最坏电流(堵转),不是额定。</li>
+<li>模块化思维:HAT 的 buck 功能,复刻时可以整个换成一颗现成 UBEC(见<a href="/learn/deep-91">解读 91</a>)。</li>
+</ul>
+<h2 id="延伸">延伸</h2>
+<ul>
+<li>LDO 那条 3.3V 路:<a href="/learn/deep-89">解读 89</a></li>
+<li>整机电源树与勘误方法论:<a href="/learn/deep-45">解读 45</a></li>
+<li>把 buck 功能模块化的采购与验收:<a href="/learn/deep-91">解读 91</a></li>
+<li>本地:<code>/Volumes/dev/dev/microduck/microduck-replica/docs/硬件方案逆向.md</code> §四</li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

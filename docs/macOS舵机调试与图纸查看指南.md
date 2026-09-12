@@ -111,7 +111,7 @@ ls /dev/tty.usb*
 # 应看到 /dev/tty.usbserial-XXXX（U2D2/FTDI 芯片）或 /dev/tty.usbserial-XXXX（FE-URT-1）
 ```
 
-- 没出现 → 换根 USB 线试试（有些线只能充电），再装 [FTDI 官方 VCP 驱动](https://ftdichip.com/drivers/)（Apple Silicon 兼容）；
+- 没出现 → 换根 USB 线试试（有些线只能充电），再装 FTDI 官方 VCP 驱动（`ftdichip.com/drivers`，Apple Silicon 兼容；该站对部分网络环境关闭，新版 macOS 通常已内置驱动，先直接试）；
 - 出现了就别用 `screen` 命令去调 1Mbps——macOS 的 `screen` 波特率上限不够，**总线调试一律用 Wizard 或 Python（pyserial 支持 1Mbps）**。
 
 ---

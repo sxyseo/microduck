@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>解读 82 · 混装与渐进替换:一次换一只 · 什么鸭 WhatDuck</title>
+<meta name="description" content="microduck-replica/构建日志.md(2026-09-07 舵机采购落地、09-08 采购单改版)+ microduck-replica/docs/执行器选型.md「">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="解读 82 · 混装与渐进替换:一次换一只">
+<meta property="og:description" content="microduck-replica/构建日志.md(2026-09-07 舵机采购落地、09-08 采购单改版)+ microduck-replica/docs/执行器选型.md「">
+<meta property="og:url" content="https://duck.whatled.com/learn/deep-82">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/deep-82">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">DEEP 82 · 第八辑 · 通用换舵机方法论 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="解读-82-混装与渐进替换一次换一只">解读 82 · 混装与渐进替换:一次换一只</h1>
+<blockquote>
+<p><strong>解读对象</strong>:<code>microduck-replica/构建日志.md</code>(2026-09-07 舵机采购落地、09-08 采购单改版)+ <code>microduck-replica/docs/执行器选型.md</code>「能不能混搭」<br />
+<strong>需要的前置</strong>:<a href="/learn/deep-52">解读 52</a>(XL330 vs HL-1910 逐项对比)· <a href="/learn/deep-58">解读 58</a>(换件的真实代价)</p>
+</blockquote>
+<p>换舵机最常见的两种冒进:15 只一口气下单,或者腿头嘴各买一种"混着来"。仓库里的真实记录给出第三条路:<strong>采购渐进、验证门控、混装有边界</strong>。</p>
+<h2 id="1-十五只的大单押在验证之后">1. 十五只的大单,押在验证之后</h2>
+<p>换舵机重训全流程 §2 第一句就是:"第一步永远是:单舵机台架测试——买 1–2 只新舵机,<strong>15 只大单之前把下面做完</strong>"。渐进替换的第一层含义是决策渐进:先 1–2 只验证协议连通、电压窗口、堵转电流(§2.1 四项),再谈量产订单。</p>
+<p>构建日志 09-07 的真实决策不是反例,而是这条原则的完整版:主控缺货期以 ¥100/只购入 HL-1910-C001 ×15(¥1500),较 XL330 方案(¥2580+)省约 ¥1100,整机预计 ≈¥2460——但<strong>同一条记录</strong>里把四层代价逐条列明,①几何"打印件舵机仓按 XL330 设计,HL 尺寸/孔位适配 = <strong>头号验证项</strong>(转接板或局部重画)"排在第一位,②③④(电气/通信/动力学)随后。大单可以下,前提是代价清单同条入账。</p>
+<h2 id="2-门控写进采购单本身">2. 门控写进采购单本身</h2>
+<p>09-08 采购单改版记录了一场自我纠正:此前以"链接 + 快照价"为主,电商价格漂移导致对不上,用户"不知道买哪个"。改版原则:<strong>规格导向</strong>——每项 = 搜索词 + 验收规格 + 数量 + 约价区间,链接降级为参考。教训原文:"采购单的生命是规格,不是链接。"</p>
+<p>更值得注意的是门控直接嵌进了条目:连接线长度按鸭子几何定量(10/15/20cm 各 5 条,<strong>30cm+ 不要</strong>),且"<strong>等 HL-1910 到货确认出线插头(5264 还是 XH/PH)再下单</strong>"。到货后三件动手事按序门控:G1 收货实测 → G2 单舵机验总线(写 return_delay=0)→ Zero 3W 刷机过三坑;G2 门票 ≈¥220(FE-URT-1 + 1 只总线舵机)。预算同样分批:已花 ¥1898,剩 ≈¥560 分三批(耗材 ¥180/电子 ¥280/自制板 ¥100)。</p>
+<h2 id="3-混装的理论边界">3. 混装的理论边界</h2>
+<p>执行器选型「能不能混搭」按关节组算过账:腿 10 只(要支撑 737 g 整机并吸收落地冲击,力矩需求高)STS3032 <strong>不够</strong>;颈/头 4 只(驱动 189 g 头部总成,需求中)<strong>可能够</strong>;嘴 1 只(需求低)<strong>够</strong>。结论:"混搭在理论上可行,全换不行"——但混搭要解决 7.4V → 6V 的降压,而且两种舵机的 BAM 参数、回差、响应延迟都不同,"训练时要按关节分组建模,复杂度上升不少"。</p>
+<p>还有一条隐性约束来自教程 §9.2:同一批货要"<strong>全部同型号同固件批次</strong>——混批是最隐蔽的坑"。也就是说边界不仅在型号之间,还在批次之间:同型号不同批,辨识参数照样可能对不上。</p>
+<h2 id="你带走的收获">你带走的收获</h2>
+<ul>
+<li>大单之前先台架:1–2 只把协议、电压、辨识做完,15 只的订单才有依据。</li>
+<li>采购单的生命是规格不是链接;把"等确认插头再下单"这类门控写进清单条目本身。</li>
+<li>到货三件事(G1 实测/G2 验总线/刷机)按序执行,每件是下一阶段的门票。</li>
+<li>混装按关节分带(嘴/头/腿力矩需求不同)理论可行,代价是降压路径 + 分组建模。</li>
+<li>批次一致性是隐性参数:换舵机选型规则里"不囤货、同批同固件"不是吝啬,是控制变量。</li>
+</ul>
+<h2 id="延伸">延伸</h2>
+<ul>
+<li><a href="/learn/deep-52">解读 52</a>:混装的参数前提 · <a href="/learn/deep-72">解读 72</a>:§9.2 选型规则逐段</li>
+<li><a href="/learn/deep-63">解读 63</a>:"1–2 只"阶段的通用方法论</li>
+<li><code>microduck-replica/构建日志.md</code>(2026-09-07、09-08 两条采购记录)</li>
+<li><code>microduck-replica/docs/执行器选型.md</code>(「能不能混搭」表)</li>
+<li><code>microduck-replica/docs/物料清单-进度快照.md</code>(分批预算与规格导向采购单)</li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

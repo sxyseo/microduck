@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>解读 92 · 电压遥测与电量计:`BATTERY_FULL_V/EMPTY_V` · 什么鸭 WhatDuck</title>
+<meta name="description" content="duck-control/src/model.rs(241 行,电池节 107–135)">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="解读 92 · 电压遥测与电量计:`BATTERY_FULL_V/EMPTY_V`">
+<meta property="og:description" content="duck-control/src/model.rs(241 行,电池节 107–135)">
+<meta property="og:url" content="https://duck.whatled.com/learn/deep-92">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/deep-92">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">DEEP 92 · 第九辑 · 电压专项 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="解读-92-电压遥测与电量计battery-full-vempty-v">解读 92 · 电压遥测与电量计:<code>BATTERY_FULL_V/EMPTY_V</code></h1>
+<blockquote>
+<p><strong>解读对象</strong>:<code>duck-control/src/model.rs</code>(241 行,电池节 107–135)<br />
+<strong>需要的前置</strong>:<a href="/learn/deep-45">解读 45</a>("没有电量计"这个前提)、<a href="/learn/deep-93">解读 93</a>(换电压时这两个常量怎么改)</p>
+</blockquote>
+<p>model.rs 的电池节开头就交代了硬件真相:"There is no fuel gauge and no ADC"(model.rs:109)——整机没有任何电量测量电路。那电量百分比从哪来?答案:舵机自己。每个舵机会回报自己的供电电压,主机把它当作"从总线上看到的电池"。理解了这个出身,后面每个数字的怪脾气都说得通。</p>
+<h2 id="1-测量路径寄存器-144-起-3-字节">1. 测量路径:寄存器 144 起 3 字节</h2>
+<p><code>bus.rs</code> 的慢速块用一次事务读回电压和温度:<code>SLOW_READ_ADDR: u8 = 144</code>(bus.rs:44)——寄存器 144 是 <code>present_input_voltage</code>(u16,<strong>0.1 V/LSB</strong>,bus.rs:47),146 是 <code>present_temperature</code>(u8),三个字节,电压与热学共用一次 sync_read(bus.rs:529)。换算先记住:读数 74 就是 7.4 V。</p>
+<h2 id="2-两个常量满-82空-66">2. 两个常量:满 8.2、空 6.6</h2>
+<ul>
+<li><code>BATTERY_FULL_V = 8.2</code>(model.rs:115)——注释:"Off a full charge, <strong>under load</strong>"。NP-F550 是 2S 锂电,满电开路 8.4 V,带载会塌;8.2 是"满电且在跑"的实测口径。</li>
+<li><code>BATTERY_EMPTY_V = 6.6</code>(model.rs:119)——"the sag floor":低于它机器人开始费劲,<strong>远早于</strong>电池自己的保护动作。注释特意区分:这是"我们的空",不是"电芯的空"。</li>
+</ul>
+<h2 id="3-battery-percent一条线性式和它的边界">3. <code>battery_percent</code>:一条线性式和它的边界</h2>
+<pre><code class="language-rust">((volts - BATTERY_EMPTY_V) / (BATTERY_FULL_V - BATTERY_EMPTY_V)).clamp(0.0, 1.0) * 100.0
+</code></pre>
+<p><code>f64</code> 是 Rust 的 64 位浮点数,<code>.clamp(0.0, 1.0)</code> 把结果夹在区间内。算例:读数 7.4 V → (7.4−6.6)/(8.2−6.6) = 0.8/1.6 = <strong>50%</strong>(测试断言,model.rs:191);9.5 V 超满 → 钳到 100(model.rs:199);5.0 V → 0(model.rs:200)。入口守卫(model.rs:131):非有限值或 ≤0 一律返回 0——NaN 是"对空集合求均值"的产物,0.0 是"总线没人应答",两者都该显示"未知",而不是一个吓人的百分数。</p>
+<p>注释还记了一条教训:这个映射住在 model.rs 而不是 robotd,为的是全仓只有一个映射——原型曾把它在 CLI 写一份、应用里又推一遍,于是两块屏幕对同一块电池各说各话(model.rs:122-126)。</p>
+<h2 id="4-消费端ema-平滑与没电前的坐下">4. 消费端:EMA 平滑与没电前的坐下</h2>
+<p>原始电压每走一步塌零点几伏、迈步间又回弹,直接显示会乱摆。robotd 用 <code>BATTERY_EMA_ALPHA = 0.1</code>(main.rs:118)每秒刷新一次,时间常数约 10 秒——数字可读了,但也意味着负载塌陷到不了阈值,注释说破:"a pack that gets there is spent"(main.rs:2445-2446)。跌破 <code>BATTERY_EMPTY_V</code> 触发的不是急断电,而是<strong>先坐下再断电</strong>的序列(main.rs:2444-2451):能坐就缓降坐下、顺路播一声"peck",然后才切扭矩断电。</p>
+<h2 id="你带走的收获">你带走的收获</h2>
+<ul>
+<li>没有专用电量计就借道遥测:让供电对象自报电压,一个寄存器就够。</li>
+<li>满电/空电常量是<strong>带载口径</strong>,不是电芯化学口径——差的 0.2 V 与 1.8 V 都是工程决策。</li>
+<li>线性映射先写边界:超界钳位、NaN/0 拒绝,再写公式本身。</li>
+<li>显示值要平滑(EMA),而靠平滑值触发的动作要想清楚平滑带来的延迟。</li>
+<li>一个物理量的换算只写一处:两处各自推导,迟早给出两个答案。</li>
+</ul>
+<h2 id="延伸">延伸</h2>
+<ul>
+<li>这条遥测跑的总线与 30 ms 超时:<a href="/learn/deep-01">解读 01</a></li>
+<li>换 3S 后这两个常量改什么:<a href="/learn/deep-93">解读 93</a></li>
+<li>整机电源树与"无电量计"注释的出处:<a href="/learn/deep-45">解读 45</a></li>
+<li>本地:<code>/Volumes/dev/dev/microduck/duck-control/src/model.rs</code></li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

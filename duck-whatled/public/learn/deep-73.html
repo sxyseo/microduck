@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>解读 73 · 换舵机决策树:从需求到型号 · 什么鸭 WhatDuck</title>
+<meta name="description" content="bam/bam/params/(8 个已辨识型号目录)+ bam/bam/actuators.py、model.py 的 load_model">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="解读 73 · 换舵机决策树:从需求到型号">
+<meta property="og:description" content="bam/bam/params/(8 个已辨识型号目录)+ bam/bam/actuators.py、model.py 的 load_model">
+<meta property="og:url" content="https://duck.whatled.com/learn/deep-73">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/deep-73">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">DEEP 73 · 第八辑 · 通用换舵机方法论 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="解读-73-换舵机决策树从需求到型号">解读 73 · 换舵机决策树:从需求到型号</h1>
+<blockquote>
+<p><strong>解读对象</strong>:<code>bam/bam/params/</code>(8 个已辨识型号目录)+ <code>bam/bam/actuators.py</code>、<code>model.py</code> 的 <code>load_model</code><br />
+<strong>需要的前置</strong>:<a href="/learn/deep-54">解读 54</a>(BAM 是什么)· <a href="/learn/deep-58">解读 58</a>(为什么必须重训)</p>
+</blockquote>
+<p>"换成其他舵机怎么改"的第一问不是"怎么改",而是"换成谁"。仓库里恰好有<br />
+现成的证据库:<code>bam/bam/params/</code> 下 8 个型号目录,每个存着一条真实舵机上台架辨识出的参数。</p>
+<h2 id="1-型号库里有什么">1. 型号库里有什么</h2>
+<p>每个目录放 <code>m1.json</code> 到 <code>m6.json</code> 六档文件——编号越高摩擦模型越完整(m6 = 库仑 + Stribeck<br />
++ 载荷相关 + 方向性 + 二次项,见 <a href="/learn/deep-56">解读 56</a>)。加载只有两条路(<code>model.py::load_model</code>):<br />
+- <strong>用库里的</strong>:<code>load_model(motor_name="xl330", model="m6")</code>,按目录名 + 档位找 json;<br />
+- <strong>用自己的</strong>:<code>load_model(json_file="params/my_motor/m6.json")</code>——自己辨识的型号走这条路。</p>
+<p>有个容易踩的细节:目录名 <code>feetech_sts3215_7_4V</code>,json 里却写着 <code>"actuator": "sts3215"</code>——<br />
+<strong>json 的 <code>actuator</code> 字段必须是 <code>actuators.py</code> 注册表里的键名</strong>,目录名随意,键名不能错。<br />
+另外注册表有 10 个键(还有 <code>xl330i</code>、<code>unitree_go1</code>),params 下只有 8 个目录:注册了 ≠ 有已辨识参数。</p>
+<h2 id="2-四道门的决策树">2. 四道门的决策树</h2>
+<p>换舵机的判定顺序照 《换舵机重训全流程》(<code>microduck-replica/docs/换舵机重训全流程.md</code>) §1 的四层判定表:<br />
+像过海关,第一关没过,后面免谈——</p>
+<table>
+<thead>
+<tr>
+<th>门</th>
+<th>判据(以官方 XL330 为基准)</th>
+<th>不过怎么办</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>① 电压</td>
+<td>电池窗口落在新舵机额定内?官方 2S 母线 6.6–8.2 V</td>
+<td>改电池节数或加降压</td>
+</tr>
+<tr>
+<td>② 力矩</td>
+<td>堵转力矩 ≥ 0.5 N·m 量级(XL330 官方 0.52 N·m @5V)</td>
+<td>腿站不起来,淘汰</td>
+</tr>
+<tr>
+<td>③ 尺寸/重量</td>
+<td>外形接近 20×34×26 mm、M2 安装、单只 18 g 量级</td>
+<td>打印件重画 + 质量预算重算</td>
+</tr>
+<tr>
+<td>④ 协议</td>
+<td>Dynamixel V2?飞特?厂商私有?</td>
+<td>通信层"改常量"或"写新控制器"</td>
+</tr>
+</tbody>
+</table>
+<p>四道门全过才谈得上"少改";现实是<strong>全兼容的便宜货不存在</strong>(选型文档原话),正常路径是逐层适配 + 重训。</p>
+<h2 id="3-八个型号一眼看清">3. 八个型号一眼看清</h2>
+<p><code>params/</code> 里 8 个型号的 m6 辨识值(逐个 json 核对,保留三位):</p>
+<table>
+<thead>
+<tr>
+<th>目录</th>
+<th>系</th>
+<th>kt (N·m/A)</th>
+<th>R (Ω)</th>
+<th>armature</th>
+<th>friction_viscous</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>xl330</code></td>
+<td>Dynamixel</td>
+<td>0.346</td>
+<td>2.50</td>
+<td>0.0016</td>
+<td>0.006</td>
+</tr>
+<tr>
+<td><code>xl320</code></td>
+<td>Dynamixel</td>
+<td>1.009</td>
+<td>31.59</td>
+<td>0.0012</td>
+<td>0.007</td>
+</tr>
+<tr>
+<td><code>feetech_sts3215_7_4V</code></td>
+<td>飞特</td>
+<td>1.275</td>
+<td>2.75</td>
+<td>0.0216</td>
+<td>0.028</td>
+</tr>
+<tr>
+<td><code>waveshare_st3025</code></td>
+<td>微雪</td>
+<td>1.651</td>
+<td>3.10</td>
+<td>0.0048</td>
+<td>0.022</td>
+</tr>
+<tr>
+<td><code>mx64</code></td>
+<td>Dynamixel MX</td>
+<td>1.602</td>
+<td>2.32</td>
+<td>0.0123</td>
+<td>0.025</td>
+</tr>
+<tr>
+<td><code>mx106</code></td>
+<td>Dynamixel MX</td>
+<td>2.210</td>
+<td>2.03</td>
+<td>0.0260</td>
+<td>0.051</td>
+</tr>
+<tr>
+<td><code>erob80_50</code></td>
+<td>eRob 工业级</td>
+<td>4.897</td>
+<td>1.07</td>
+<td>0.362</td>
+<td>1.403</td>
+</tr>
+<tr>
+<td><code>erob80_100</code></td>
+<td>eRob 工业级</td>
+<td>9.396</td>
+<td><em>(json 无此字段)</em></td>
+<td>1.135</td>
+<td>9.709</td>
+</tr>
+</tbody>
+</table>
+<p>kt(力矩常数,1 A 电流出多少 N·m)从 0.35 跨到 9.4,差 <strong>27 倍</strong>;<br />
+armature(转子反射惯量)从 0.0012 跨到 1.14,差近千倍。<br />
+同一套训练代码,喂不同的 json,练出来的是完全不同的机器——"换舵机 = 换动力学"不是修辞。</p>
+<h2 id="4-你的型号不在库里怎么办">4. 你的型号不在库里怎么办</h2>
+<p>这正是这个库的元方法论:官方那组 XL330 参数,也是某个人拿着一颗实物 XL330<br />
+在单摆台架上摆出来的。你的新舵机走同一条路——<a href="/learn/deep-63">解读 63</a> 的六课采数据,<br />
+再用 <code>bam fit --logdir &lt;台架日志&gt; --actuator &lt;键名&gt; --model m6</code> 拟合出 json<br />
+(默认 10 万次 trial),产出 <code>params/你的型号/m6.json</code>。"换舵机"从此变成流水线问题。</p>
+<h2 id="你带走的收获">你带走的收获</h2>
+<ul>
+<li>选型的正确顺序是<strong>电压→力矩→尺寸→协议</strong>四道门,第一道不过,后面全免谈。</li>
+<li><code>params/</code> 的 8 个目录是 8 条真实辨识记录;json 里 <code>actuator</code> 字段必须对上 <code>actuators.py</code> 的键名。</li>
+<li>注册表 10 个键、参数库只有 8 家:"注册 ≠ 可用",用前先 <code>ls</code>。</li>
+<li>辨识参数离散度触目惊心(kt 跨 27 倍、armature 跨近千倍):官方 ONNX 换舵机必作废的数值证据。</li>
+<li>型号不在库里不是死路:<code>fit</code> 拟合一份自己的 json,和官方同一条流水线。</li>
+</ul>
+<h2 id="延伸">延伸</h2>
+<ul>
+<li><a href="/learn/deep-74">解读 74</a>:四道门展开成六个维度</li>
+<li><a href="/learn/deep-80">解读 80</a>:m6.json 里每个数是什么意思</li>
+<li><a href="/learn/deep-72">解读 72</a>:一次性投入与下一次换舵机</li>
+<li><code>bam/bam/params/</code> · <code>bam/bam/actuators.py</code>(注册表)· <code>bam/bam/model.py</code>(<code>load_model</code>)</li>
+<li><code>microduck-replica/docs/换舵机重训全流程.md</code> §1(四层判定表)</li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

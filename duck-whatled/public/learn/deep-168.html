@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>解读 168 · 强度入门:材料失效 · 什么鸭 WhatDuck</title>
+<meta name="description" content="概念课 · 以 microduck-replica/docs/打印工艺调整表.md + microduck-replica/BOM.md(打印件表)+ microduck-repl">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="解读 168 · 强度入门:材料失效">
+<meta property="og:description" content="概念课 · 以 microduck-replica/docs/打印工艺调整表.md + microduck-replica/BOM.md(打印件表)+ microduck-repl">
+<meta property="og:url" content="https://duck.whatled.com/learn/deep-168">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/deep-168">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">DEEP 168 · 第十四辑 · 小白机械课 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="解读-168-强度入门材料失效">解读 168 · 强度入门:材料失效</h1>
+<blockquote>
+<p><strong>解读对象</strong>:概念课 · 以 <code>microduck-replica/docs/打印工艺调整表.md</code> + <code>microduck-replica/BOM.md</code>(打印件表)+ <code>microduck-replica/docs/打印就绪检查.md</code> 为教材<br />
+<strong>需要的前置</strong>:<a href="/learn/deep-160">解读 160</a>;<a href="/learn/deep-36">解读 36</a>讲过"三明治"结构。</p>
+</blockquote>
+<h2 id="零件怎么坏文档里出现过的三种">零件怎么"坏":文档里出现过的三种</h2>
+<p>结构件失效不都是"啪一声断成两截"(断裂模式分类属通用经验,项目文档未展开)。落到这只鸭子上,文档里真实出现的三种是:</p>
+<ul>
+<li><strong>变形</strong>:塑料件被单边螺丝力拉翘、过度锁紧压伤——说明书注意事项原文"塑料件切勿过度锁紧";防御手法是"对角分步预紧"(解读 167)。</li>
+<li><strong>滑丝</strong>:M2 自攻的螺纹靠塑料被挤出成型,拧到底硬怼就滑丝,<strong>不可逆</strong>(course/20)。新手文档 §6.2 提醒先想清楚"螺丝受的是拉力、剪切还是反复振动",以及"轴承是否承担了侧向载荷,而不是让舵机输出轴硬扛"——失效预防在设计阶段就开始。</li>
+<li><strong>薄壁抖纹</strong>:薄板打印冷却不均产生振纹,这是精度层面的失效,不是一声脆响。</li>
+</ul>
+<h2 id="加固板10mm-的答案">加固板:1.0mm 的答案</h2>
+<p>BOM 打印件表里有一件不起眼的东西:<code>upper_leg_rigidity_plate_上腿加固板</code> ×2。它有多薄?打印工艺调整表专门点名:"上腿加固板 <strong>1.0mm</strong> 薄、颈部 2.0mm"。1.0mm 的板单用毫无刚度,但解读 36 讲过大腿的读法:这是"平板 + 加固板"三明治——<strong>抗弯刚度靠隔开距离的两片板,不靠板厚</strong>;薄板把受力面撑开距离,大片开槽去掉中性层附近的材料,"刚度靠几何,不靠堆料"。</p>
+<p>代价写在工艺表同一段:薄壁件要<strong>冷却风扇全开 + 减速</strong>防抖纹,加固板建议<strong>立印</strong>或加裙板。而"打印就绪检查"自曝边界:自动体检"<strong>不包含</strong>最小壁厚与悬垂分析——请在切片器里开「细墙/悬垂检测」过一遍"。薄壁是这 41 件里最需要人眼盯的强度风险。</p>
+<h2 id="材料与方向失效模式是选出来的">材料与方向:失效模式是选出来的</h2>
+<ul>
+<li><strong>材料</strong>:结构件 299g PLA、软性件 26g TPU(软下巴/软嘴)。构建日志 09-06 认真评估过"PLA 顶 TPU"的代价:鸭嘴实为软夹爪,PLA 版会让叼取技能退化、连杆公差无弹性易卡——虽不影响走路/装配/发声,但"<strong>勿让店家降填充冒充软料</strong>"。选材料本质是选失效模式:你要它刚(结构件),还是要它让(接口件)。</li>
+<li><strong>方向</strong>:调整表写明过孔类尽量孔轴垂直于打印平面摆放,并注明代价——"<strong>牺牲强度换装配</strong>"。为什么有牺牲?FDM 层层堆叠,层与层的结合弱于层内(此机理文档未展开,属通用经验——"层间撕裂/沿层断裂是 3D 打印件最常见失效之一"是文献通识,非本仓证据)。项目文档没写"层间"二字,但"牺牲强度换装配"这半句,就是承认了打印件的强度随方向变。</li>
+</ul>
+<h2 id="你带走的收获">你带走的收获</h2>
+<ul>
+<li>失效三件套:变形、滑丝、薄壁抖纹——文档各给了一条真实防线。</li>
+<li>1.0mm 加固板证明刚度问题可以用几何解决,不必加厚。</li>
+<li>薄壁与悬垂不在自动体检范围,切片器的细墙/悬垂检测是必做的第二关。</li>
+<li>TPU 件别拿 PLA 顶:材料决定失效模式,公差弹性也是功能。</li>
+<li>"立印""孔轴垂直"这些摆放词背后都是各向异性:打印件强度看方向。</li>
+</ul>
+<h2 id="延伸">延伸</h2>
+<ul>
+<li><a href="/learn/deep-36">解读 36</a>:三明治结构与减重开槽的完整版(<code>docs/deep-dive/36-腿部连杆.md</code>)</li>
+<li><a href="/learn/deep-161">解读 161</a>:方向是怎么定下来的(<code>docs/deep-dive/161-打印参数.md</code>)</li>
+<li><a href="/learn/deep-167">解读 167</a>:滑丝与过度锁紧的装配侧防御(<code>docs/deep-dive/167-装配设计.md</code>)</li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

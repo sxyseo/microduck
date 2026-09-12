@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>解读 76 · 电气适配:插头/线序/调试板 · 什么鸭 WhatDuck</title>
+<meta name="description" content="docs/macOS舵机调试与图纸查看指南.md §2(总线舵机调试:硬件与供电)">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="解读 76 · 电气适配:插头/线序/调试板">
+<meta property="og:description" content="docs/macOS舵机调试与图纸查看指南.md §2(总线舵机调试:硬件与供电)">
+<meta property="og:url" content="https://duck.whatled.com/learn/deep-76">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/deep-76">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">DEEP 76 · 第八辑 · 通用换舵机方法论 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="解读-76-电气适配插头线序调试板">解读 76 · 电气适配:插头/线序/调试板</h1>
+<blockquote>
+<p><strong>解读对象</strong>:<code>docs/macOS舵机调试与图纸查看指南.md</code> §2(总线舵机调试:硬件与供电)<br />
+<strong>需要的前置</strong>:<a href="/learn/deep-46">解读 46</a>(电平与转接板)· <a href="/learn/deep-66">解读 66</a>(电池选型)</p>
+</blockquote>
+<p>新舵机到手,第一件事不是装上鸭子,而是在桌面上让它"报上名来"。这一步的全部内容是三件事:<br />
+用什么调试板、怎么供电、线序别接反。《macOS 舵机调试指南》(<code>docs/macOS舵机调试与图纸查看指南.md</code>)<br />
+§2 把这套流程写成了标准动作,本篇照着走一遍,再补上几家舵机的线序证据。</p>
+<h2 id="1-调试板按协议家族选不按型号选">1. 调试板:按协议家族选,不按型号选</h2>
+<table>
+<thead>
+<tr>
+<th>路线</th>
+<th>调试板</th>
+<th>价格</th>
+<th>macOS 软件</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Dynamixel 系(XL330 等)</td>
+<td>ROBOTIS <strong>U2D2</strong>(建议 + Power Hub 供电)</td>
+<td>≈¥200/套</td>
+<td>Wizard 2.0 官方 Mac 版</td>
+</tr>
+<tr>
+<td>飞特系(STS/SCS/HL)</td>
+<td><strong>FE-URT-1</strong> 或 ¥22–26 第三方 ST/SC 转接板</td>
+<td>¥22–45</td>
+<td>图形软件是 Windows 的,见下</td>
+</tr>
+</tbody>
+</table>
+<p>飞特没有 Mac 图形软件,指南给了三个替代,按省事排序:①官方 SCServo <strong>Python SDK</strong> 在 Mac 终端直接跑;<br />
+②调试板插树莓派,Mac <code>ssh</code> 过去(和 SG90 台架同一套工作流);③借一台 Windows 笔记本,<br />
+用 Feetech 的 FD 软件设完 ID 就还——设 ID 是一次性工作,借一次不亏。</p>
+<h2 id="2-供电与共地本节最重要的一节">2. 供电与共地:本节最重要的一节</h2>
+<p><strong>USB 调试板只传数据,不供电。</strong> 舵机必须独立供电:1–2 只 XL330 台架用 4×AA 电池盒(6 V)<br />
+最简单,或 2S 锂电;Feetech STS/SCS 多数规格 6–8.4 V,按 datasheet 定。</p>
+<p><strong>共地铁律</strong>:调试板的 GND 必须和舵机电源的 GND 连通。忘了共地 = 扫描不到舵机或乱码,<br />
+指南称之为<strong>新手第一大故障</strong>——概念上就一句话:电流要有一个回家的回路,信号才有一个统一的"0V 参考点"。</p>
+<p>上电顺序也是铁律:接完线 → 万用表通断档确认电源正负没短路 → <strong>先给舵机上电,再插 USB</strong>;<br />
+改任何线之前断电。另外 macOS 自带 <code>screen</code> 命令波特率上限不够,1 Mbps 总线调试一律用<br />
+Wizard 或 Python(pyserial 支持 1 Mbps)。</p>
+<h2 id="3-线序一插反就烧两份文档还会打架">3. 线序:一插反就烧,两份文档还会打架</h2>
+<p>线序是电气适配里唯一"错了就报销"的地方,各家舵机不相同:</p>
+<table>
+<thead>
+<tr>
+<th>舵机</th>
+<th>插头</th>
+<th>线序</th>
+<th>出处</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>XL330</td>
+<td>Dynamixel 3-pin JST</td>
+<td>1=GND 2=Vcc 3=Signal</td>
+<td>逆向文档五之二</td>
+</tr>
+<tr>
+<td>HL-2915-C001</td>
+<td><strong>PH1.25-3P</strong>(1.25 mm 间距,与 5264/JST-EH 不通用)</td>
+<td>1=GND 2=Vcc 3=Signal</td>
+<td>《HL-2915-C001 规格书》</td>
+</tr>
+<tr>
+<td>HD-1910-C001</td>
+<td>AMP-3P</td>
+<td>⚠️ <strong>两份文档说法相反</strong></td>
+<td>见下</td>
+</tr>
+</tbody>
+</table>
+<p>⚠️ <strong>HD-1910 的线序存在文档冲突</strong>:《硬件方案逆向》(<code>microduck-replica/docs/硬件方案逆向.md</code>)<br />
+写 1=GND / 2=Vcc / 3=Signal;而 《HL-2915 路线全流程教程》(<code>docs/HL-2915路线全流程教程.md</code>) §9.2<br />
+写"脚序与 HL 相反:1=Signal / 2=Vcc / 3=GND"。两个来源只能信一个,处理方式只有一个:<br />
+<strong>到手先拿规格书 + 万用表实测确认,再插电</strong>。这正是"线序必须逐只核对"的活教材——<br />
+文档会打架,实物不会。</p>
+<h2 id="4-扫不到舵机按这个顺序查">4. 扫不到舵机?按这个顺序查</h2>
+<p>指南 §7 的排查表浓缩成一句口诀:<strong>先电源、再共地、后波特率、最后 ID</strong>——<br />
+① 舵机电源独立供了吗 ② 共地了吗 ③ 波特率勾对了吗(新舵机出厂可能是 57600,设过的才是 1M)<br />
+④ 总线上是不是挂了两只同 ID 的舵机(两只出厂都是 ID=1)⑤ 数据线插反没。<br />
+拧螺丝装上鸭子之前,这五问全过,电气适配就算交卷。</p>
+<h2 id="你带走的收获">你带走的收获</h2>
+<ul>
+<li>调试板按<strong>协议家族</strong>选:U2D2 对 Dynamixel,FE-URT-1 对飞特;Mac 没图形软件就用 Python SDK 或借 Windows。</li>
+<li>USB 调试板不供电;独立电源 + 共地是台架第一课,"扫不到"九成出在这两处。</li>
+<li>上电顺序:查短路 → 舵机上电 → 插 USB;改线必先断电。</li>
+<li>线序是唯一烧硬件的错误,而且文档之间可能互相矛盾——以实物实测为准,别信任何一个单一来源。</li>
+<li>排查顺序固定:电源→共地→波特率→ID 冲突→插反,从便宜到昂贵的假设逐个排除。</li>
+</ul>
+<h2 id="延伸">延伸</h2>
+<ul>
+<li><a href="/learn/deep-65">解读 65</a>:设 ID、改波特率、校零位的操作细节</li>
+<li><a href="/learn/deep-50">解读 50</a>:2S 直供 vs 6V 舵机的上电前风险</li>
+<li><a href="/learn/deep-77">解读 77</a>·<a href="/learn/deep-78">解读 78</a>:通了电之后协议怎么适配</li>
+<li><code>docs/macOS舵机调试与图纸查看指南.md</code> §2、§7(完整排查表)</li>
+<li><code>microduck-replica/docs/硬件方案逆向.md</code> 五之二(HL-2915-C002 脚序警告)</li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

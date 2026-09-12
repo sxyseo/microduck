@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>解读 149 · 电容:去耦与储能 · 什么鸭 WhatDuck</title>
+<meta name="description" content="概念课 · 以 microduck-replica/docs/imu_to_dxl-设计包/(BOM · 原理图连接表)为教材,附 构建日志.md 的耐压教训">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="解读 149 · 电容:去耦与储能">
+<meta property="og:description" content="概念课 · 以 microduck-replica/docs/imu_to_dxl-设计包/(BOM · 原理图连接表)为教材,附 构建日志.md 的耐压教训">
+<meta property="og:url" content="https://duck.whatled.com/learn/deep-149">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/deep-149">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">DEEP 149 · 第十三辑 · 小白电气课 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="解读-149-电容去耦与储能">解读 149 · 电容:去耦与储能</h1>
+<blockquote>
+<p><strong>解读对象</strong>:概念课 · 以 <code>microduck-replica/docs/imu_to_dxl-设计包/</code>(BOM · 原理图连接表)为教材,附 <code>构建日志.md</code> 的耐压教训<br />
+<strong>需要的前置</strong>:<a href="/learn/deep-147">解读 147</a>(C6/C7 挂在谁身上)、<a href="/learn/deep-88">解读 88</a>(尖峰从哪来)</p>
+</blockquote>
+<p>电容是电路里的"小水池":平时蓄水,谁突然抽水它先顶上。一块板上电容占了大头,但只有两个角色——<strong>去耦</strong>和<strong>储能/稳压</strong>。设计包总共十来颗电容,正好各看一例。</p>
+<h2 id="1-去耦每颗芯片门口的小水杯">1. 去耦:每颗芯片门口的小水杯</h2>
+<p>芯片不是匀速喝电的:MCU 翻转一下引脚、IMU 采一次样,都是"猛吸一口"。导线有电阻电感,远处电源来不及送水,芯片脚上的电压就会瞬间塌一个坑——塌得深了,芯片自己都会复位。解法是在<strong>每个供电引脚旁边</strong>贴一颗小电容,平时充满,瞬吸时由它就近垫上。</p>
+<p>BOM 里那行"去耦电容 <strong>100nF</strong> 0603 ×<strong>5</strong>,MCU/IMU/缓冲各 VDD 引脚"就是干这个的;连接表进一步要求 C1/C2"就近"贴着 IMU 的 Vdd/Vdd_IO 脚、走线尽量短——水池必须修在门口,修在隔壁街区就没用了。100nF 容量小,响应快,正好对"猛吸一口"这种快而小的波动。</p>
+<h2 id="2-储能稳压进水口的大水箱">2. 储能稳压:进水口的大水箱</h2>
+<p>另一种波动慢而大:总线电压随舵机启停起伏。这在电源入口放一颗大电容当水箱——本板是 <strong>C6,10µF,挂 LDO 输入端</strong>(连接表还配了一颗 C7 10µF 在输出端)。它与去耦的区别只是位置和容量:门口小水杯 100nF 管快,进水口大水箱 10µF 管慢。</p>
+<h2 id="3-耐压-25v构建日志里的教训">3. 耐压 ≥25V:构建日志里的教训</h2>
+<p>C6 的踩坑记录值得单开一节。连接表该行写着"<strong>10µF ≥25V 0805</strong>……<strong>耐压是踩坑修正,勿用 10V</strong>",自查清单还有一条"C6 耐压 ≥25V(挂 8.4V 总线,10V 件会长期超压)"。构建日志 2026-09-06 把它列为两大新手翻车点之一。为什么 8.4V 的总线不能用 10V 电容?仓库的口径是<strong>耐压至少取工作电压的 2 倍</strong>(<code>硬件入门.md</code>:"8.4 V 的总线,用 25 V";8.4×2≈16.8,取整到 25V 这一档);而且这颗电容还是过压防线的一环——TVS 管 SMF12A 钳位时最高 19.9V,电容得扛得住。耐压不够不会当场爆炸,是常年超限慢慢折寿,不拆表根本看不见。</p>
+<h2 id="4-动手验证">4. 动手验证</h2>
+<p>万用表电容档(没有就先跳过,别用电阻档怼电容):断电后量 C6,应接近 10µF 标称——注意这只在"空板不带电"时成立,它带电工作时实际容量更低(X5R 材料在 8.4V 直流偏压下会衰减,主仓 BOM 注释估 30–40%,约剩 6–7µF,对 LDO 输入仍够用)。再数一数板上 100nF 的颗数,对一对是不是每颗芯片门口都有一只"小水杯"。</p>
+<h2 id="你带走的收获">你带走的收获</h2>
+<ul>
+<li>电容两个角色:芯片门口 100nF 管快(去耦),电源入口 10µF 管慢(储能稳压)。</li>
+<li>去耦必须"就近":水池修在门口才救得了瞬吸,走线一长等于白贴。</li>
+<li>耐压按 2 倍工作电压选:C6 用 25V 不是浪费,是 8.4V 总线+尖峰的双重余量。</li>
+<li>电容有"带电缩水"属性:X5R 在偏压下衰减 30–40%,标称 10µF 不等于工作 10µF。</li>
+</ul>
+<h2 id="延伸">延伸</h2>
+<ul>
+<li>C6 的主人 LDO:<a href="/learn/deep-147">解读 147</a> · 尖峰与钳位 19.9V 的来历:<a href="/learn/deep-88">解读 88</a></li>
+<li>选型史与 2 倍口径的完整推导:<a href="/learn/deep-89">解读 89</a> §3</li>
+<li>本地:<code>microduck-replica/docs/imu_to_dxl-设计包/原理图连接表.md</code>(阻容归位表)、<code>microduck-replica/BOM.md</code>(C6 直流偏压注释)、<code>microduck-replica/构建日志.md</code>(2026-09-06)</li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>解读 120 · chorale.rs(一):合唱结构 · 什么鸭 WhatDuck</title>
+<meta name="description" content="robotd/src/chorale.rs(1320 行,本篇读 1-631 的结构主干)">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="解读 120 · chorale.rs(一):合唱结构">
+<meta property="og:description" content="robotd/src/chorale.rs(1320 行,本篇读 1-631 的结构主干)">
+<meta property="og:url" content="https://duck.whatled.com/learn/deep-120">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/deep-120">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">DEEP 120 · 第十一辑 · 服务与训练工具逐函数 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="解读-120-choralers一合唱结构">解读 120 · chorale.rs(一):合唱结构</h1>
+<blockquote>
+<p><strong>解读对象</strong>:<code>robotd/src/chorale.rs</code>(1320 行,本篇读 1-631 的结构主干)<br />
+<strong>需要的前置</strong>:导览见<a href="/learn/deep-12">解读 12</a>;声部怎么唱见<a href="/learn/deep-118">解读 118</a>;信标队列见<a href="/learn/deep-10">解读 10</a></p>
+</blockquote>
+<p>鸭子合唱的行为层:谁指挥、谁唱哪个声部、唱到第几拍。分工在文件头(chorale.rs:1-5):<code>btd</code> 管无线电不思考;这里思考不碰无线电,两者只过 <code>chorale.*</code> 信标。没有服务器、共同时钟、投票,四只鸭却能唱同一首歌。</p>
+<h2 id="1-身份与曲单">1. 身份与曲单</h2>
+<p><code>Chorale::new</code>(chorale.rs:198-228)定下信标身份:<code>register</code> 由嗓音的音高中心量化(chorale.rs:200,低音鸭天生是低音声部);<code>id</code> 取种子混洗后的十六位(chorale.rs:206)。注释记了一场事故:曾是 8 位,四鸭房间第一天就撞号,有只鸭从此加不进来(chorale.rs:201-205)。曲单是三个常量(chorale.rs:60-66):wistful、duck_strut,和如实标着"TEST ONLY — remove before release"的 outer_wilds。曲单的意义:不认识某 id 的鸭<strong>继续听而不是加入</strong>——瞎猜就是对唱两首歌(chorale.rs:56-59)。</p>
+<h2 id="2-state四态装下全部人生">2. <code>State</code>:四态装下全部人生</h2>
+<p><code>Off / Listening{since} / Conducting{conductor, roster} / Following{…}</code>(chorale.rs:113-144)。最值得细读的是 <code>Following.conductor</code> 的注释(chorale.rs:127-138):指挥以<strong>信标 id</strong> 记,绝不以 radio 地址记——"这是让合唱永远同步不了的那个 bug,而且犯了两次";BLE 隐私地址几秒一换,跟着地址认指挥的鸭会拒收之后的每一拍,相位锁饿死,从此不唱。同状态的 <code>last_beat</code>(chorale.rs:142-143):信标一拍重播好几次,重读同一计数值不算又一拍,喂进去相位会拖后半个广播间隔(chorale.rs:360-365)。对外的 <code>Tick</code>(chorale.rs:147-164)里有个微妙的 <code>voices</code>:它不是 roster 长度——走出范围的鸭<strong>保留座位</strong>(裁掉它会把下面所有人换声部),那行谱只是空着(chorale.rs:158-163)。</p>
+<h2 id="3-tick从旁听到指挥">3. <code>tick</code>:从旁听到指挥</h2>
+<p>每拍入口(chorale.rs:382-462)先裁掉 3 秒没音讯的同伴(<code>PEER_STALE</code>,chorale.rs:43)。<code>Listening</code> 两条出路:<strong>有人在唱认识的曲子就加入</strong>(chorale.rs:396-424)——第二个指挥不允许存在;<strong>没人唱、自己 id 最小、过了 <code>SETTLE = 1.5 s</code>(chorale.rs:51)就开团</strong>(chorale.rs:425-448)。低 id 指挥是确定性的:两只鸭从同样的信标推出同样的答案,没有选票可丢(chorale.rs:705 测试)。开团时 roster 按加入顺序收录、超 <code>MAX_ROSTER</code> 截断(chorale.rs:429-431);选曲先看操作者的钉子,没有就用时钟低位当硬币(chorale.rs:437-439)。<code>Conducting</code> 分支(chorale.rs:464-506)每拍把新鸭<strong>追加</strong>进 roster——只增不重排,已开唱的鸭才不会换声部;曲终判定 <code>position &gt; 总拍数 + 2</code>(chorale.rs:491-496)——它曾经不会结束。<code>Following</code> 分支(chorale.rs:522-552)晚 6 拍才认输,把领路权留给指挥的重启;还没被排座的鸭报 <code>joining: true</code>(chorale.rs:155-157)。</p>
+<h2 id="4-座位表广播与表达">4. 座位表、广播与表达</h2>
+<p><code>heard</code>(chorale.rs:264-368)收信标:滤掉自己的回声(chorale.rs:269-271),按 id 合并同伴;指挥换曲或拍计数倒退(倒退 4..128 拍算重启,小前进只是漏拍,chorale.rs:326-330),跟随者换谱重建相位锁。<code>my_part</code>(chorale.rs:558-570)是座位表的消费端:拿自己在 roster 的序号,取 <code>seat_all</code> 按全体 register 排好的声部表——<strong>人人重放同一张表</strong>,不会有俩中音。广播被 <code>publish</code>(chorale.rs:586-597)限流到"变了才发":50 Hz 的循环、一秒一翻的拍,不限流就是百倍 D-Bus。彩蛋级函数 <code>head_expression</code>(chorale.rs:617-631):头部摇摆由<strong>乐谱位置</strong>而非本地时钟驱动——所有鸭从同一拍数算出同一摆动,编舞是同步的免费赠品;幅度刻意小,头上驮着 ToF。</p>
+<h2 id="你带走的收获">你带走的收获</h2>
+<ul>
+<li>无时钟多机同步三件套:确定性选主(低 id)、权威方广播座位表、拍计数当时间基。</li>
+<li>身份绝不下沉到会变的层:BLE 地址轮换,信标 id 才是指挥的身份证。</li>
+<li>重复信标与倒退计数都是信息:去重靠 <code>last_beat</code>。</li>
+<li>名册保留离席者座位:重排的代价高于一行空谱。</li>
+<li>限流广播:载荷不变就不发。</li>
+</ul>
+<h2 id="延伸">延伸</h2>
+<ul>
+<li>曲子数据与音频渲染在下半场;声部合成:<a href="/learn/deep-118">解读 118</a>;导览:<a href="/learn/deep-12">解读 12</a></li>
+<li>本地:<code>/Volumes/dev/dev/microduck/robotd/src/chorale.rs</code></li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

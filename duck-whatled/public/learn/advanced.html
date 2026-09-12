@@ -176,10 +176,10 @@ uv sync
 <p>第一次会下载较多东西，属正常。<strong>这一步只是 CPU 推理，不需要训练 GPU。</strong></p>
 <h3 id="14-跑官方现成策略第一个里程碑">1.4 跑官方现成策略（第一个里程碑）</h3>
 <pre><code class="language-bash">uv run scripts/infer_policy.py \
-  --walking   ../microduck/policies/alpha_walking.onnx \
-  --standing  ../microduck/policies/alpha_stand.onnx \
-  --sitstand  ../microduck/policies/alpha_sitstand.onnx \
-  --roulade   ../microduck/policies/roulade.onnx \
+  --walking   /absolute/path/to/alpha_walking.onnx \
+  --standing  /absolute/path/to/alpha_stand.onnx \
+  --sitstand  /absolute/path/to/alpha_sitstand.onnx \
+  --roulade   /absolute/path/to/roulade.onnx \
   --new-cmd-obs
 </code></pre>
 <p>会弹出 MuJoCo 视窗，鸭子按你的指令走/站/翻滚。默认走 <strong>BAM 执行器模型</strong>（比理想电机更接近真机，见第 4 节原理）。</p>
@@ -359,7 +359,7 @@ git clone https://github.com/pollen-robotics/microduck
 
 # ③ 装依赖 + 跑官方策略（第一次约 20–40 分钟，主要是下载）
 cd microduck_rl &amp;&amp; export UV_HTTP_TIMEOUT=600 &amp;&amp; uv sync
-uv run scripts/infer_policy.py --walking ../microduck/policies/alpha_walking.onnx --new-cmd-obs
+uv run scripts/infer_policy.py --walking /absolute/path/to/alpha_walking.onnx --new-cmd-obs
 </code></pre>
 <p>看到鸭子在仿真里走起来，你就完成了整个项目里<strong>性价比最高的一个里程碑</strong>：零硬件成本，验证了模型、策略、接口三层。之后再按第 2 节跑 5 迭代 Smoke Test，按第 3 节准备 Radxa。</p>
 <p>三条起步铁律：<strong>先推理后训练</strong>（官方模型能跑通之前不碰训练）；<strong>先仿真后真机</strong>；<strong>每次只改一类变量并记录</strong>（<code>rl-series/experiments/</code> 有模板）。</p>

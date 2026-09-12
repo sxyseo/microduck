@@ -247,7 +247,7 @@ def rewrite_course_links(text: str) -> str:
 
 def rewrite_deep_links(text: str) -> str:
     """解读系列内的 NN-xxx.md 相对链接 → /learn/deep-NN;工作区路径留文字去链接。"""
-    text = re.sub(r"\]\(\d\d-[^)]*\.md\)", lambda m: "](/learn/deep-" + m.group(0)[2:4] + ")", text)
+    text = re.sub(r"\]\((\d{1,3})-[^)]*\.md\)", lambda m: "](/learn/deep-" + m.group(1) + ")", text)
     return re.sub(r"\]\(((?:\.\./|docs/|microduck-replica/|open-microduck/|bam/|xiaozhi-esp32/)[^)]+)\)", r"\1", text)
 
 
@@ -278,13 +278,31 @@ def deep_stage_tag(n: int) -> str:
         return "第五辑 · 电路"
     if n <= 60:
         return "第六辑 · 舵机与执行器"
-    return "第七辑 · 换装 HL-2915 全流程"
+    if n <= 72:
+        return "第七辑 · 换装 HL-2915 全流程"
+    if n <= 84:
+        return "第八辑 · 通用换舵机方法论"
+    if n <= 94:
+        return "第九辑 · 电压专项"
+    if n <= 114:
+        return "第十辑 · duck-control 逐函数精读"
+    if n <= 130:
+        return "第十一辑 · 服务与训练工具逐函数"
+    if n <= 142:
+        return "第十二辑 · 任务配置与脚本逐文件"
+    if n <= 156:
+        return "第十三辑 · 小白电气课"
+    if n <= 168:
+        return "第十四辑 · 小白机械课"
+    if n <= 180:
+        return "第十五辑 · 其他舵机案例库"
+    return "第十六辑 · 小白基础课"
 
 
 # 课程正文按文件名自动发现(00/01 已在上面手工登记,这里跳过)
 _seen = {d["out"] for d in DOCS}
 for f in sorted(Path("/Volumes/dev/dev/microduck/docs/course").glob("[0-9][0-9]-*.md")):
-    nn = f.name[:2]
+    nn = re.match(r"(\d{1,3})-", f.name).group(1)
     out = f"course-{nn}.html"
     if out in _seen:
         continue
@@ -316,10 +334,10 @@ DOCS.append(
         "date": "2026-09-11",
     }
 )
-for f in sorted(DEEP_DIR.glob("[0-9][0-9]-*.md")):
-    nn = f.name[:2]
+for f in sorted(f for f in DEEP_DIR.glob("[0-9]*-*.md") if re.match(r"^\d{1,3}-", f.name)):
+    nn = re.match(r"(\d{1,3})-", f.name).group(1)
     text = f.read_text(encoding="utf-8")
-    m = re.search(r"^# 解读 \d\d · (.+)$", text, re.M)
+    m = re.search(r"^# 解读 \d+ · (.+)$", text, re.M)
     title = f"解读 {nn} · {m.group(1).strip()}" if m else f.stem
     dm = re.search(r">\s*\*\*解读对象\*\*[::](.+)", text)
     desc = re.sub(r"[`\*]", "", dm.group(1)).strip()[:90] if dm else title

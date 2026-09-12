@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>解读 134 · swizzle 配置精读 · 什么鸭 WhatDuck</title>
+<meta name="description" content="microduck-replica/upstream/microduck_rl/src/mjlab_microduck/tasks/microduck_velocity_swizz">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="解读 134 · swizzle 配置精读">
+<meta property="og:description" content="microduck-replica/upstream/microduck_rl/src/mjlab_microduck/tasks/microduck_velocity_swizz">
+<meta property="og:url" content="https://duck.whatled.com/learn/deep-134">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/deep-134">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">DEEP 134 · 第十二辑 · 任务配置与脚本逐文件 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="解读-134-swizzle-配置精读">解读 134 · swizzle 配置精读</h1>
+<blockquote>
+<p><strong>解读对象</strong>:<code>microduck-replica/upstream/microduck_rl/src/mjlab_microduck/tasks/microduck_velocity_swizzle_env_cfg.py</code>(198 行)<br />
+<strong>需要的前置</strong>:<a href="/learn/deep-135">解读 135</a>(roller 基座)、<a href="/learn/deep-132">解读 132</a>(课程手法)</p>
+</blockquote>
+<h2 id="做减法得到的新技能">做减法得到的新技能</h2>
+<p>swizzle(双刀贴地、双腿对称开合的"葫芦"滑法)不是从零写的:<code>make_microduck_velocity_swizzle_env_cfg()</code>(:34)先整体拿过 stride 版 roller 环境(:37),然后<strong>删掉五个反 swizzle 项</strong>——<code>_ANTI_SWIZZLE = (single_support, glide, skating_air_time, gait_symmetry, hip_roll_neutral)</code>(:31),正是基座里塑造"交替蹬步"的那组力——再加两块新奖励:<code>leg_symmetry</code>(权重 2.0,双腿互为镜像,:44-48)与 <code>grounded</code>(权重 1.0,双刀贴地,:50-54)。模块 docstring 交代了前提:基座 roller 配方天然收敛到 swizzle,所以只需拆掉围栏。</p>
+<h2 id="三组改造">三组改造</h2>
+<p><strong>倒滑</strong>:基座里 cmd_x&lt;0 是刹车;这里 <code>wheel_speed</code> 打开 <code>bidirectional=True</code>、删掉 <code>braking</code>、命令范围对称成 (-0.6, 0.6)(:61-64)——负命令变成"倒着滑",想停就给 0,<code>grounded</code> 用 |cmd_x| 双向都把刀按在地上。</p>
+<p><strong>航向两阶段</strong>:基座为直线上滑禁了转向;这里把 ang_vel_z 范围重开到 ±0.5(:77,注释记录 ±1.0 训出的策略转向过猛,真机要用 <code>--max-angular-vel 0.3</code> 驯服),然后课程把 <code>heading_hold</code>(保持直行,1.0)与 <code>heading_tracking</code>(跟踪航向,0)在 1000/1750/2500 迭代交换主导权(:85-108)——先滑直,再学指哪滑哪。</p>
+<p><strong>头部控制后挂</strong>:头部命令与观测槽接入(:114-130),但 <code>head_pose_tracking</code> 从 0 起步、1500 迭代(swizzle 成形)后才爬到 4.0(:161-172),命令范围同步扩到与 velocity 环相同的终值 ±1.10/±1.40/±0.31(:176-188)。为了让头只听命令,还要拆掉两个"回家拉力":删 <code>neck_joint_pos_l2</code>(:142-143),pose 奖励的 std 表滤掉 neck/head、asset_cfg 限定腿关节(:146-157)。</p>
+<p>文件尾一行值得看:<code>MicroduckSwizzleRlCfg = dataclasses.replace(MicroduckRollersRlCfg, experiment_name="velocity_swizzle", run_name=...)</code>(:194-198)——PPO 超参原样继承,只换实验名。注册名 <code>Mjlab-Velocity-Swizzle-MicroDuck</code>。</p>
+<h2 id="你带走的收获">你带走的收获</h2>
+<ul>
+<li>新技能环境可以只是旧环境的"删除清单 + 两个奖励":先找到塑造旧行为的那组项,再拆。</li>
+<li>交换两个奖励的主导权(航向 hold→track)是两阶段教学的通用形式,比硬调一个权重可解释。</li>
+<li>引入命令跟踪前,必须清掉同一自由度上的既有拉力(颈部回 HOME),否则策略只听强的那个。</li>
+<li><code>dataclasses.replace</code> 复制 runner 配置:家族内所有任务共享一套 PPO 底座。</li>
+</ul>
+<h2 id="延伸">延伸</h2>
+<ul>
+<li>基座四配置总览:<a href="/learn/deep-135">解读 135</a>;坡地生成:<a href="/learn/deep-136">解读 136</a></li>
+<li>任务注册表与 <code>Mjlab-Velocity-Swizzle-MicroDuck</code>:<a href="/learn/deep-21">解读 21</a></li>
+<li>本文件:<code>.../tasks/microduck_velocity_swizzle_env_cfg.py</code></li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

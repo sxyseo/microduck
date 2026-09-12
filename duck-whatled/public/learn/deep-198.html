@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>解读 198 · 50Hz 的由来 · 什么鸭 WhatDuck</title>
+<meta name="description" content="duck-control/src/model.rs(241 行,常量区自第 80 行起)· 交叉验证 infer_policy.py">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="解读 198 · 50Hz 的由来">
+<meta property="og:description" content="duck-control/src/model.rs(241 行,常量区自第 80 行起)· 交叉验证 infer_policy.py">
+<meta property="og:url" content="https://duck.whatled.com/learn/deep-198">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/deep-198">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">DEEP 198 · 第十六辑 · 小白基础课 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="解读-198-50hz-的由来">解读 198 · 50Hz 的由来</h1>
+<blockquote>
+<p><strong>解读对象</strong>:<code>duck-control/src/model.rs</code>(241 行,常量区自第 80 行起)· 交叉验证 <code>infer_policy.py</code><br />
+<strong>需要的前置</strong>:<a href="/learn/deep-107">解读 107</a>(model.rs 常量全表);<a href="/learn/deep-01">解读 01</a>(一个节拍里怎么安排 16 个对话)。</p>
+</blockquote>
+<h2 id="一句话答案">一句话答案</h2>
+<p>50Hz 不是拍脑袋,是<strong>三道算术</strong>互相咬合的结果:仿真侧 0.005s × 4 步 = 20ms;总线侧 16 台设备在 1Mbps 上的问答必须塞进这 20ms;而且修好的关键参数不是波特率,是一个出厂默认值。</p>
+<h2 id="第一道训练侧的-0005-4">第一道:训练侧的 0.005 × 4</h2>
+<p>回放脚本 infer_policy.py 启动时打印:<code>Control frequency: 50 Hz (decimation: 4)</code>,配 <code>model.opt.timestep = 0.005</code>。物理引擎每 5 毫秒推一步,策略每攒 4 步(20ms)想一次——这是训练时就定下的节拍。策略在什么节拍上学的,部署就必须在什么节拍上跑,<strong>50Hz 首先是训练合同的复制</strong>。</p>
+<h2 id="第二道总线侧的-8ms-账单">第二道:总线侧的 8ms 账单</h2>
+<p>真机上每个节拍要干一件事:一条 <code>sync_read</code> 问遍总线上的 16 台设备(IMU 板 ID 200 + 15 只舵机),一条 <code>sync_write</code> 写回目标位置。总线带宽是 <code>BAUD_RATE: u32 = 1_000_000</code>(model.rs:80,1Mbps)。真正的暗雷在 <code>EXPECTED_REGISTERS</code> 的注释里(model.rs:89–94):</p>
+<blockquote>
+<p><code>return_delay_time</code> is the load-bearing one: the XL330 ships at 250, which is <strong>500 µs of turnaround per device</strong>. Across 16 devices that is <strong>8 ms per tick — 40% of a 20 ms budget</strong> — spent waiting for servos to get around to answering.</p>
+</blockquote>
+<p>翻译:每只舵机收到指令后要<strong>默认等 500 微秒</strong>才应答(出厂寄存器值 250,单位 2µs)。16 台设备排队,光"轮到你我再开口"就要烧掉 8 毫秒——<strong>20ms 预算的 40% 什么都没干,纯等</strong>。所以启动时 <code>check_registers</code> 会把这个寄存器强制改写成 0:<code>("return_delay_time", 0)</code>。8ms 的账单一笔勾销,读写才塞得进一个节拍。同表里 <code>("baud_rate", 3)</code> 也是防漂移:寄存器值 3 必须 = 1Mbps,与 <code>BAUD_RATE</code> 对账。</p>
+<h2 id="第三道预算的纪律">第三道:预算的纪律</h2>
+<p>20ms 里不只有问答:61 维观测要拼装、ONNX 要推理、14 个动作要写回、安全检查要过。bus.rs 为此把每个环节都按预算设计:</p>
+<ul>
+<li><code>READ_TIMEOUT = Duration::from_millis(30)</code> 不是"可以超 30ms",而是<strong>封顶</strong>:"a missing device costs a bounded hiccup rather than stalling the loop"(一只设备失联只许付有限代价,不许拖死循环);</li>
+<li>一条 <code>sync_read</code> 而不是每关节一条:IMU 排第一位先应答,舵机数据紧随其后;</li>
+<li>电压、温度这类慢变量挪出主节拍,约一秒一次(<code>slow_sensors</code>),别占 50Hz 的奶油;</li>
+<li><code>STALE_RUN_WARN: u64 = 25</code> 的注释自己算给你看:"25 reads is <strong>half a second at 50 Hz</strong>"——连常量都以 50Hz 为刻度。</li>
+</ul>
+<p>超时 30ms 比 20ms 大,矛盾吗?不——它是"坏情况的上限",健康时 16 台设备的问答远到不了 20ms,预算余量就是用来吸收失联那一拍的。</p>
+<h2 id="你带走的收获">你带走的收获</h2>
+<ul>
+<li>50Hz = 训练节拍(decimation 4 × 0.005s)在真机上的复刻:仿真与实机必须同频。</li>
+<li>出厂默认值也能吃预算:一只 500µs 的应答延迟 × 16 台 = 8ms = 40% 预算,启动时强制清零。</li>
+<li>换算口诀:寄存器值 × 2µs = 每台周转时间;20ms = 一个控制节拍;25 次 = 半秒。</li>
+<li>实时性的本质是预算管理:封顶超时、合并事务、慢变量降频,都是给 20ms 省时间的手段。</li>
+<li>"由来"类的数字都有出处可查:<code>BAUD_RATE</code> 在 model.rs:80,8ms 账单在其 89–94 行注释里。</li>
+</ul>
+<h2 id="延伸">延伸</h2>
+<ul>
+<li>20ms 里的完整调度:<a href="/learn/deep-01">解读 01</a> · 主循环组织:<a href="/learn/deep-09">解读 09</a></li>
+<li>寄存器对账的启动流程:<a href="/learn/deep-98">解读 98</a> · 常量与电池:<a href="/learn/deep-107">解读 107</a></li>
+<li>本地:<code>duck-control/src/model.rs</code>(80–100 行)、<code>duck-control/src/bus.rs</code>(50–72 行常量注释)</li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

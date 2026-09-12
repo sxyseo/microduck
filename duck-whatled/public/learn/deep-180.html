@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>解读 180 · 端到端推演:换成 MX-64 · 什么鸭 WhatDuck</title>
+<meta name="description" content="bam/bam/params/mx64/m6.json + bam/bam/dynamixel/actuator.py(MXActuator)">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="解读 180 · 端到端推演:换成 MX-64">
+<meta property="og:description" content="bam/bam/params/mx64/m6.json + bam/bam/dynamixel/actuator.py(MXActuator)">
+<meta property="og:url" content="https://duck.whatled.com/learn/deep-180">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/deep-180">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">DEEP 180 · 第十五辑 · 其他舵机案例库 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="解读-180-端到端推演换成-mx-64">解读 180 · 端到端推演:换成 MX-64</h1>
+<blockquote>
+<p><strong>解读对象</strong>:<code>bam/bam/params/mx64/m6.json</code> + <code>bam/bam/dynamixel/actuator.py</code>(<code>MXActuator</code>)<br />
+<strong>需要的前置</strong>:<a href="/learn/deep-79">解读 79</a>(五落点)· <a href="/learn/deep-77">解读 77</a>(Dynamixel 系协议)</p>
+</blockquote>
+<p>上次(<a href="/learn/deep-179">解读 179</a>)是往便宜里换,这次往"豪"里换:ROBOTIS MX-64,<br />
+堵转 6.0 N·m @12 V(11.1/14.8 V 下 5.5/7.3,e-manual 口径)——是 XL330 堵转 0.52 N·m 的<br />
+十余倍。协议还是自家 Dynamixel V2,看似最省事;推演一遍,"超配"的账单比省事的爽感先到。</p>
+<h2 id="1-机械十几倍的力气十一倍的体重">1. 机械:十几倍的力气,十一倍的体重</h2>
+<p>MX-64 重 126 g(T/R 版;AR/AT 135 g),是 18 g XL330 的 7 倍;15 只合计多出<br />
+<strong>1620 g</strong>——737 g 的鸭子变 2.36 kg。外形 40.2×61.1×41 mm 对 20×34×26 mm,<br />
+25 cm 的小鸭腔体毫无悬念地装不下,连杆件、舵盘、走线全部重画。力矩过剩还有个隐蔽问题:<br />
+一只 737 g 的鸭根本用不到 6 N·m 的膝盖——多余的峰值力矩只以重量、发热和账单的形式存在。</p>
+<h2 id="2-电气电压反而最顺电流是暗坑">2. 电气:电压反而最顺,电流是暗坑</h2>
+<p>MX-64 窗口 10.0–14.8 V、推荐 12 V。3S 锂电(满电 12.6 V、放空约 9.9 V)整个落在窗口内——<br />
+这是 HL-2915 路线(66/67 课)推过的同一套 3S 电力拓扑,照搬即可。暗坑是电流:e-manual 标<br />
+6.0 N·m 时堵转 4.1 A/只,15 只最坏情形是 60 A 级——电池放电倍率、母线线径、保护器件<br />
+都要按新量级重算(工程推断,待实测)。另外 BAM 那颗 mx64 是在 <code>vin=15.0</code> 的台架供电下<br />
+辨识的(<code>MXActuator.__init__</code>),复现辨识时别忘了这一项。</p>
+<h2 id="3-协议唯一的加分项">3. 协议:唯一的加分项</h2>
+<p>MX-64 说 Dynamixel V2——与 XL330 同协议家族:ID/波特率/Control Table 流程照<br />
+<a href="/learn/deep-59">解读 59</a> 一路走通,T 型(TTL)与 R 型(RS-485)二选一,接口件不同。<br />
+<code>rustypot</code> 与运行时的 Dynamixel 通路都能复用,是五落点里唯一"改常量就行"的一环。</p>
+<h2 id="4-参数与重训一份干净得可疑的-json">4. 参数与重训:一份"干净"得可疑的 json</h2>
+<p>mx64/m6.json 对照 xl330(<code>_BAM_ACTUATOR_KWARGS</code> 那侧):</p>
+<table>
+<thead>
+<tr>
+<th>字段</th>
+<th>mx64</th>
+<th>xl330</th>
+<th>读法</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>kt</td>
+<td>1.602</td>
+<td>0.346</td>
+<td>4.6 倍</td>
+</tr>
+<tr>
+<td>armature</td>
+<td>0.0123</td>
+<td>0.0016</td>
+<td>7.7 倍</td>
+</tr>
+<tr>
+<td>friction_base</td>
+<td>6.2e-07</td>
+<td>0.0119</td>
+<td>库仑摩擦<strong>≈0</strong></td>
+</tr>
+<tr>
+<td>friction_stribeck</td>
+<td>0.1227</td>
+<td>0.00085</td>
+<td>全挤到低速附加项</td>
+</tr>
+<tr>
+<td>dtheta_stribeck</td>
+<td>2.575</td>
+<td>0.261</td>
+<td>"慢区"宽 10 倍</td>
+</tr>
+<tr>
+<td>alpha</td>
+<td>0.841</td>
+<td>8.53</td>
+<td>尖峰变宽坡</td>
+</tr>
+<tr>
+<td>viscous</td>
+<td>0.0253</td>
+<td>0.0058</td>
+<td>4.4 倍</td>
+</tr>
+</tbody>
+</table>
+<p>摩擦形状变了质:XL330 的 Stribeck 是 α=8.53 的窄尖峰(只在近停转处陡增),mx64 是<br />
+α=0.84 的宽缓坡+几乎为零的库仑底——大减速箱(200:1)把摩擦"洗"成了另一种形状。<br />
+json 里<strong>没有 <code>q_offset</code> 与 <code>command_delay</code></strong>:按 <a href="/learn/deep-80">解读 80</a>,缺失字段<br />
+加载时回落到类初始值,不是数据丢失。类级参数也别漏:<code>kp=32</code>、<code>error_gain=0.158</code>、<br />
+<code>max_pwm=0.9625</code>,与 XL330 的 kp=400 体系完全是两套固件语义,<code>kp_fw=200</code> 必须重标。</p>
+<h2 id="5-结论四道门死在第三道">5. 结论:四道门死在第三道</h2>
+<p>按 <a href="/learn/deep-73">解读 73</a> 的顺序验收:①电压过(3S 正合窗口)、②力矩过(远超 0.5<br />
+N·m 线)、③尺寸/重量<strong>死</strong>(+1620 g、腔体不装)、④协议过。四道门是"第一关不过后面免谈"的<br />
+串联电路,这题的答案是:除非你本来就想做一只大型鸭,否则 MX-64 是教科书级的"超配陷阱"。</p>
+<h2 id="你带走的收获">你带走的收获</h2>
+<ul>
+<li>超配的真实代价是质量预算:126 g×15 = +1620 g,机器人从 737 g 变 2.36 kg。</li>
+<li>电压最顺(3S 直接落窗)、协议最省(同 Dynamixel V2)、机械完全不可行——门是串联的。</li>
+<li>大减速箱改变摩擦形状:库仑项≈0、Stribeck 变宽坡,m6.json 的形状差异就是换执行器的证据。</li>
+<li>缺失字段回落类初始值;<code>kp_fw</code>、forcerange 等固件语义参数一律重标,不迁移。</li>
+</ul>
+<h2 id="延伸">延伸</h2>
+<ul>
+<li><a href="/learn/deep-85">解读 85</a>/<a href="/learn/deep-86">解读 86</a>:3S 电力拓扑的由来</li>
+<li><a href="/learn/deep-80">解读 80</a>:字段缺失的回落机制</li>
+<li><code>bam/bam/params/mx64/m6.json</code> · <code>bam/bam/dynamixel/actuator.py</code>(<code>MXActuator</code>)</li>
+<li>MX-64 规格:ROBOTIS e-manual(docs.robotis.com,mx-64 页,2026-09 核)</li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

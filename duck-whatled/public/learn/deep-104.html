@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>解读 104 · fall.rs 全函数走读 · 什么鸭 WhatDuck</title>
+<meta name="description" content="duck-control/src/fall.rs(272 行)">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="解读 104 · fall.rs 全函数走读">
+<meta property="og:description" content="duck-control/src/fall.rs(272 行)">
+<meta property="og:url" content="https://duck.whatled.com/learn/deep-104">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/deep-104">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">DEEP 104 · 第十辑 · duck-control 逐函数精读 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="解读-104-fallrs-全函数走读">解读 104 · fall.rs 全函数走读</h1>
+<blockquote>
+<p><strong>解读对象</strong>:<code>duck-control/src/fall.rs</code>(272 行)<br />
+<strong>需要的前置</strong>:<a href="/learn/deep-05">解读 05</a>(检测器导览与物理推导)、<a href="/learn/deep-04">解读 04</a>(安全层的"确认"版判据)</p>
+</blockquote>
+<p>导览见解读 05,本篇把文件里的每个函数走完:配置、状态、两个纯函数、状态机 <code>observe</code> 与 <code>reset</code>。文件很小(272 行),但没有一行是填充。</p>
+<h2 id="1-配置与状态fallpredictorconfig-与-fallpredictor">1. 配置与状态:<code>FallPredictorConfig</code> 与 <code>FallPredictor</code></h2>
+<p><code>FallPredictorConfig</code>(fall.rs:56-68)四个字段,默认值集中在一个 <code>Default</code>(fall.rs:70-79):<code>tilt_z = -0.90</code>(约 26° 前倾,fall.rs:73)、<code>predicted_z = -0.5</code>(fall.rs:74,注释明说与 <code>SafetyConfig::fall_gravity_z</code> 同义且默认同值——"它将在 <code>lookahead</code> 后成为安全层眼中的摔倒",fall.rs:59-63)、<code>lookahead = 300 ms</code>(fall.rs:75)、<code>debounce = 60 ms</code>(fall.rs:76,50 Hz 下三个 tick)。<code>FallPredictor</code> 自身只带两个状态量(fall.rs:87-94):<code>falling_for</code>(三条件连续成立的时长)与 <code>fired</code>(这一跤的边沿发出去了没有)。<code>new</code>(fall.rs:97-103)把二者归零。整个检测器是纯内存状态机,不持传感器句柄——每个 tick 由调用方喂 <code>ImuData</code> 与 <code>dt</code>,所以它能对任意录像离线重放。</p>
+<h2 id="2-两个可公开的数gravity-z-rate-与-predicted-z">2. 两个可公开的数:<code>gravity_z_rate</code> 与 <code>predicted_z</code></h2>
+<p><code>gravity_z_rate</code>(fall.rs:110-112)是关联函数(不接 <code>self</code>,以 <code>FallPredictor::gravity_z_rate(&amp;imu)</code> 调用):</p>
+<pre><code class="language-rust">-(imu.gyro[0] * imu.gravity[1] - imu.gyro[1] * imu.gravity[0])
+</code></pre>
+<p>一行就是 ġz = −(ωx·gy − ωy·gx)(恒等式从哪来、为什么不对四元数做数值微分,见解读 05)。它是 <code>pub</code> 的,理由写在注释里(fall.rs:107-109):这是对着录像调阈值时要盯的那个数,"不设为公开就从外面拿不到"。<code>predicted_z</code>(fall.rs:115-117)是线性外推:当前重力 z 加速率乘 <code>lookahead.as_secs_f64()</code>——<code>Duration::as_secs_f64</code> 把 300 ms 变成 0.3。两个函数都不碰 <code>self</code> 的状态,是纯粹的可复用数学,测试因此能断言解析值(<code>the_rate_is_the_analytic_derivative</code>,fall.rs:170,容差 1e-12)。</p>
+<h2 id="3-observe边沿触发的状态机">3. <code>observe</code>:边沿触发的状态机</h2>
+<p>签名(fall.rs:120):<code>(&amp;mut self, imu: &amp;ImuData, dt: Duration) -&gt; bool</code>。第一段算判据(fall.rs:121-124):三个条件与运算——已越 <code>tilt_z</code>、<code>rate &gt; 0</code>(还在倒下而不是从倾斜中恢复)、外推越 <code>predicted_z</code>,缺一即"不像在摔"。第二段(fall.rs:126-133)是这个函数真正的机密:不像在摔时,<strong>同时</strong>清 <code>falling_for</code> 与 <code>fired</code>。注释(fall.rs:128-131):重新武装必须等机器人"不再像在摔",否则正在软倒的第一跤还没落地,调用方就又收到一记触发;测试 <code>it_rearms_when_the_fall_stops</code>(fall.rs:244-257)验证了完整序列——触发后必须先恢复、再凑满新一轮去抖,才有第二枪。第三段(fall.rs:135-139):像在摔则 <code>saturating_add(dt)</code> 累计,<code>falling_for &gt;= debounce &amp;&amp; !fired</code> 同时成立才返回 <code>true</code> 并立起 <code>fired</code>——默认参数下第三 tick 触发(fall.rs:207-210),此后同一次摔倒永远 <code>false</code>(fall.rs:211-213)。<code>reset</code>(fall.rs:145-148)留给"调用方已接管"的场合:清掉进行中的去抖,下一跤从零检测;测试 <code>reset_drops_a_debounce_in_progress</code>(fall.rs:262-271)钉住"计数重启"而非"接着数"。</p>
+<p>测试侧还值得一枚:<code>tipping</code>(fall.rs:158-164)用 <code>gravity = [sin θ, 0, −cos θ]</code> 造出解析可算的姿态,于是每个阈值测试断言的都是数学事实而非近似;<code>a_footfall_on_an_upright_robot_never_fires</code>(fall.rs:189-195)用 8° 倾角加 3 rad/s 冲量复现"每一步都会发生"的那类假阳性,把它拒之门外的是 <code>tilt_z</code> 这道位置闸。</p>
+<h2 id="你带走的收获">你带走的收获</h2>
+<ul>
+<li>预测器的终点阈值复用安全层的阈值:两个检测器说的是同一种摔倒的两种时态。</li>
+<li><code>pub</code> 不只是封装的让步:把"调参要看的中间量"设为公开 API,是可观测性的设计手段。</li>
+<li>边沿触发器同时管理"计数"与"已发"两个状态,且复位必须双向同步,否则第一跤的尾巴会触发第二跤。</li>
+<li>解析构造的测试数据(sin/cos 造重力)让断言停在数学事实层,不吃数值误差。</li>
+</ul>
+<h2 id="延伸">延伸</h2>
+<ul>
+<li>物理推导与"迟侧调参"的理由:<a href="/learn/deep-05">解读 05</a></li>
+<li>摔倒"确认"版判据与 gain_limp:<a href="/learn/deep-04">解读 04</a></li>
+<li>gyro 与 gravity 的来路:<a href="/learn/deep-06">解读 06</a></li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

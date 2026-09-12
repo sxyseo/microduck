@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>解读 113 · robotd/control.rs:`Controller` 抽象 · 什么鸭 WhatDuck</title>
+<meta name="description" content="robotd/src/control.rs(747 行)">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="解读 113 · robotd/control.rs:`Controller` 抽象">
+<meta property="og:description" content="robotd/src/control.rs(747 行)">
+<meta property="og:url" content="https://duck.whatled.com/learn/deep-113">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/deep-113">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">DEEP 113 · 第十辑 · duck-control 逐函数精读 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="解读-113-robotdcontrolrscontroller-抽象">解读 113 · robotd/control.rs:<code>Controller</code> 抽象</h1>
+<blockquote>
+<p><strong>解读对象</strong>:<code>robotd/src/control.rs</code>(747 行)<br />
+<strong>需要的前置</strong>:<a href="/learn/deep-09">解读 09</a>(循环怎么调它);<a href="/learn/deep-95">解读 95</a>(<code>Net</code> 与 <code>Policy</code>)</p>
+</blockquote>
+<p><a href="/learn/deep-09">解读 09</a> 看过守护进程的一拍;本篇走进被它调用的 <code>Controller</code>。模块注释(control.rs:1-16)按序写死一拍:窗口推进 → 指令重编码 → 优先链选网络 → ONNX 推理 → 目标 → 低通。它不持任何 IO 句柄,"构造上就命令不了电机,只能提议目标"(control.rs:2-5)。</p>
+<h2 id="1-两张调参表一个一拍的结果">1. 两张调参表,一个一拍的结果</h2>
+<p><code>Tuning</code>(control.rs:49-77):<code>action_scale 0.9</code>、<code>standing_gain_ratio 0.8</code>、<code>gain 200</code>,低通 <code>head_lowpass Some(0.5)</code>、<code>legs_lowpass Some(0.7)</code>(control.rs:66-77)。<code>Option</code> 是 Rust 表达"可能没有"的类型,<code>None</code> 即不过滤;注释点名低通是训练合约:"must match training or transfer degrades"(control.rs:59-61)。<code>SkillTuning</code>(control.rs:81-114)装脚本动作的数:pick 周期 4.0 s、交还相位 0.7,<code>skills</code> 直接装配置——技能是数据。每拍产出 <code>Step</code>(control.rs:116-131):targets、label(<code>Cow&lt;'static, str&gt;</code>,Rust 的"能借用就借用、需要时才拥有"字符串,因为配置技能的名字来自配置而非编译期)、gain、busy(control.rs:122-125)。</p>
+<h2 id="2-状态机与搬状态">2. 状态机与搬状态</h2>
+<p>三个小类型撑起历史:<code>Sit</code> 三态 Up/Sitting/Rising{remaining}(control.rs:134-144);<code>ActiveSkill</code>(control.rs:147-160)记 index、phase、剩余秒、chain 倒计时;<code>SkillPhase</code> 分 Holding/Unwinding(control.rs:167-173)——后者只为"不会自己结束的策略"存在,直接交还 walk 会交出一个卡在姿势中间的机器人(control.rs:163-166)。<code>Driving</code>(control.rs:179-192)是 <code>last_net</code> 的对外版,<code>Seated</code> 单独成变体:坐稳是"停放不是行进",是唯一在网络被替换时无感切换的状态(control.rs:183-187)。字段里 <code>last_action</code> 存<strong>原始</strong>输出——策略观察的是自己的输出,不是执行器指令(control.rs:211-214);<code>previous: Option</code> 让低通从现实起滤(control.rs:215-217)。<code>carry_over</code>(control.rs:281-289)在热替换时搬走全部状态:"换上新控制器会从 <code>Sit::Up</code> 开始,对坐着的鸭子就是一次没人要求的起身"(control.rs:274-276)。</p>
+<h2 id="3-请求怎么变成状态">3. 请求怎么变成状态</h2>
+<p><code>start_skill</code>(control.rs:357-382)返回 <code>Ok(true)</code> 启动 / <code>Ok(false)</code> 刷新链——"调用方保持安静,因为按住的按钮每秒落在这里五十次"(control.rs:350-351);链时效 <code>CHAIN_WINDOW = 0.15</code>(control.rs:47)即七拍。<code>sit_toggle</code>(control.rs:386-403)在 Rising 中拒绝;<code>busy</code>(control.rs:318-322)是 pick、one-shot、Rising 之或——坐着不算 busy,"parked, not travelling"(control.rs:317)。</p>
+<h2 id="4-step一拍的完整旅程">4. <code>step</code>:一拍的完整旅程</h2>
+<p>签名在 control.rs:427-434。<strong>先过期</strong>(control.rs:435-478):有 unwind 的先进 Unwinding(control.rs:448-452),窗口尽头的分叉只有链上技能能走(control.rs:453-471);链上重放虽是同一个 <code>Net</code> 却是新 episode,要 <code>policy.reset()</code>(control.rs:462-464)。<strong>再选网络</strong>(control.rs:483-539):技能清零头身槽——<code>zero_command_padding</code> 训出的策略就盼着这个;pick 把相位编成 <code>[cos φ, sin φ, 0]</code>(control.rs:504-512);坐旗标乘 vx 槽:<code>[1,0,0]</code> 坐、全零起(control.rs:517-524)。<strong>缩放跟随状态</strong>:<code>standing_tuned</code>(control.rs:559-561)解释了模块注释里的怪癖——踢腿与 rise 的指令全零,模长落进站立阈值,自然落在站立增益。然后 <code>targets[j] = DEFAULT_POSITION[j] + scale × offsets[j]</code>(control.rs:608-610),头四关节(5..9,control.rs:40)与十腿各做一阶低通,腿跳过嘴(control.rs:620)。<strong>窗口最后推进</strong>(control.rs:629-643):"原型在电机写之后推进相位"。测试 <code>the_defaults_match_the_prototype</code>(control.rs:698)与 <code>standing_softens_the_gain</code>(control.rs:732)钉住这些数。</p>
+<h2 id="你带走的收获">你带走的收获</h2>
+<ul>
+<li>纯计算对象靠"构造上不持 IO"获得可测试与安全,提议与执行分层。</li>
+<li>调参数值是训练合约(0.5/0.7 低通、0.8 增益比),要有测试钉住。</li>
+<li>"看起来一样"的状态拆成两个变体(Seated vs SitStand):对网络替换的容忍度不同。</li>
+<li>窗口"先过期、使用、再推进"的顺序与原型对齐,是 sim2real 的一部分。</li>
+</ul>
+<h2 id="延伸">延伸</h2>
+<ul>
+<li>调用它的循环:<a href="/learn/deep-09">解读 09</a>;<code>Net</code>/<code>Policy</code>:<a href="/learn/deep-95">解读 95</a>;技能配置:<a href="/learn/deep-11">解读 11</a></li>
+<li>本地:<code>/Volumes/dev/dev/microduck/robotd/src/control.rs</code></li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

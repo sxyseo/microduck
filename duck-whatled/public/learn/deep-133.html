@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>解读 133 · velstand 配置精读 · 什么鸭 WhatDuck</title>
+<meta name="description" content="microduck-replica/upstream/microduck_rl/src/mjlab_microduck/tasks/microduck_velstand_env_c">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="解读 133 · velstand 配置精读">
+<meta property="og:description" content="microduck-replica/upstream/microduck_rl/src/mjlab_microduck/tasks/microduck_velstand_env_c">
+<meta property="og:url" content="https://duck.whatled.com/learn/deep-133">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/deep-133">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">DEEP 133 · 第十二辑 · 任务配置与脚本逐文件 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="解读-133-velstand-配置精读">解读 133 · velstand 配置精读</h1>
+<blockquote>
+<p><strong>解读对象</strong>:<code>microduck-replica/upstream/microduck_rl/src/mjlab_microduck/tasks/microduck_velstand_env_cfg.py</code>(416 行)<br />
+<strong>需要的前置</strong>:<a href="/learn/deep-131">解读 131</a>(walk 层)、<a href="/learn/deep-27">解读 27</a>(起身奖励)</p>
+</blockquote>
+<h2 id="一层走路-一层恢复">一层走路 + 一层恢复</h2>
+<p>velstand = "走路 + 跌倒恢复"单策略任务(注册名 <code>Mjlab-VelStand-Flat-MicroDuck</code>,另有 Rough 版)。2026-07 重构后的结构极清晰:<code>make_microduck_velstand_env_cfg()</code>(:162)第一行就整个拿过 velocity 环(:164)——走路层零改动;然后换上能躺平的全碰撞机器人 <code>MICRODUCK_STANDUP_ROBOT_CFG</code>(:173),再叠一个小而讲究的恢复层。旧版的问题写在模块 docstring 里:2/3 趴姿重置 + 恢复奖励全程收税,只有约 25% 经验是干净走路。</p>
+<p>关键设计是<strong>门控</strong>:恢复奖励只在真摔了时出钱——<code>REWARD_GATE_TILT_DEG=40.0</code>(:107)。注释里的教训:门控若带高度条件,坐姿(z≈0.07)也会开门,策略学会坐下刷 <code>upright_linear</code>、抖腿刷 air_time;只按倾角开门,舒服姿势装不出来。</p>
+<h2 id="恢复层的经济学">恢复层的经济学</h2>
+<ul>
+<li>两个<strong>基于势函数</strong>的稠密项:<code>upright_progress</code>(权重 5.0,Δcos 倾角,:198-204)与 <code>height_progress</code>(权重 30.0,ceiling 0.115,:211-218)——上升付钱、下落扣钱、原地不动为零,刷不了。</li>
+<li>两个<strong>定时生效</strong>的经济项:税 <code>fallen_tax</code>(课程在 1200 迭代从 0 压到 -0.5,:345-354;带滞回,倾角 &lt;25° 且 z&gt;0.09 才解税)与赏金 <code>recovery_success</code>(同期 0→+10,:355-364;要求倒地 ≥0.5 s 后真的站到完成定义上)。</li>
+<li>阈值全部对齐实测:<code>RECOVERED_UP_Z=0.09</code>(:125)落在策略真实站立包络 0.084–0.096 内——旧的 0.105 永远够不着,赏金从不触发,恢复停在 40° 门外的深蹲(Run-5 教训);<code>TERM_GATE_Z=0.08</code>(:112)既要接住坐姿又不能误杀正常晃动。失败回收 <code>fallen_too_long</code>:连续倒地 8 秒终止(:141,:307-315)。反抖动用 standup 验证过的 <code>joint_torque_rate_l2</code>(-2e-3,:239-242);air_time 换成 <code>feet_air_time_upright</code>——倒地时腿再怎么抖也刷不了(:249-253)。</li>
+</ul>
+<h2 id="课程编排run-17-的沉积">课程编排(Run 1–7 的沉积)</h2>
+<p><code>fell_over_disable</code>(:321-332)在 500 迭代(<code>FELL_OVER_DISABLE_ITER</code>,:96)把 <code>fell_over</code> 阈值 70°→180°——摔倒从"episode 结束"变成"训练机会"。<code>prone_init_prob</code>(:335-341,驱动 <code>PRONE_RAMP_STAGES</code>,:153-159)按 800/1500/2000/2500 迭代爬坡:趴概率封顶 45%(保住 ≥55% 走路数据),脸朝下先行、朝上后混,另有 15% 的 <code>crouch_prob</code> 直接重置进半蹲——给"最后一英里"喂稠密数据(Run-6 验证有效)。经济项统一在 1200 迭代开闸(<code>RECOVERY_ECON_KICKIN_ITER</code>,:135):Run-6 试过 800,免税探索窗口被删,趴姿恢复率掉到 0%——<strong>时机又一次比数值重要</strong>。</p>
+<h2 id="你带走的收获">你带走的收获</h2>
+<ul>
+<li>复用成熟环境做加法比重写安全:walk 层的奖励/DR/观测"按构造继承",不会漏。</li>
+<li>正奖励必须门控在"不爽的状态"上,且只门在无法假装的判据上(倾角,而不是高度)。</li>
+<li>税与赏金共享同一个"完成"定义并加滞回——把恢复从"可持续刷分"变成"一次性事件"。</li>
+<li>阈值要贴着实测包络放:赏金线高于策略能力 = 永不触发 = 白写。</li>
+</ul>
+<h2 id="延伸">延伸</h2>
+<ul>
+<li>走路层的奖励与课程:<a href="/learn/deep-131">解读 131</a>、<a href="/learn/deep-132">解读 132</a></li>
+<li>纯起身专家版:<a href="/learn/deep-27">解读 27</a></li>
+<li>本文件:<code>.../tasks/microduck_velstand_env_cfg.py</code></li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

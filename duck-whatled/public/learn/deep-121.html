@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>解读 121 · chorale.rs(二):曲子数据与调度 · 什么鸭 WhatDuck</title>
+<meta name="description" content="robotd/src/chorale.rs(1320 行;上篇[解读 120](120-chorale一合唱结构.md)已走 1-631 结构主干,本篇读曲子表的消费端、演出收场机">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="解读 121 · chorale.rs(二):曲子数据与调度">
+<meta property="og:description" content="robotd/src/chorale.rs(1320 行;上篇[解读 120](120-chorale一合唱结构.md)已走 1-631 结构主干,本篇读曲子表的消费端、演出收场机">
+<meta property="og:url" content="https://duck.whatled.com/learn/deep-121">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/deep-121">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">DEEP 121 · 第十一辑 · 服务与训练工具逐函数 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="解读-121-choralers二曲子数据与调度">解读 121 · chorale.rs(二):曲子数据与调度</h1>
+<blockquote>
+<p><strong>解读对象</strong>:<code>robotd/src/chorale.rs</code>(1320 行;上篇<a href="/learn/deep-120">解读 120</a>已走 1-631 结构主干,本篇读曲子表的消费端、演出收场机制与 633-1320 行的测试)<br />
+<strong>需要的前置</strong>:<a href="/learn/deep-120">解读 120</a>(状态机与 tick 主干,必读)、<a href="/learn/deep-12">解读 12</a>(合唱机制导览)</p>
+</blockquote>
+<p>120 篇讲清了"谁指挥、坐哪个位";本篇讲剩下两件事:一首曲子从编号到声响要经过哪些函数,以及演出怎么体面收场——然后走进文件的后半:633-1320 行整整 687 行测试,占全文件一半,120 篇尚未拆封。</p>
+<h2 id="曲子目录查询-api-与即换即载">曲子目录:查询 API 与"即换即载"</h2>
+<p>曲子表本体(三个 <code>PIECE_*</code> 常量与 <code>PIECES</code> 数组,60-66 行)120 篇已列;它的三个消费函数在本篇:<code>piece(id)</code>(84-91 行)match 出乐谱 <code>Score</code>,<code>known_piece</code>(70-72 行)给命令入口验 <code>--piece</code>,<code>piece_catalogue</code>(75-81 行)把"本机有哪些曲子"拼成拒绝文案。表的关键性质是<strong>换曲即换 tempo</strong>:<code>heard()</code> 里确认重启后,新建 <code>Follower::new(score.bpm)</code> 并立刻 <code>observe</code> 第一拍(348-356 行)——测试 <code>a_joiner_sings_the_piece_the_beacon_names</code>(1041-1050 行)钉死"加入 duck-strut 演出必须载入它的 126 bpm",否则相位锁数的是错误的拍长。操作者钉曲是一条三级链:激活时 <code>--piece</code> 钉优先,普通激活退回环境变量 <code>DUCK_CHORALE_PIECE</code>,再退回时钟硬币(237-244 行);钉在停用后失效(测试 968-1011 行,"钉子赢一次,硬币回归"),构造时(210-222 行)就把不认识的钉曲过滤掉,不让它经兜底路径变成 panic。</p>
+<h2 id="收场散场阈值重启与安静好过错误">收场:散场阈值、重启与"安静好过错误"</h2>
+<p>演出终点的三条路构成对称设计:<strong>指挥</strong>在 position 超过总拍数 +2.0 时散场回 Listening(492 行);<strong>跟随者</strong>晚到 +6.0(536 行),注释写明这是给"指挥在最后一个和弦里消失"的兜底——健康时永远由指挥的重启带路。<strong>重启</strong>检测在 326-330 行:曲子编号变了、或拍计数倒退 4–128 拍,都按新演出处理;两个测试分别钉住换曲重启(749-782 行)与同曲倒退重启(787-823 行,旧相位拟合吃到倒退拍会"自由飞行")。重启分支里还有个安静的退路:指挥换了一首本机构不认识的曲子(332-340 行),跟随者直接回 Listening——注释原话 "quiet is better than wrong"(安静好过唱错)。测试 <code>an_unknown_piece_is_declined_not_guessed</code>(1056-1070 行)进一步钉住:面对未知曲子不仅不加入,<strong>也不在同一间屋里开第二场</strong>——有人唱歌时自己的信标必须保持 idle。</p>
+<h2 id="687-行测试注释先讲事故断言钉修复">687 行测试:注释先讲事故,断言钉修复</h2>
+<p>633-1320 行共 20 个测试,是这份文件的验收档案,几个代表:<code>the_conductor_is_followed_across_its_rotating_addresses</code>(1107-1142 行)被注释称为"本特性最糟 bug 的回归测试"——BLE 隐私下地址每几秒轮换,按地址认指挥的跟随者永远锁不上;测试让六个拍子各从全新地址到达,断言照样锁定并领到 Bass 声部。<code>a_duck_sharing_a_register_is_still_a_different_duck</code>(930-963 行)钉 16 位 id 的由来:8 位时代第四只鸭滚了指挥的字节,被全队当成回声吞掉,永远加不进来。<code>the_beacon_is_only_published_when_it_changes</code>(1276-1303 行)钉发布限流:50 Hz 循环、一秒一拍的节拍,"每秒两次 D-Bus 往返与一百次的区别"。<code>a_duck_not_yet_seated_waits_rather_than_guessing</code>(1308-1319 行)钉最后的谦逊:roster 里没你的名字就不唱,猜一个声部就是俩鸭同唱一行。<code>head_expression</code>(617-631 行,曲子位置的纯函数)也被 1017-1035 行钉住:同一拍全队算出同一摇摆,且幅度全部不超过 0.15 rad——头上驮着 ToF,摆大了平衡策略有意见。</p>
+<h2 id="你带走的收获">你带走的收获</h2>
+<ul>
+<li>目录表的完整 API 不止"查":校验入口(<code>known_piece</code>)、用户文案(<code>piece_catalogue</code>)、按 id 载入全部参数(含 bpm)都是表的一部分。</li>
+<li>收场要有对称余量:指挥 +2 拍、跟随者 +6 拍,健康时重启信号永远先到。</li>
+<li>混布版本下的两层谦逊:未知曲子不加入、有演出不抢场——"安静好过错误"。</li>
+<li>回归测试的注释讲事故史,让半年后的读者知道每条断言在防哪次翻车。</li>
+</ul>
+<h2 id="延伸">延伸</h2>
+<ul>
+<li>结构主干(状态、信标、座位表):<a href="/learn/deep-120">解读 120</a></li>
+<li>三句话导览与 <code>[chorale] accept</code> 开关:<a href="/learn/deep-12">解读 12</a></li>
+<li>本地路径:<code>/Volumes/dev/dev/microduck/robotd/src/chorale.rs</code></li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

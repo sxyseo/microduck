@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>解读 110 · sim.rs:仿真 IO 后端 · 什么鸭 WhatDuck</title>
+<meta name="description" content="duck-control/src/sim.rs(441 行)">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="解读 110 · sim.rs:仿真 IO 后端">
+<meta property="og:description" content="duck-control/src/sim.rs(441 行)">
+<meta property="og:url" content="https://duck.whatled.com/learn/deep-110">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/deep-110">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">DEEP 110 · 第十辑 · duck-control 逐函数精读 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="解读-110-simrs仿真-io-后端">解读 110 · sim.rs:仿真 IO 后端</h1>
+<blockquote>
+<p><strong>解读对象</strong>:<code>duck-control/src/sim.rs</code>(441 行)<br />
+<strong>需要的前置</strong>:<a href="/learn/deep-07">解读 07</a>(RobotIo 接缝)、<a href="/learn/deep-09">解读 09</a>(谁在调用 read/write)</p>
+</blockquote>
+<p><code>RemoteIo</code> 是设计文档点名的第三个后端(sim.rs:3-7):身体在 MuJoCo 里,通过 <code>RobotIo</code> 接进来——"接缝之上的一切原样运行,分不出差别"。模块注释交代了三个形状决定:用 TCP,因为 unix 路径上限约 108 字节、仿真器要能跨容器与虚拟机被够到(:9-14);用 JSON,一拍约 1 KB,"能用 <code>nc</code> 读一帧、用二十行 Python 写回另一半"胜过两仓库共享内存布局(:16-22);仿真器经常不在(改鸭子数量就得重启),断线只报错、下拍重连,"控制循环就是重试定时器"(:24-30)。</p>
+<h2 id="1-线上的词表requestsensorframeack">1. 线上的词表:<code>Request</code>、<code>SensorFrame</code>、<code>Ack</code></h2>
+<p><code>Request</code>(sim.rs:59-72)六个变体对应 trait 的动作,<code>#[serde(tag = "op")]</code> 让每帧自带 <code>"op":"read"</code> 标签——"日志里不用解码器就能读一帧"(:56)。<code>PROTOCOL = 1</code>(:47)在握手时核对,不匹配时错误<strong>同时报出两个数字</strong>(:183-189):两端住在两个仓库,"仿真器太旧"和"守护进程太旧"是同一个症状。<code>SensorFrame</code>(:86-92)的字段就是 <code>Sensors</code> 要的单位;原则是(:82-84)"换算由仿真器做——这里再放一层翻译,就是第二处会漂移的知识"。<code>Ack</code>(:108-112)带 <code>Option&lt;String&gt;</code> 的 <code>error</code>,让"被拒的写"不冒充成功。</p>
+<h2 id="2-connect懒连接与三道设置">2. <code>connect</code>:懒连接与三道设置</h2>
+<p><code>RemoteIo</code> 只有三个字段(sim.rs:115-120):地址、<code>Option&lt;Link&gt;</code>、只抱怨一次的开关。<code>at</code>(:130-136)只记名字不连接——"守护进程必须能先于仿真器启动"(:128-129),<code>--sim</code> 缺仿真器时只是报不健康,和真总线没上电一个待遇(见解读 111)。<code>connect</code>(:138-196)检查 <code>link.is_none()</code>,要连时:解析地址取第一个(:140-146);<code>connect_timeout</code> 用 200 ms 的 <code>TIMEOUT</code>(:54)——没人监听的端口立刻拒绝,静默丢包的主机不能把循环挂死(:152-158);然后三道设置(:160-165),第一道最要命:</p>
+<pre><code class="language-rust">// **Nagle 在这里是灾难性的,而且无声。** 它会把小写入攒起来等更多数据,
+// 最多 ~40 ms——两拍——把每笔事务变成一次错过 deadline。
+let _ = stream.set_nodelay(true);
+</code></pre>
+<p>握手发 <code>Request::Hello{protocol, joints}</code>(:176-182),版本不符即失败(:183-189);成功后记日志、清 <code>complained</code>、存下 <code>Link</code>(:191-194),读半边是 <code>try_clone</code> 出的 <code>BufReader</code>。</p>
+<h2 id="3-callexchange任何错误都拆线">3. <code>call</code>/<code>exchange</code>:任何错误都拆线</h2>
+<p><code>call</code>(:203-216)是所有请求的通道:<code>connect().and_then(exchange)</code>,关键在错误处理(:205-214)——<strong>任何</strong>错误都把 <code>link</code> 置 <code>None</code>,不只是断连:"一帧解析不出来,意味着两端对消息从哪开始有了分歧,行协议除了重来无法重新同步"(sim.rs:199-202);<code>complained</code> 保证警告只发一次。<code>exchange</code>(:219-243)是行协议本体:一行 JSON 加换行(:220-224),<code>read_line</code> 返回 0 视为挂断(:231-236),解析失败报"答了读不懂的东西"(:237-242),错误都带 <code>tag(request)</code>(:245-254)指明步骤;<code>acked</code>(:256-261)把 <code>Ack</code> 的 <code>error</code> 变成 <code>IoError::Bus</code>。</p>
+<h2 id="4-trait-实现与罐头仿真器测试">4. trait 实现与"罐头仿真器"测试</h2>
+<p><code>RobotIo</code> 实现里,<code>read</code>(:264-276)把 <code>SensorFrame</code> 逐字段搬进 <code>Sensors</code>;<code>write</code>/<code>set_gain</code>/<code>set_torque</code>(:278-293)发请求并检查 ack;<code>reboot</code>(:299-302)是全文最短的方法——仿真舵机没有锁存的硬件错误,直接 <code>Ok(())</code>,"刻意不占用线上操作,仿真器反正只能回一个 ack";<code>slow_sensors</code>(:304-310)取 <code>SlowFrame</code>。测试(:313-441)起真的 <code>TcpListener</code> 播放罐头台词(:324-346):"值得在这里测的东西<strong>就是</strong> socket——挂断的对端、解析不了的帧、死后的第二条连接"。五个测试各钉一类故障:目标按关节顺序过线、版本不匹配报双方版本、拒绝是错误、重启后下一拍自动重连并重新握手(:410-427)、坏帧导致拆线重建(:430-440)。</p>
+<h2 id="你带走的收获">你带走的收获</h2>
+<ul>
+<li>换算放在数据的源头:仿真器自己出"机器人的单位",翻译层只此一家。</li>
+<li>Nagle 算法对 20 ms 控制环是隐形杀手:<code>set_nodelay(true)</code> 是低延迟 TCP 第一课。</li>
+<li>行协议一旦错位只能拆线重来——"解析失败即断连"比"带病续读"安全。</li>
+<li>测网络代码要用真 socket 放故障剧本:挂断、坏帧、重启,trait 替身恰好挡在门外。</li>
+</ul>
+<h2 id="延伸">延伸</h2>
+<ul>
+<li>这条 trait 的语义约定:<a href="/learn/deep-106">解读 106</a></li>
+<li><code>--sim</code> 在启动里的位置:<a href="/learn/deep-111">解读 111</a>;真总线对照:<a href="/learn/deep-98">解读 98</a></li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

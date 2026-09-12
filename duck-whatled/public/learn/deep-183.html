@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>解读 183 · 奖励设计的艺术与陷阱 · 什么鸭 WhatDuck</title>
+<meta name="description" content="tasks/mdp.py 的 reward 函数 + microduck_velocity_env_cfg.py 的奖励权重表">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="解读 183 · 奖励设计的艺术与陷阱">
+<meta property="og:description" content="tasks/mdp.py 的 reward 函数 + microduck_velocity_env_cfg.py 的奖励权重表">
+<meta property="og:url" content="https://duck.whatled.com/learn/deep-183">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/deep-183">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">DEEP 183 · 第十六辑 · 小白基础课 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="解读-183-奖励设计的艺术与陷阱">解读 183 · 奖励设计的艺术与陷阱</h1>
+<blockquote>
+<p><strong>解读对象</strong>:<code>tasks/mdp.py</code> 的 reward 函数 + <code>microduck_velocity_env_cfg.py</code> 的奖励权重表<br />
+<strong>需要的前置</strong>:<a href="/learn/deep-181">解读 181</a>(奖励是什么)· <a href="/learn/deep-131">解读 131</a>(权重表逐项)</p>
+</blockquote>
+<p>奖励就是鸭子世界里的法律:你定义"什么叫好",它就把这个"好"执行到极限——包括钻空子。<br />
+所以奖励设计的艺术不在"想要什么就奖励什么",而在<strong>让它没法假装做到了</strong>。</p>
+<h2 id="1-艺术奖励变化不奖励状态">1. 艺术:奖励"变化",不奖励"状态"</h2>
+<p><code>upright_progress</code> 奖励的是每步倾斜角的<strong>变化量</strong> Δcos(倾斜角),不是角度本身。好处是<br />
+理论级的:potential-based shaping 保证不改变最优策略——趴着不扣、一直趴也赚不到,<br />
+从趴到立的过程全程收约 +1,没有可以躺平薅分的状态。同一家族的 <code>height_progress</code> 负责<br />
+"蹲了要起来"。判据句:想让策略持续做事,就付钱给"变好",别付钱给"待着"。</p>
+<h2 id="2-艺术每个正奖励配一扇门">2. 艺术:每个正奖励配一扇门</h2>
+<p>正奖励会被薅,所以 mdp.py 里处处是门。<code>recovery_success</code>(起身奖金)要求先真摔<br />
+(倾角 &gt;40°)累计满 0.5 秒才布防,起来那一刻发一次奖、立即撤防——在门口来回摇摆<br />
+一分不得。<code>fallen_state_penalty</code> 注释里有一句铁律:"罚坏状态是安全的;<strong>门控在坏状态<br />
+上的正奖励才会被薅</strong>。"门还要带滞回:布防用 40°、解除要"倾角 &lt;25° <strong>且</strong>高度达标",<br />
+两套阈值——否则策略会在门下面找个低姿态歇脚,起身永远差最后一步。</p>
+<h2 id="3-陷阱一乘法门控防单项作弊">3. 陷阱一:乘法门控防"单项作弊"</h2>
+<p><code>glide_reward</code>(轮滑奖励)是四个因子连乘:恰好单脚着地 × 前进速度达标 × 腿静定 × 前进<br />
+指令非零。docstring 自述它是修 bug 的产物:早先版本漏了"单脚"因子,结果"双脚着地扭着滑"<br />
+能把奖励薅走、步态倒退。经验:<strong>想要"同时满足多个条件"时,连乘,别相加</strong>——相加的话,<br />
+某一项拿满分就能掩盖另一项交白卷。</p>
+<h2 id="4-陷阱二不可逃脱的税把走路罚死">4. 陷阱二:不可逃脱的税把走路罚死</h2>
+<p>头部曾经顶着 14.6° 的低头偏差走路。第一反应是把 head_pose 跟踪的容差 std 从 0.5 收紧到<br />
+0.1——结果策略 300 迭代就干脆不走了:280 g 的头走路必然振荡,瞬时紧公差等于对每一步收<br />
+约 0.77 的<strong>不可逃脱</strong>的税。正确的做法是只对"可消除的 DC 偏置"收税(<code>head_pose_bias</code>,<br />
+L1,权重从 0 课程化爬到 3.0),振荡本身不罚。同理,<code>action_rate</code> 平滑项从 -0.1 课程化爬到<br />
+-1.0:先让步态诞生,再收紧纪律——一上来就全罚,什么都不会诞生。</p>
+<h2 id="5-陷阱三指标会骗人expd-案">5. 陷阱三:指标会骗人(expD 案)</h2>
+<p>2026-09-07 的 expD:ep_len 从 315 涨到 744,"站稳了",指标全线变好——但回放一看,<br />
+步态没成:<code>air_time_mean</code> 卡在 0.04 s,策略学会了 shuffle(蹭着小碎步挪)。站着不摔、<br />
+episode 就长、reward 就好看,可它始终没学会迈步——<strong>局部最优在指标上是看不出来的</strong>。<br />
+修复在 expE:把 air_time 奖励门槛从 0.125 s 降到 0.04,让"真抬脚"先变得可见、拿得到钱,<br />
+等 <code>air_time_mean &gt;0.10</code> 再收紧回去。每次下结论前回放亲眼看一遍:reward 和 ep_len 是<br />
+体检表,不是诊断书。</p>
+<h2 id="你带走的收获">你带走的收获</h2>
+<ul>
+<li>奖励"变化量"而非"状态量":Δcos 势函数防躺平,理论背书是 potential-based shaping。</li>
+<li>正奖励必须门控,门必须带滞回;要"同时满足"就连乘,别相加。</li>
+<li>罚则要可逃脱:对偏置收税、不对振荡收税;惩罚用课程慢慢加码。</li>
+<li>reward 涨了不等于学会了——expD 教你先看回放,再信指标。</li>
+</ul>
+<h2 id="延伸">延伸</h2>
+<ul>
+<li><a href="/learn/deep-124">解读 124</a>:五个代表 reward 函数的逐行版</li>
+<li><a href="/learn/deep-132">解读 132</a>:惩罚与门槛的课程引擎</li>
+<li><a href="/learn/deep-184">解读 184</a>:本系列的下一课</li>
+<li><code>microduck-replica/upstream/microduck_rl/src/mjlab_microduck/tasks/mdp.py</code>(7188 行函数库)</li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

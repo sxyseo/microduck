@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>解读 126 · mdp.py(五):命令与课程函数 · 什么鸭 WhatDuck</title>
+<meta name="description" content="microduck-replica/upstream/microduck_rl/src/mjlab_microduck/tasks/mdp.py,抽读命令类与课程函数(全文件 71">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="解读 126 · mdp.py(五):命令与课程函数">
+<meta property="og:description" content="microduck-replica/upstream/microduck_rl/src/mjlab_microduck/tasks/mdp.py,抽读命令类与课程函数(全文件 71">
+<meta property="og:url" content="https://duck.whatled.com/learn/deep-126">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/deep-126">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">DEEP 126 · 第十一辑 · 服务与训练工具逐函数 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="解读-126-mdppy五命令与课程函数">解读 126 · mdp.py(五):命令与课程函数</h1>
+<blockquote>
+<p><strong>解读对象</strong>:<code>microduck-replica/upstream/microduck_rl/src/mjlab_microduck/tasks/mdp.py</code>,抽读命令类与课程函数(全文件 7188 行,10 个 class 全是命令项)<br />
+<strong>需要的前置</strong>:<a href="/learn/deep-22">解读 22</a>(命令槽怎么配)、<a href="/learn/deep-26">解读 26</a>(课程函数"改活配置"原则的速览)</p>
+</blockquote>
+<p>命令(command)是策略的遥控器输入;课程(curriculum)是随训练进度自动拧旋钮的机制。mdp.py 里两者占尽风头:10 个 class 全是命令项,课程函数则散布在 3295-5540 行之间。</p>
+<h2 id="命令类遥控器怎么造">命令类:遥控器怎么造</h2>
+<p><code>VelocityCommandCommandOnly</code>(4505 行起)继承 mjlab 的速度命令,<code>_resample_command</code>(4508-4533 行)加了一个"原地转"抽签:按 <code>rel_turn_in_place_envs</code>(Cfg 默认 0.0,4570 行)抽中的环境线速度清零、偏航强制到 <code>[0.4·max, max]</code> 且随机左右——注释算过账,均匀采样几乎抽不出"线速≈0 且角速大"的组合(约 2%),不补签原地转就永远练不到。</p>
+<p><code>RelativeHeadingVelocityCommand</code>(4576 行起)改了 cmd[2] 的语义:从偏航速率改成<strong>航向误差</strong>(体框架下的角度差)。<code>_update_command</code>(4613-4623 行)刻意不调父类——父类的偏航 P 控制器会用角速度覆盖这个槽——而是每步从四元数现算 yaw、wrap 到 ±π、clamp 到 <code>_heading_max</code>。部署时人直接喂这个槽,恒定误差 ≈ 恒定转弯速率。</p>
+<p><code>GroundPickPhaseCommand</code>(4966 行起)把命令槽当乐谱:命令 = <code>[cos 2πφ, sin 2πφ, 0]</code>,相位每步推进 <code>dt/period</code>(默认 4 s,sitstand 用 8 s,Cfg 5023-5026 行);<code>reset</code> 时按 <code>randomize_phase</code> 决定随机相位还是从 0(站立)起——False 对齐部署上"按键从头开始"的行为。</p>
+<p><code>SitStandCommand</code>(6234 行起)最讲究:命令是坐/站旗标,内部维护一个<strong>斜坡混合</strong> alpha 以 <code>ramp_s=2.0</code> 秒匀速滑向旗标(sit_z=0.060、stand_z=0.115,6263-6266 行)。docstring 讲了为什么必须有斜坡:二值目标下"瞬移坐下"每省一步都拿满分、速度上限惩罚只是线性成本,瞬移赢;换成滑动目标后,跑到斜坡前面只拿零分,跟着斜坡走才是最优(6244-6253 行)。还有个细节:alpha 初始化读真实躯干高度放在 <code>compute()</code> 里而不是 <code>reset()</code> 里(6297-6306 行)——命令管理器重置先于传送机器人的事件执行,在 reset 里读高度读到的是传送前的旧值。</p>
+<p><code>UniformPoseCommand</code>(5061 行起)是通用 N 维均匀采样器,亮点是 <code>zero_command_prob</code>(5098-5100 行):显式抽一个全零命令桶,否则均匀采样几乎永远抽不出"待机"——部署时的静止工况会在训练里缺席。</p>
+<h2 id="课程函数改活着的配置">课程函数:改"活着的"配置</h2>
+<p>原则(26 篇速览过):各 Manager 初始化时对配置做了 deepcopy,改 <code>env.cfg.xxx</code> 是无效操作,必须经 <code>get_term_cfg</code> 拿经理持有的活配置。本篇看四个变体:</p>
+<ul>
+<li><code>velocity_command_ranges_curriculum</code>(3540-3598 行):按 <code>{step, lin_vel_range, ang_vel_range}</code> 分档放宽命令范围,<code>forward_only=True</code> 时 x 下界锁 0。</li>
+<li><code>face_down_prob_curriculum</code>(4477-4502 行):调 Reset 事件的 <code>face_down_prob</code>——初期多趴着(任务简单),渐近 0.5。</li>
+<li><code>termination_param_curriculum</code>(5370-5402 行):改<strong>终止条件</strong>的参数,典型用法是把 <code>bad_orientation</code> 的 limit_angle 后期设成 π,"允许摔倒才能学会自己起来";直接访问 <code>tm._term_names/_term_cfgs</code> 并对 play 模式做了保护。</li>
+<li><code>terrain_levels_slope</code>(3521-3537 行)+ <code>slope_move_masks</code>(3504-3518 行):坡地任务的升降级——走了 40% 块长升坡,不足 20% 降坡;注释强调升级阈值必须与 <code>terrain_edge_reached</code> 终止(块长的 95%)对齐,否则成功的穿越者永远升不了级。</li>
+</ul>
+<h2 id="你带走的收获">你带走的收获</h2>
+<ul>
+<li>命令分布就是课程的一部分:均匀采样抽不到的工况(原地转、全零待机)要显式留桶。</li>
+<li>改语义要绕开父类:航向槽从速率改误差后,父类每步更新必须整段跳过。</li>
+<li>目标斜坡化(slew)能把"瞬移抢奖"变成"跟随斜坡",是反 time-optimal 作弊的通用手段。</li>
+<li>课程函数四步一套:分档 dict → common_step_counter 比较 → <code>get_term_cfg</code> 改活配置 → 返回标量给 wandb。</li>
+</ul>
+<h2 id="延伸">延伸</h2>
+<ul>
+<li>命令当相位源的观测侧:<a href="/learn/deep-123">解读 123</a>;RewardManager 补丁与 deepcopy 原则:<a href="/learn/deep-26">解读 26</a></li>
+<li>这些类在配置里的接线:<a href="/learn/deep-22">解读 22</a>、<a href="/learn/deep-28">解读 28</a></li>
+<li>本地路径:<code>microduck-replica/upstream/microduck_rl/src/mjlab_microduck/tasks/mdp.py</code></li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>解读 85 · 电压全景:三代舵机窗口对照 · 什么鸭 WhatDuck</title>
+<meta name="description" content="microduck-replica/docs/执行器选型.md「⚠️ 电压真相:XL330 被超压运行」章节 + microduck-replica/docs/硬件方案逆向.md ">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="解读 85 · 电压全景:三代舵机窗口对照">
+<meta property="og:description" content="microduck-replica/docs/执行器选型.md「⚠️ 电压真相:XL330 被超压运行」章节 + microduck-replica/docs/硬件方案逆向.md ">
+<meta property="og:url" content="https://duck.whatled.com/learn/deep-85">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/deep-85">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">DEEP 85 · 第九辑 · 电压专项 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="解读-85-电压全景三代舵机窗口对照">解读 85 · 电压全景:三代舵机窗口对照</h1>
+<blockquote>
+<p><strong>解读对象</strong>:<code>microduck-replica/docs/执行器选型.md</code>「⚠️ 电压真相:XL330 被超压运行」章节 + <code>microduck-replica/docs/硬件方案逆向.md</code> HD-1910 对照表<br />
+<strong>需要的前置</strong>:<a href="/learn/deep-50">解读 50</a>(2S 直供的一号风险)· <a href="/learn/deep-45">解读 45</a>(官方电源树)</p>
+</blockquote>
+<p>每颗舵机的规格书都写着一个<strong>电压窗口</strong>——像电器铭牌上的"220V~":低于下限,控制芯片可能不启动;高于上限,触发过压保护甚至损坏;窗口内,才有标称性能。这个项目里出现过的三代舵机,恰好是"窗口与电池关系"的三种典型。</p>
+<h2 id="1-三代对照">1. 三代对照</h2>
+<table>
+<thead>
+<tr>
+<th>代</th>
+<th>电压窗</th>
+<th>出处</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Dynamixel XL330-M288(官方)</td>
+<td><strong>3.7–6.0 V</strong>(推荐 5.0)</td>
+<td>Robotis e-manual(执行器选型 2026-09-04 核)</td>
+</tr>
+<tr>
+<td>HL-1910 / HD-1910(实购装机候选)</td>
+<td><strong>4–8.4 V</strong></td>
+<td>《HD-1910-C001 串型规格书》A/0,经<code>硬件方案逆向.md</code>转述(旧记录写 5V 起,实为 4V 起)</td>
+</tr>
+<tr>
+<td>HL-2915-C001(开发单元)</td>
+<td><strong>9–14 V</strong></td>
+<td><code>hl2915_bench.py</code> 头注释/《HL-2915-C001 规格书》A/0</td>
+</tr>
+</tbody>
+</table>
+<p>电池侧的参照:官方 NP-F550 是 2S 锂电,标称 7.4V、满电 8.4V,<strong>带载</strong>区间 6.6–8.2V;HL-2915 路线的 3S 满电 12.6V、空电 ~9.9V(教程 §5.1)。</p>
+<h2 id="2-第一代超压运行官方的明牌妥协">2. 第一代:超压运行,官方的明牌妥协</h2>
+<p>XL330 额定上限 6.0V,实跑 6.6–8.2V——超出约 37%。<code>执行器选型.md</code> 给的证据链分两层。<strong>源码三处互相印证</strong>:<code>microduck_constants.py</code> 的 BAM 配置 <code>vin_range=(6.5, 8.2)</code>、<code>vin_min=6.0</code>;robotd 电压自适应钳位 6.0–9.5V;电池本身 2S。<strong>原理图直接证据</strong>:官方 HAT(dynamixel.kicad_sch)三个舵机接口 J11/J13/J14 的电源脚直接接 <code>+BATT</code>,中间<strong>没有任何降压</strong>;全板唯一一颗 buck(U9 AP63205,2A)只给 <code>+5V</code> 那一路(树莓派、音频、EEPROM)——整张 BOM 47 行只有一颗 buck 一个电感。</p>
+<p>后果两面:堵转力矩随电压近似线性上升,8V 下会明显高于标称 0.52 N·m @5V——原文判断"这大概是他们敢用 18 g 舵机扛 800 g 整机的原因之一";代价是发热与寿命(<strong>推断</strong>,官方从未公开数据)。所以复刻时"你要自己做这个决定":照抄 = 同样超压;加降压到 5–6V 则力矩下降,可能需要重训——官方 ONNX 是在超压条件下训出来的。</p>
+<h2 id="3-第二三代额定匹配的零余量与彻底不匹配">3. 第二、三代:额定匹配的零余量,与彻底不匹配</h2>
+<p>HD-1910(4–8.4V)与 2S 带载 6.6–8.2V:<code>硬件方案逆向.md</code> 的判语是"<strong>额定匹配</strong>……不存在超压",但紧跟着警告——满电 8.4V 恰好等于电压上限,"<strong>零余量</strong>"。HL-2915(9–14V)与 2S 则完全不匹配:bench 头注释原话"接 5V/2S 都不动",必须 3S,教程 §5.1 称之为"换舵机路线最刚性的约束"。</p>
+<p>同一个窗口还有第二重身份:它随电量漂移。"电池从 8.4V 掉到 6.5V 的过程中,同样的 PWM 输出的力矩差很多,不做补偿的话策略在电量不同时表现会飘"——固件用 <code>scale × (7.4 / 实测EMA)</code> 做电压自适应,训练侧用 <code>vin_range</code> 随机化让策略提前见识全范围(代码细节见<a href="/learn/deep-87">解读 87</a>)。<strong>同一副鸭身,三种舵机,三种供电答案</strong>——这就是"换舵机先看电压窗"的全部理由。</p>
+<h2 id="你带走的收获">你带走的收获</h2>
+<ul>
+<li>电压窗口是选型第一道门:先对窗口,再比力矩、价格。</li>
+<li>超压不是秘密是工程妥协,且证据可查:三处源码 + 开源 HAT 原理图。</li>
+<li>匹配分三档:超压运行(XL330)/额定但零余量(HD-1910)/须换电池节数(HL-2915)。</li>
+<li>满电顶格 ≠ 匹配:留不出余量的窗口,在电池满充时没有保护距离。</li>
+<li>电压决定力矩:窗口内电量的漂移会让同一指令表现不同,补偿与随机化是稳定的前提。</li>
+</ul>
+<h2 id="延伸">延伸</h2>
+<ul>
+<li><a href="/learn/deep-86">解读 86</a>:窗口怎么反推电池节数 · <a href="/learn/deep-88">解读 88</a>:越界的后果与保护</li>
+<li><a href="/learn/deep-52">解读 52</a>:三代参数全面对比</li>
+<li><code>microduck-replica/docs/执行器选型.md</code>(电压真相章节)</li>
+<li><code>microduck-replica/docs/硬件方案逆向.md</code>(HD-1910 规格书对照与零余量警告)</li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

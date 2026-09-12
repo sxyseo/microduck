@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>解读 144 · 万用表怎么用 · 什么鸭 WhatDuck</title>
+<meta name="description" content="概念课 · 以 docs/HL-2915路线全流程教程.md §5.2(验收电压)与 docs/新手学习文档.md(§7 第 4 阶段、§9 安全卡)为教材">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="解读 144 · 万用表怎么用">
+<meta property="og:description" content="概念课 · 以 docs/HL-2915路线全流程教程.md §5.2(验收电压)与 docs/新手学习文档.md(§7 第 4 阶段、§9 安全卡)为教材">
+<meta property="og:url" content="https://duck.whatled.com/learn/deep-144">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/deep-144">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">DEEP 144 · 第十三辑 · 小白电气课 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="解读-144-万用表怎么用">解读 144 · 万用表怎么用</h1>
+<blockquote>
+<p><strong>解读对象</strong>:概念课 · 以 <code>docs/HL-2915路线全流程教程.md</code> §5.2(验收电压)与 <code>docs/新手学习文档.md</code>(§7 第 4 阶段、§9 安全卡)为教材<br />
+<strong>需要的前置</strong>:<a href="/learn/deep-143">解读 143</a>(电压/电流/功率)、<a href="/learn/deep-67">解读 67</a>(要量的是哪张电路)</p>
+</blockquote>
+<p>上一篇讲了电的道理,这一篇讲工具。万用表是电气第一件仪器:几十块钱,回答"有电吗、多少伏、通没通"。本篇只教两件事——<strong>量电压</strong>与<strong>查通断</strong>(蜂鸣档展开在解读 145)。</p>
+<h2 id="认识它两根表笔一个档位盘">认识它:两根表笔、一个档位盘</h2>
+<p>万用表长得像一个小方块收音机。下方几个插孔:黑表笔永远插 <strong>COM</strong>(公共端),红表笔插 <strong>VΩ</strong>(电压/电阻)孔;中间档位盘,转到哪就是哪把尺子。文字示意(通用样式):</p>
+<pre><code class="language-text">      ┌──────────────────────┐
+      │   OFF ●────● V⎓      │  V⎓ 直流电压档:电池、舵机总线、UBEC
+      │                      │  V~ 交流电压档:市电插座,本项目用不到
+      │  Ω ♪(蜂鸣)  mA/A    │  Ω 电阻档;♪ 蜂鸣档(断电才许用!)
+      │                      │  A 电流档:要串进电路,新手先跳过
+      │ COM ⊖          ⊕ VΩ  │  A 档用错=短路烧表,原因见下
+      └──────────────────────┘
+</code></pre>
+<p>新手只需三个档:<code>V⎓</code>、<code>♪</code>、<code>OFF</code>。用完转回 OFF,防止下次一搭表笔就打火。</p>
+<h2 id="量电压三步-鸭子的三个数">量电压:三步 + 鸭子的三个数</h2>
+<p>一,转 <code>V⎓</code> 直流档(电池/舵机都是直流;V~ 交流档只会读出乱数)。二,量程大于预期:量 12V 选 20V 档。三,红笔探正、黑笔探负,<strong>并联</strong>搭上——表笔只是"趴在线路上看",不用剪断任何线;读反显示负号,不伤表。</p>
+<p>用这三个数字练手,全部出自教程 §5.2 的验收:空载母线 <strong>12.3–12.6V</strong>(3S 满电附近;读数明显低,先怀疑电池没充满或表笔接触不良);UBEC 输出 <strong>5.0–5.2V</strong>(低了 Radxa 会莫名重启);给台架单只 XL330 供电时,供电端应在 2S 电压窗内(标称 7.4V,代码窗 6.6–8.2V)。<code>新手学习文档.md</code> §7 第 4 阶段把它列为总线舵机实验的第 3 步:"万用表测电源正负和空载电压"——<strong>上电之前</strong>先量一次,是整个项目第一条电气纪律。</p>
+<h2 id="动态电压让舵机动起来再量">动态电压:让舵机动起来再量</h2>
+<p>静态电压只是半个体检。教程 §5.2 的第二条验收是动态的:单舵机课做 3 个动作,<strong>同时</strong>盯着母线电压——压降 &lt;0.5V 合格。操作上就是"表笔搭住母线正负极,另一只手触发动作":静置 12.4V,舵机发力瞬间掉到 12.1V 以内算健康;掉到 11V 级别说明电源内阻大,先换电源再查别的。这一步教会你 143 篇的压降概念怎么落地:电压不是常数,是"电流流出多少"的实时记录。</p>
+<h2 id="安全习惯三条来自文档的铁律">安全习惯:三条来自文档的铁律</h2>
+<p>其一,<strong>断电用蜂鸣档,带电只许电压档</strong>——教程 §5.2 的标题原话是"全部断电接线,接完用万用表蜂鸣档复查",顺序纪律写在标题里(蜂鸣档怎么用看解读 145)。其二,量压时表笔金属头别同时碰到相邻两个引脚:HL-2915 用 PH1.25-3P 插头(1=GND、2=Vcc、3=Signal,§12.1),间距只有约 1.25mm,镊子似的表笔一歪就是人为短路——可以先在插头延长线上量,或笔尖套热缩管只露一点点。其三,电流档(A)新手别碰:它内阻极低,并联搭上电路等于制造短路,多数烧表烧保险都发生在这一档;本项目要测电流时,靠电源的限流显示和保险丝选型(台架 5A)间接覆盖。加上 §9 安全卡的总则——改线前断电、伸手能碰到断电开关——你已经有了一套不烧板子的最小操作规程。</p>
+<h2 id="你带走的收获">你带走的收获</h2>
+<ul>
+<li>黑表笔永远在 COM,档位先 <code>V⎓</code> 后量程大于预期;量电压是并联,不用断线。</li>
+<li>三个必背读数:3S 母线 12.3–12.6V、UBEC 5.0–5.2V、动作压降 &lt;0.5V。</li>
+<li>上电量一次(静态),舵机动起来再量一次(动态)——压降才是电源体检的真指标。</li>
+<li>蜂鸣档断电用、A 档新手跳过、细插头上表笔防搭错:三条习惯保住你的板子和表。</li>
+</ul>
+<h2 id="延伸">延伸</h2>
+<ul>
+<li>蜂鸣档与通断检查的完整规程:<a href="/learn/deep-145">解读 145</a>;电力拓扑验收原文:<a href="/learn/deep-67">解读 67</a></li>
+<li>概念回炉:<a href="/learn/deep-143">解读 143</a>;烧板案例:<a href="/learn/deep-94">解读 94</a></li>
+<li>本地路径:<code>docs/HL-2915路线全流程教程.md</code>(§5.2)、<code>docs/新手学习文档.md</code>(§7、§9、§12.1)</li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

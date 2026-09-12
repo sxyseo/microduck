@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>解读 112 · robotd/main.rs(二):`control_loop` 全走读 · 什么鸭 WhatDuck</title>
+<meta name="description" content="robotd/src/main.rs 的 control_loop(:1826–3275,约 1450 行)">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="解读 112 · robotd/main.rs(二):`control_loop` 全走读">
+<meta property="og:description" content="robotd/src/main.rs 的 control_loop(:1826–3275,约 1450 行)">
+<meta property="og:url" content="https://duck.whatled.com/learn/deep-112">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/deep-112">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">DEEP 112 · 第十辑 · duck-control 逐函数精读 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="解读-112-robotdmainrs二control-loop-全走读">解读 112 · robotd/main.rs(二):<code>control_loop</code> 全走读</h1>
+<blockquote>
+<p><strong>解读对象</strong>:<code>robotd/src/main.rs</code> 的 <code>control_loop</code>(:1826–3275,约 1450 行)<br />
+<strong>需要的前置</strong>:<a href="/learn/deep-09">解读 09</a>(主干导览)、<a href="/learn/deep-111">解读 111</a>(谁把它跑起来)</p>
+</blockquote>
+<p>导览见解读 09,本篇把 <code>control_loop</code> 从头走到尾。它由解读 111 的专属线程 <code>block_on</code> 驱动;安全层握着唯一的 IO 出口。</p>
+<h2 id="1-搭台第一拍之前18362072">1. 搭台:第一拍之前(:1836–2072)</h2>
+<p>先消费参数:<code>policy_params</code> 克隆,<code>drop_unloadable_overrides</code> 把加载不了的策略槽降级回默认并记入 <code>slot_errors</code>(:1839-1843),<code>Safety::new(io, config)</code> 把 IO 包进安全层(:1856-1865)。<code>adopt_startup_pose</code> 阻塞到总线答出第一个样本,存为 <code>hold</code>——<strong>启动绝不先动</strong>(:1867-1869)。随后判定 <code>seated_boot</code>:腿关节偏离 home 位的均值超过 <code>SEATED_BOOT_RAD = 0.30</code>(:150)即坐着上电,起立要走 sitstand 而非线性斜率(:1875-1887)。<code>build_controller</code>(:1890)加载策略;<code>ticker.set_missed_tick_behavior(Skip)</code>(:1914,见解读 09)。之后是一串可缺席的协作者(<code>Coast</code>、<code>FallPredictor</code> :1968-1977、声音、宠物检测、特雷门、合唱),全坏了也不影响走路(:1979-2065)。</p>
+<h2 id="2-一拍之始读滑行门20742134">2. 一拍之始:读、滑行、门(:2074–2134)</h2>
+<p><code>safety.read()</code> 成功则清 <code>consecutive_errors</code>;失败则计数打日志(:2093-2108):连续第 10 次的"一串"照旧报,孤立掉读受 <code>BUS_DROP_QUIET = 60</code>s 限流,压掉的次数记进 <code>bus_drops_quiet</code>。样本进 <code>Coast::sample</code>(:3310-3323):失败的头 3 拍(<code>COAST_TICKS</code>)沿用上个好样本,再往后返回 <code>None</code>。只有<strong>新鲜</strong>样本才喂 <code>safety.observe</code> 和里程计(须 <code>imu_ready</code>,滑行拍跳过,:2120-2129)。随后 <code>intents.snapshot()</code> 与 <code>safety.gate</code>(死手开关在这里读 twist 的年龄,:2132-2133)。</p>
+<h2 id="3-一拍之中请求与两个状态机21362615">3. 一拍之中:请求与两个状态机(:2136–2615)</h2>
+<p>请求按优先级消费。<code>take_power_request</code>:<code>robot.init</code> 从 Limp 上扭矩后要么坐着起立、要么进 <code>Homing</code> 斜率,<code>robot.relax</code> 切扭矩回 Limp(:2141-2200);<code>robot.rebootMotors</code> 先切扭矩再重启舵机(:2211-2229)。模式切换(:2324-2357)先回家再换网络,并按目标模式 chirp 一声或两声。策略变更(:2368-2443)由 <code>change_disturbs</code>(:1641-1664)判断:换掉正在驱动的网络→回家等新网络;"坐着的机器人什么变更都不打扰",其余原地 <code>carry_over</code> 换入;加载在独立线程,<code>PendingSwap::poll</code> 非阻塞收结果(:1594-1614)。关机(:2445-2495):<code>robot.shutdown</code> 或电池 EMA 触到 <code>BATTERY_EMPTY_V</code> 时,能坐下就 <code>begin_shutdown_sit</code> + 非阻塞播 <code>peck</code>,坐完 <code>cut_torque_before_poweroff</code>(:1791,重试 3 次)再 <code>poweroff()</code>。limp-fall(:2510-2615)是三态机:<code>Idle</code> 里 <code>falling.observe</code> 判坠落→<code>Limp</code>(跟随实测、<code>gain_limp</code> 软着陆);<code>Landing::observe</code> 按陀螺幅值去抖判"已停"或超时→<code>Posing</code>(斜率回 home);到达后交还策略;中途被抢则弃权。</p>
+<h2 id="4-一拍之末目标嘴与发布26183272">4. 一拍之末:目标、嘴与发布(:2618–3272)</h2>
+<p>命令平滑:<code>slew</code>(:1500-1504,丢弃非有限目标)对 twist/head/body 三个 EMA 各推一步,合成 <code>PolicyCommand</code>(:2638-2654)。使能路径(:2673-2709)在 <code>Limp</code>+使能+有控制器+有样本时上扭矩进 <code>Homing</code>,防的正是"坐下→站起→关机"的时序 bug;<code>Homing</code> 完成处(:2717-2755)顺势落地 <code>mode_change</code>,<code>pending_swap</code> 等 ramp 结束或原地生效(:2765-2846),失败保留旧控制器、错误记进 <code>slot_errors</code>。<code>driving</code> 七条件(:2869-2877)的边沿管理重置:<code>reset_on_resume</code>(:3337)只在真停顿(<code>RESET_AFTER_PAUSE = 200ms</code>)后才重置。电压自适应 <code>scale_mult = nominal_voltage / battery_v</code>(钳 6.0–9.5,:2923-2927)。目标四分支 <code>match</code>(:2929-2989):limp-fall 优先,然后策略步进(推理失败落 <code>hold</code>)、<code>homing</code> 斜率、<code>hold</code>。嘴有三个主人(:2992-3171):特雷门&gt;合唱&gt;意图,只有 driving 时意图才能动嘴。最后 <code>safety.apply</code> 写总线(:3173),有订阅者才组装状态帧(:3181-3224),每 1 秒窗口算 <code>achieved_hz</code> 并 <code>publish_slow_sensors</code>(:3237-3243),每 5 分钟汇总报真实掉读率(:3245-3271)。</p>
+<h2 id="你带走的收获">你带走的收获</h2>
+<ul>
+<li>滑行(<code>Coast</code>)与新鲜样本分开管:去抖和里程计只吃新鲜读,策略可吃 3 拍内的旧读。</li>
+<li>状态切换都"先回家":模式切换与扰动性变更共享 Homing 机制,网络永不在移动中换。</li>
+<li>嘴的单一所有权链是并发写同一关节的干净解法:特雷门&gt;合唱&gt;意图。</li>
+</ul>
+<h2 id="延伸">延伸</h2>
+<ul>
+<li>启动与总线打开:<a href="/learn/deep-111">解读 111</a></li>
+<li><code>gate</code>/<code>apply</code> 内部:<a href="/learn/deep-04">解读 04</a>;limp-fall 预测器:<a href="/learn/deep-05">解读 05</a></li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

@@ -276,7 +276,7 @@
     .stages{grid-template-columns:1fr}
     .learn-grid{grid-template-columns:1fr}
     .metrics{grid-template-columns:repeat(3,1fr)}
-    .topbar-right .stamp{display:none}
+    .topbar-right .stamp,.topbar-right .gh-link{display:none}
   }
 </style>
 </head>
@@ -302,6 +302,8 @@
     </a>
     <div class="topbar-right">
       <span class="stamp">更新 · 2026-09-11 · D7/30</span>
+      <a class="gh-link" href="/learn/course">公开课 · 30 课</a>
+      <a class="gh-link" href="/learn/deep" style="border-color:var(--orange-deep);color:var(--orange-deep)">深度解读 · 200 篇</a>
       <a class="gh-link" href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">GitHub ↗</a>
     </div>
   </nav>
@@ -314,6 +316,7 @@
     <p class="hero-sub">从 Pollen Robotics 公开的 <strong>47 个 STL 零件</strong>与仿真模型出发，逆向出装配、电控与软件，再用 <strong>30 天冲刺</strong>把它真正造出来。只用于个人学习与研究，过程全部公开。</p>
     <div class="btn-row">
       <a class="btn btn-solid" href="#progress">查看当前进度 ↓</a>
+      <a class="btn btn-ghost" href="/learn/deep">深度解读 · 200 篇</a>
       <a class="btn btn-ghost" href="#learn">学习手册 · 4 份</a>
       <a class="btn btn-ghost" href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">复刻仓库 ↗</a>
     </div>
@@ -449,7 +452,7 @@
             <li><span class="st stuck mono">⚠ STALL</span><p><b>expD 512 env 续训</b> · ep_len 315→744 站稳，步态未成，换打法</p></li>
             <li><span class="st run mono">● RUN</span><p><b>expE gait-ramp</b> · 让步态奖励可见，50k 迭代重训</p></li>
           </ul>
-          <p class="rl-note mono">// 全部实验记录开源：<a href="https://github.com/fanhao375/microduck-replica/tree/main/rl-series" target="_blank" rel="noopener" style="color:inherit">rl-series/experiments ↗</a></p>
+          <p class="rl-note mono">// 全部实验记录开源：<a href="https://github.com/sxyseo/microduck-replica/tree/master/rl-series" target="_blank" rel="noopener" style="color:inherit">rl-series/experiments ↗</a></p>
         </div>
       </div>
     </div>
@@ -582,9 +585,9 @@
         <span class="l-go">进入课程 →</span>
       </a>
       <a class="learn-card featured reveal" href="/learn/deep">
-        <span class="l-no">DEEP-DIVE · 深度解读<span class="d">72 篇</span></span>
+        <span class="l-no">DEEP-DIVE · 深度解读<span class="d">200 篇</span></span>
         <h4>深读 Microduck<br>代码 · 结构 · 电路 · 舵机</h4>
-        <p>逐文件拆解真实工程：Rust 控制栈、训练配置、结构、电路、舵机执行器，以及换装 HL-2915-C001 的七阶段全流程专辑。</p>
+        <p>逐文件、逐函数拆解真实工程：Rust 控制栈、训练配置、结构、电路、舵机执行器，HL-2915 换装全流程，通用换舵机与电压改造方法论，外加小白电气/机械/Rust 基础课。</p>
         <span class="l-go">开始深读 →</span>
       </a>
       <a class="learn-card reveal" href="/learn/newbie">

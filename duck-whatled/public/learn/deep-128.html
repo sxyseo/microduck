@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>解读 128 · export.py 全函数 · 什么鸭 WhatDuck</title>
+<meta name="description" content="microduck-replica/upstream/microduck_rl/src/mjlab_microduck/export.py(311 行,全读:3 个函数 + 2 个">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="解读 128 · export.py 全函数">
+<meta property="og:description" content="microduck-replica/upstream/microduck_rl/src/mjlab_microduck/export.py(311 行,全读:3 个函数 + 2 个">
+<meta property="og:url" content="https://duck.whatled.com/learn/deep-128">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/deep-128">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">DEEP 128 · 第十一辑 · 服务与训练工具逐函数 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="解读-128-exportpy-全函数">解读 128 · export.py 全函数</h1>
+<blockquote>
+<p><strong>解读对象</strong>:<code>microduck-replica/upstream/microduck_rl/src/mjlab_microduck/export.py</code>(311 行,全读:3 个函数 + 2 个 dataclass)<br />
+<strong>需要的前置</strong>:<a href="/learn/deep-32">解读 32</a>(导出在部署链路的位置)、<a href="/learn/deep-03">解读 03</a>(机器人侧怎么消费 ONNX)</p>
+</blockquote>
+<p>这是 checkpoint 到可部署 <code>.onnx</code> 的唯一通路。文件头 docstring(1-10 行)把立场说死:仿真内 <code>play</code> 会自己套归一化,掩盖过"手工转换却忘了归一化器"的 checkpoint——<strong>永远别手工转</strong>;<code>scripts/export.py</code> 只是命令行外壳,发布管线直接调 <code>run_export</code>,让发布的策略无法绕过这一步。</p>
+<h2 id="两个-dataclass配置与回执33-69-行">两个 dataclass:配置与回执(33-69 行)</h2>
+<p><code>ExportConfig</code> 是 frozen dataclass(不可变配置对象,<code>@dataclass(frozen=True)</code> 一句话:实例化后字段不可再赋值):<code>onnx_file</code> 默认 "output.onnx"、<code>agent</code> 取 "zero/random/trained"(默认 trained)、<code>checkpoint</code> 按 iteration 数选、<code>checkpoint_file</code> 直接给路径、<code>video=False</code>、<code>video_length=200</code> 等;<code>_demo_mode</code> 用 <code>tyro.conf.Suppress</code> 藏出命令行。<code>ExportResult</code>(55-62 行)是导出回执:onnx 路径、checkpoint 路径、wandb run 路径、iteration——给发布器的"来源证明"块用。<code>_iteration_of</code>(65-69 行)用正则 <code>model_(\d+)\.pt$</code> 从文件名抽数字。</p>
+<h2 id="run-export上定位-checkpoint-与-motion72-200-行">run_export(上):定位 checkpoint 与 motion(72-200 行)</h2>
+<p><code>DUMMY_MODE = agent in {"zero", "random"}</code>(80 行)把流程劈成两半。运动追踪任务的分支(84-148 行)在 dummy 模式下强制要求 <code>registry_name</code> 并从 wandb artifact 下载 <code>motion.npz</code>;训练模式下按"CLI &gt; 配置已设 &gt; run 的 used_artifacts"三级兜底。checkpoint 解析(150-200 行)同样三级:<code>checkpoint_file</code> 给本地路径;<code>checkpoint</code> 给 iteration 数时,若给了 <code>wandb_run_path</code> 就下载到 <code>logs/rsl_rl/&lt;实验名&gt;/wandb_checkpoints/&lt;run_id&gt;/</code>(已存在打印 cached,否则 downloaded);两者都没有时必须给 <code>wandb_run_path</code>。每条路都打印实际加载的文件名,溯源从这一刻开始。</p>
+<h2 id="run-export下环境假策略与真正的导出202-277-行">run_export(下):环境、假策略与真正的导出(202-277 行)</h2>
+<p>环境按 <code>load_env_cfg(task_id, play=True)</code> 建,<code>RslRlVecEnvWrapper</code> 包上 <code>clip_actions</code>(227 行)。dummy 分支现场定义两个迷你策略类:<code>PolicyZero</code> 恒输出零、<code>PolicyRandom</code> 输出 ±1 均匀随机(232-245 行)——用假策略跑通环境与录制管线,是"不训练也能验部署"的验收件。训练分支加载 <code>OnPolicyRunner</code> 并 <code>runner.load(resume_path)</code>。</p>
+<p>真正的导出只有三行(258-267 行):<code>runner.export_policy_to_onnx(path, filename)</code>、<code>get_base_metadata(...)</code>、<code>attach_metadata_to_onnx(...)</code>。注释解释了 mjlab 1.3.0 后归一化为什么不用手动管:经验归一化 <code>EmpiricalNormalization</code> 是策略 MLPModel 的子模块(<code>obs_normalization=True</code>),导出图自动生成 <code>actor(normalizer(obs))</code>——机器人端拿到的就是训练时的口径。注意 <code>get_base_metadata</code> 正是 122 篇讲的 mdp.py 补丁 4 替换掉的函数:import mdp 后这里实际执行的是过滤 <code>passive_*</code> 关节的版本,元数据里 joint_names/stiffness/damping/default_joint_pos 与 14 维动作空间保持一致——两个文件隔着补丁暗通款曲。一个可验证的细节:三个分支都给 <code>policy</code> 赋值(237/245/250 行),此后再没被读过——导出走 runner 内建方法,赋值只为对齐分支逻辑。最后 <code>env.close()</code> 并填 <code>ExportResult</code> 回执。</p>
+<h2 id="main两段式命令行280-307-行">main:两段式命令行(280-307 行)</h2>
+<p>先 <code>tyro.cli</code> 用任务清单生成字面量类型让用户选任务(<code>add_help=False, return_unknown_args=True</code> 放行剩余参数),再对 <code>ExportConfig</code> 跑第二次 tyro 解析,配置 <code>AvoidSubcommands</code> 与 <code>FlagConversionOff</code>。中间 <code>load_rl_cfg</code> 后又 <code>del agent_cfg</code>——解析器借它生成参数,实际运行全靠 run_export 内部重新加载。</p>
+<h2 id="你带走的收获">你带走的收获</h2>
+<ul>
+<li>部署件最大的坑是"训练口径 ≠ 部署口径":归一化要烘进计算图,而不是靠调用方记得。</li>
+<li>唯一通路原则:发布管线直接调 <code>run_export</code>,"跳过导出"在结构上不可能。</li>
+<li>dummy 策略(zero/random)让导出管线没有 checkpoint 也能端到端演练。</li>
+<li>元数据在导出后附着,且元数据函数可被上游模块打补丁——导出内容随任务定义联动。</li>
+</ul>
+<h2 id="延伸">延伸</h2>
+<ul>
+<li>导出与回放全景:<a href="/learn/deep-32">解读 32</a>;metadata 补丁的来历:<a href="/learn/deep-122">解读 122</a></li>
+<li>ONNX 到真机:<a href="/learn/deep-03">解读 03</a>;七阶段路线中的位置:<a href="/learn/deep-70">解读 70</a></li>
+<li>本地路径:<code>microduck-replica/upstream/microduck_rl/src/mjlab_microduck/export.py</code></li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

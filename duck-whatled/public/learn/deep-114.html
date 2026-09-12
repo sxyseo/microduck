@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>解读 114 · robotd/intents.rs:槽、快照与权力 · 什么鸭 WhatDuck</title>
+<meta name="description" content="robotd/src/intents.rs(703 行)">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="解读 114 · robotd/intents.rs:槽、快照与权力">
+<meta property="og:description" content="robotd/src/intents.rs(703 行)">
+<meta property="og:url" content="https://duck.whatled.com/learn/deep-114">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/deep-114">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">DEEP 114 · 第十辑 · duck-control 逐函数精读 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="解读-114-robotdintentsrs槽快照与权力">解读 114 · robotd/intents.rs:槽、快照与权力</h1>
+<blockquote>
+<p><strong>解读对象</strong>:<code>robotd/src/intents.rs</code>(703 行)<br />
+<strong>需要的前置</strong>:导览见<a href="/learn/deep-10">解读 10</a>(三种槽语义);消费方见<a href="/learn/deep-09">解读 09</a></p>
+</blockquote>
+<p><a href="/learn/deep-10">解读 10</a> 讲过地基:ArcSwap 槽、时间戳、边沿/电平/事件三分。本篇函数级走读没展开的部分——位掩码布局、快照组装、每对 <code>request_*</code>/<code>take_*</code> 的理由。<strong>权力</strong>取字面义:循环是唯一能碰总线的东西,intents 就是意愿递进循环的全部通道(intents.rs:155-157)。</p>
+<h2 id="1-技能位掩码一个-u32-的预算">1. 技能位掩码:一个 <code>u32</code> 的预算</h2>
+<p>一次一拍的技能请求不是单个槽,而是位图(intents.rs:74-87):"同一拍里两个不同的请求都该被看见——单个 last-writer 槽会弄丢一个"。布局三个数:底两位保留席 <code>SKILL_GROUND_PICK = 1 &lt;&lt; 0</code>、<code>SKILL_SIT_TOGGLE = 1 &lt;&lt; 1</code>(intents.rs:102-103)——这两个由守护进程自己驱动(关机坐下、开机起身也走它们),不进可配置清单(intents.rs:78-81);可配置技能从第三位起,<code>request_skill</code> 存 <code>1 &lt;&lt; (index + SKILL_BITS)</code>(intents.rs:345-348),<code>take_skills</code> 用 <code>bits &gt;&gt; SKILL_BITS</code> 还原(intents.rs:352-359)。上限 <code>MAX_SKILLS = 30</code>(intents.rs:111)不是防滥用:每个技能的网络启动时都要加载加预热。<code>requested()</code>(intents.rs:96-99)按位号从低到高迭代——位号即优先序,因为技能清单本就按配置排序。</p>
+<h2 id="2-声音请求的两个去向">2. 声音请求的两个去向</h2>
+<p><code>request_sound</code>(intents.rs:365-377)第一行就分岔:wheee 不是事件,是电平——按住的骑乘,写进带戳的槽;其余标签进 <code>sounds: AtomicU32</code> 位图。<code>take_sounds</code>(intents.rs:380-394)按写死的顺序过滤:<code>Alarm, Greet, Inquire, Peck, Chirp, Coo</code>——遍历顺序即优先级,和技能"位号即优先序"是同一个决定。注释补了一句:裸的 <code>tag: wheee</code> 不带 <code>hold</code> 当 <code>hold: true</code> 写——"一个立刻开始衰减的 hold:一小段骑乘"(intents.rs:361-364)。查询端 <code>wheee_hold</code>(intents.rs:398-408)把值加年龄判成三态;三态为何不能压成 bool,见<a href="/learn/deep-10">解读 10</a>。</p>
+<h2 id="3-成对的-requesttake容器按载荷选">3. 成对的 request/take,容器按载荷选</h2>
+<p>节奏:请求端 store,循环端 swap 取走。<code>power</code> 用 <code>AtomicU8</code> 编码两个互斥请求(intents.rs:149-153,"一次 set_torque 是每关节一笔总线事务,电平会让每拍十六次写");<code>reboot_motors</code> 带一个 id 列表,只能用 <code>Mutex&lt;Option&lt;Vec&lt;u8&gt;&gt;&gt;</code>,取时 <code>try_lock</code>——"锁被占着就读作'还没有',下一拍再来",循环永远不等(intents.rs:481-488)。<code>request_chorale</code>(intents.rs:503-512)是手工的两步:先写 piece 钉子再 swap 请求旗标——"先钉子后旗标,下一拍消费的循环才能看见";piece id 从 1 起,0 当"没钉"(intents.rs:506-507)。<code>stop</code> 与 <code>request_relax</code> 的区别:<code>stop</code> 只清 twist,不动 enabled——"机器人该站住,不是瘫软也不是停驶"(intents.rs:314-317,测试 intents.rs:685)。</p>
+<h2 id="4-snapshot与一处看得见的手滑">4. snapshot,与一处看得见的手滑</h2>
+<p>循环每拍读的 <code>snapshot</code>(intents.rs:569-588)把各槽拼成 <code>Command</code>:body 块恒为 <code>BodyPose::default()</code>——"训练用的标称零,不是占位符",平滑由循环自己做,"平滑是每拍状态,意图槽不该拥有它"(intents.rs:578-581,246-248);<code>twist_age</code> 用 <code>saturating_sub</code> 防下溢(intents.rs:583)。<code>PoseIntent.active: false</code> 的语义是"立刻弹回标称",对应原型 B 键退出(intents.rs:54-57)。</p>
+<p>如实记录一处瑕疵:intents.rs:469-491 一带,<code>request_relax</code> 与 <code>request_reboot_motors</code> 的文档注释互相串行——"Ask the loop to reboot these servos" 长在 relax 的文档里,relax 的后半句单独挂在 490 行。功能无损,读注释会拐弯;两个函数体(intents.rs:475-479、492-494)各自清楚:都清 <code>enabled</code>,一个存 POWER_RELAX、一个存 id 列表。</p>
+<h2 id="你带走的收获">你带走的收获</h2>
+<ul>
+<li>位掩码合流"同拍多请求":保留席、位移还原、位号即优先序,全在常量里。</li>
+<li>请求端/取走端成对,容器按载荷选:互斥小值用原子,带列表用 try_lock。</li>
+<li>两步写没有原子性可蹭时,规定写入顺序并写明哪个读是同步点。</li>
+<li>快照把"哪个字段的年龄要紧"(twist_age)显式带上。</li>
+<li>注释会撒谎(串行的文档),函数体不会——读代码以函数体为准。</li>
+</ul>
+<h2 id="延伸">延伸</h2>
+<ul>
+<li>请求在循环顶部怎么被消费:<a href="/learn/deep-09">解读 09</a></li>
+<li>wheee 三态与骑乘出口:<a href="/learn/deep-10">解读 10</a>、<a href="/learn/deep-117">解读 117</a></li>
+<li>本地:<code>/Volumes/dev/dev/microduck/robotd/src/intents.rs</code></li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

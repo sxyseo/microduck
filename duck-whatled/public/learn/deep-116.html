@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>解读 116 · soc.rs:电池电量监测 · 什么鸭 WhatDuck</title>
+<meta name="description" content="robotd/src/soc.rs(84 行,全读)">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="解读 116 · soc.rs:电池电量监测">
+<meta property="og:description" content="robotd/src/soc.rs(84 行,全读)">
+<meta property="og:url" content="https://duck.whatled.com/learn/deep-116">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/deep-116">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">DEEP 116 · 第十一辑 · 服务与训练工具逐函数 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="解读-116-socrs电池电量监测">解读 116 · soc.rs:电池电量监测</h1>
+<blockquote>
+<p><strong>解读对象</strong>:<code>robotd/src/soc.rs</code>(84 行,全读)<br />
+<strong>需要的前置</strong>:导览见<a href="/learn/deep-12">解读 12</a>;电量百分比映射见<a href="/learn/deep-07">解读 07</a></p>
+</blockquote>
+<p>这是全系列最小的一篇:一个函数加两个测试。小,恰好因为它守着一条干净的边界——"板子说自己"与"机器人说自己"是两件事(soc.rs:1-6)。板温读的是 <code>/sys/class/thermal</code> 的 sysfs(内核把传感器暴露成文件的接口),不碰 Dynamixel 总线,所以不进 <code>duck-control</code>、不走 <code>RobotIo</code>。注释给出真正的理由:"总线不响应时,热读数反而最有意思"——一块堵住通风口的板子,恰恰是在舵机不再应答时最值得被看见的那块(soc.rs:4-6)。</p>
+<h2 id="1-hottest-zone-c签名与取最大">1. <code>hottest_zone_c</code>:签名与取最大</h2>
+<pre><code class="language-rust">pub fn hottest_zone_c() -&gt; Option&lt;f64&gt;
+</code></pre>
+<p>返回 <code>Option&lt;f64&gt;</code>:Rust 的"可能没有"——没有热区的机器(macOS 开发机、无 sysfs 的容器)得到 <code>None</code>,靠"找不到文件"降级,<strong>文件里没有一行 <code>cfg</code> 条件编译</strong>(soc.rs:8-10)。核心决定写在函数文档里(soc.rs:19-24):取<strong>所有热区的最大值</strong>,不是 CPU 的值。一块 Radxa Zero 3 就有 <code>soc-thermal</code> 和 <code>gpu-thermal</code> 两区,别的板子还有 NPU、DDR 区;按名字挑一个区,"第一次遇到一块传感器接线不同的板子,就会漏掉真正在升温的那区"。</p>
+<h2 id="2-逐段目录毫度坏读数">2. 逐段:目录、毫度、坏读数</h2>
+<p>函数体(soc.rs:30-56)四步。<strong>每次采样都重新 <code>read_dir</code></strong>(soc.rs:32-34),不缓存目录列表:1 Hz 下一次遍历只有几微秒,而缓存在"驱动加载后热区才出现"时会过期。<strong>只看名字以 <code>thermal_zone</code> 开头的项</strong>(soc.rs:35-38)。<strong>读 <code>temp</code> 文件并除以 1000</strong>(<code>MILLI_PER_DEGREE = 1000</code>,soc.rs:16):内核热 sysfs 的 ABI 用毫摄氏度,47 °C 在文件里是 <code>47123</code>。<strong>坏读数跳过而不是平均进去</strong>(soc.rs:46-50):≤0 的读数"在运行中的板子上是传感器故障,不是温度";<code>hottest.is_none_or(|high| celsius &gt; high)</code>(soc.rs:51)一行同时处理"还没有最大值"与"比它大"两种情况(<code>is_none_or</code> 是 Option 的方法:为 None 时返回真)。</p>
+<h2 id="3-谁在用它电池是邻居不是同一回事">3. 谁在用它:电池是邻居,不是同一回事</h2>
+<p>调用点在 main.rs 的 <code>publish_slow_sensors</code>(main.rs:3376):每 1 秒(<code>RATE_WINDOW</code>,main.rs:104)跑一次的"慢传感器"采样,不属于 50 Hz 一拍——电压/温度寄存器是一次额外的总线事务,一秒一次约一毫秒无妨,50 Hz 就是 5% 预算(main.rs:3366-3370)。注意热读数排在总线读<strong>之前</strong>且无条件(main.rs:3382-3386):它是 sysfs 读,"欠总线什么都不欠"。电池侧在这个函数里做的是电压 EMA:<code>BATTERY_EMA_ALPHA = 0.1</code>(main.rs:118),约 10 秒时间常数,压住随步态起伏的电压;首读直接播种而不是从 0 混上去——"否则要花十秒报告一块比实际更瘪的电池"(main.rs:3393-3399)。关节温度<strong>不</strong>平滑:"舵机外壳已是慢信号,EMA 只会推迟大家关心的那个读数——正在爬向过热关机的那个"(main.rs:3401-3403)。百分比换算(满电压/空电压映射)住在 model.rs,见<a href="/learn/deep-07">解读 07</a>。</p>
+<h2 id="4-测试形状与标度">4. 测试:形状与标度</h2>
+<p>两个测试各守一种典型错误。<code>a_reading_is_plausible_or_absent</code>(soc.rs:66-75)断言"合理或缺席":macOS 上必须 <code>None</code> 而不是 panic,Linux CI 上读数须落在 1..=150 °C——测试不知道机器当时的温度,所以只能钉住<strong>形状</strong>。<code>millidegrees_convert_to_degrees</code>(soc.rs:80-83)就一行:<code>47123.0 / 1000.0 == 47.123</code>,注释把风险说透:"忘了除数,47 °C 变成 47000,任何后来写的'过热了吗'阈值都拦不住它"(soc.rs:77-79)。</p>
+<h2 id="你带走的收获">你带走的收获</h2>
+<ul>
+<li>归属按"碰不碰总线"划:sysfs 读归板上守护进程,不进控制库——边界清晰,函数才可能只有 84 行。</li>
+<li>"取所有热区最大值"是保守且可迁移的答案;按名字挑区是给下一块板子埋雷。</li>
+<li>读数 ≤0 当故障丢弃:<code>None</code>/跳过比把坏样本平均进去诚实。</li>
+<li>慢信号(电池电压)用 EMA 平滑,但平滑不是万能——外壳温度已经够慢,再平滑只剩延迟。</li>
+<li>测试钉不住具体值时,钉形状(合理区间或缺席)与标度(毫度换算)。</li>
+</ul>
+<h2 id="延伸">延伸</h2>
+<ul>
+<li>电量百分比与 <code>BATTERY_FULL_V/EMPTY_V</code>:<a href="/learn/deep-07">解读 07</a>、<a href="/learn/deep-92">解读 92</a></li>
+<li>声音系统——同为 robotd 的"板级服务":<a href="/learn/deep-117">解读 117</a></li>
+<li>本地:<code>/Volumes/dev/dev/microduck/robotd/src/soc.rs</code></li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

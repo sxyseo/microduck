@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>解读 154 · PCB 是什么:层、走线、过孔 · 什么鸭 WhatDuck</title>
+<meta name="description" content="概念课 · 以 microduck-replica/hardware/imu_to_dxl/README.md(「PCB:布局与布线」节)为教材,打样价格引自 microduck-">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="解读 154 · PCB 是什么:层、走线、过孔">
+<meta property="og:description" content="概念课 · 以 microduck-replica/hardware/imu_to_dxl/README.md(「PCB:布局与布线」节)为教材,打样价格引自 microduck-">
+<meta property="og:url" content="https://duck.whatled.com/learn/deep-154">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/deep-154">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">DEEP 154 · 第十三辑 · 小白电气课 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="解读-154-pcb-是什么层走线过孔">解读 154 · PCB 是什么:层、走线、过孔</h1>
+<blockquote>
+<p><strong>解读对象</strong>:概念课 · 以 <code>microduck-replica/hardware/imu_to_dxl/README.md</code>(「PCB:布局与布线」节)为教材,打样价格引自 <code>microduck-replica/docs/电控采购清单.md</code><br />
+<strong>需要的前置</strong>:<a href="/learn/deep-47">解读 47</a>(连接表是 PCB 的上游);<a href="/learn/deep-49">解读 49</a>(从图到下单)。</p>
+</blockquote>
+<h2 id="层两面铜一面专留给地">层:两面铜,一面专留给"地"</h2>
+<p>原理图回答"谁和谁电气相连",PCB 版图回答"它们实际怎么摆、线怎么走"。imu_to_dxl 这块板把答案写得很具体:<strong>45 × 22 mm,2 层板,1 oz 铜</strong>(1 oz = 一盎司铜铺在 1 平方英尺上的厚度,行业惯用口径),四角 R2 圆角。</p>
+<p>"2 层"指整块板只有正反两面铜:顶层(正面)放全部 29 个贴片器件并走信号线;<strong>底层整片铺 GND</strong>——不刻走线,一整面都是地。这不是浪费:高频电流沿信号线走,回流要贴着信号线下的铜返回,一片完整的地平面就是给 SPI 和 1 Mbps 半双工总线留的"回流路径"。顶层的 GND 焊盘各自就近打一个过孔扎回底层。HAT 对照着看更清楚:官方那块是 <strong>4 层板,65.0 × 30.9 mm</strong>,中间多了两层内层铜,容量和成本都上一个台阶。</p>
+<h2 id="走线与过孔227-段铜线31-个孔172-滴泪">走线与过孔:227 段铜线、31 个孔、172 滴"泪"</h2>
+<p>这版 PCB 的实测清单(2026-09-08 状态):<strong>走线 227 段</strong>(顶层 197 / 底层 30)、<strong>过孔 31 个</strong>(焊盘 φ0.6 mm / 钻孔 0.3 mm)、<strong>泪滴 172 个</strong>。</p>
+<ul>
+<li><strong>线宽就是马路的宽度</strong>:信号线 0.25 mm 为主;四个座子之间的总线直通段加宽到 <strong>0.76 mm</strong>——复查报告算过,这条链 1 oz 铜下温升 10 K 约 2.0 A、30 K 约 3.2 A,和 JST EH 连接器 3 A 的额定同一量级,加宽走线抬不抬上限,连接器说了算。</li>
+<li><strong>过孔</strong>是贯穿正反两面的钻孔加金属化,负责"换层"。钻孔是机械工序,规矩比电路硬:2026-09-08 抓到一处,一个 φ0.3 过孔落在了 J2.3 的 φ1.0 插件孔正上方(孔心距 0.001 mm),立创 DRC 直接报 <code>Hole to Hole</code>——<strong>同网络也不允许重叠</strong>,删掉这个冗余过孔后 DRC 归零。</li>
+<li><strong>泪滴</strong>是走线汇入焊盘处的一滴过渡加宽,像水滴落在桌面的形状:钻孔稍微偏一点也不至于把细线钻断,172 个泪滴就是 172 处加固。</li>
+<li>间距账:全板异网最小间距 <strong>0.152 mm</strong>,嘉立创双面板下限 0.127 mm,余量 20%;铜到板边最小 0.37 mm。</li>
+</ul>
+<h2 id="打样多少钱2540-的板与几百元的-hat">打样多少钱:¥25–40 的板与几百元的 HAT</h2>
+<p>电控采购清单给 imu_to_dxl 的打样价:<strong>2 层板,嘉立创约 ¥25–40(不含贴片)</strong>。若让厂里把元件也贴上(SMT),就是另一档账——对照 HAT:47 行 / 123 颗的 BOM、实际贴装 113 个位置,"4 层板 + SMT 成本几百元起且有起订量"。自己焊 29 个器件的板,¥25–40 的裸板就是全部固定投入,这就是为什么自绘板选了"元件极少"的路线。</p>
+<p>机械上的数字也有出处:两个 M2 非金属化安装孔(φ2.2 mm)走对角,孔距 X 向 40.00 mm / Y 向 17.27 mm,孔到板边 1.31 / 1.22 mm(嘉立创要求 ≥0.4 mm)。最后照抄 README 的一句话:<strong>"仍未验证:没有打样,没有实物"</strong>——以上全部是几何与规则层面的核对,不能替代实测。</p>
+<h2 id="你带走的收获">你带走的收获</h2>
+<ol>
+<li>层数 = 几面可用铜;2 层板的经典配方是"顶层器件 + 信号,底层整片 GND"——地平面是回流路径,不是装饰。</li>
+<li>线宽由载流决定(0.76 mm 直通 ≈ 2–3 A 量级),信号线 0.25 mm 够用;连接器额定往往才是整条链的短板。</li>
+<li>过孔是机械钻孔,规则独立于电路:孔孔不叠(哪怕同网络)、孔边留距;泪滴是给钻孔偏心的保险。</li>
+<li>裸板很便宜(2 层 ¥25–40),贵的是贴片;第一块自绘板要按"器件少、可手焊、可返修"设计。</li>
+<li>DRC 0 违规 ≠ 实物能用:几何核对与上电实测之间,隔着一次打样。</li>
+</ol>
+<h2 id="延伸">延伸</h2>
+<ul>
+<li><a href="/learn/deep-49">解读 49</a>:立创 EDA 从连接表到下单的全流程</li>
+<li><a href="/learn/deep-48">解读 48</a>:去耦电容为什么必须贴近引脚——布局一节的"2.27 mm"们</li>
+<li><a href="/learn/deep-43">解读 43</a>:这块板要在整机里干什么</li>
+<li>本地:<code>microduck-replica/hardware/imu_to_dxl/README.md</code>、<code>microduck-replica/docs/电控采购清单.md</code></li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

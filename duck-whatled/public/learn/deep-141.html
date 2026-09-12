@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>解读 141 · crouch_pose_editor.py · 什么鸭 WhatDuck</title>
+<meta name="description" content="microduck-replica/upstream/microduck_rl/scripts/crouch_pose_editor.py(99 行,全读:1 个函数 + 主干脚本">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="解读 141 · crouch_pose_editor.py">
+<meta property="og:description" content="microduck-replica/upstream/microduck_rl/scripts/crouch_pose_editor.py(99 行,全读:1 个函数 + 主干脚本">
+<meta property="og:url" content="https://duck.whatled.com/learn/deep-141">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/deep-141">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">DEEP 141 · 第十二辑 · 任务配置与脚本逐文件 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="解读-141-crouch-pose-editorpy">解读 141 · crouch_pose_editor.py</h1>
+<blockquote>
+<p><strong>解读对象</strong>:<code>microduck-replica/upstream/microduck_rl/scripts/crouch_pose_editor.py</code>(99 行,全读:1 个函数 + 主干脚本)<br />
+<strong>需要的前置</strong>:<a href="/learn/deep-135">解读 135</a>(消费这份姿势的 RollerCrouch 任务)、<a href="/learn/deep-127">解读 127</a>(HOME_FRAME 常量)</p>
+</blockquote>
+<p>训练 RollerCrouch 任务之前,得先回答"蹲下去是什么姿势"——14 个关节各多少弧度。这个脚本就是回答它的工具:打开 MuJoCo viewer,拖滑块把机器人摆成想要的蹲姿,关窗时自动打印一份 <code>CROUCH_POSE = {关节名: 弧度}</code> 字典。文件头(:1-12,法语 docstring)说明了两个物理约定:重力被关掉、基座被按住——你只管摆姿势,别的都不用管。产出的去向也写死在最后一行注释(:99):"Colle CROUCH_POSE ici et donne-le a Claude pour cabler la reward"——粘贴进 <code>microduck_roller_crouch_env_cfg.py:72</code> 的 <code>CROUCH_POSE</code>,接进 crouch 奖励。</p>
+<h2 id="搭台重力归零与两个清单26-63-行">搭台:重力归零与两个清单(26-63 行)</h2>
+<p><code>home_value</code>(:26-30)是唯一的函数:拿关节名去 <code>HOME_FRAME.joint_pos</code> 里逐条正则匹配,返回命中项的值,都不中就回 0.0——HOME_FRAME 的键本来就是正则(<code>.*hip_pitch.*</code> 这类),所以直接 <code>re.search</code> 复用。模型不经过任何环境工厂,直接 <code>get_walk_rollers_spec().compile()</code>(:34)从 spec 编译;随后一行定调性:<code>model.opt.gravity[:] = [0, 0, 0]</code>(:37)——注释说"rien ne s'effondre":没有重力,姿势就不会自己垮,滑块拨到哪就停在哪,编辑器才像编辑器而不是物理沙盒。</p>
+<p>两个清单决定交互范围:关节清单(:42-47)遍历所有铰链,跳过 freejoint 和所有 <code>passive_</code> 轮子,只留 14 个可摆的关节;执行器初始 ctrl 全部设为 HOME 姿势(:50-52)——打开时鸭子是站着的标准站姿,不是瘫着的随机姿势。若有自由基座,把它钉在 <code>z=0.14</code>、单位四元数(:55-58),这个高度后面还要用。</p>
+<h2 id="主循环钉住步进贴地70-90-行">主循环:钉住、步进、贴地(70-90 行)</h2>
+<p>60 Hz 的 <code>while viewer.is_running()</code> 循环每拍做三层。第一层是"钉":viewer 里拖基座也许会改写 qpos,所以每步开头把平移、四元数、速度全部写回缓存值(:72-75)——基座永远纹丝不动。第二层是"走":<code>mj_step</code>(:76)让 position actuator 把每个关节拉向滑块目标,滑块就是 MuJoCo viewer 的 Control 面板里每个 actuator 的 ctrl 滑条。第三层是"贴地"(:82-88):重新算一遍 forward,然后 <code>zmin = min(geom_xpos[g, 2] - geom_rbound[g])</code>——所有几何体最低点(中心 z 减去包围球半径)到地面的距离;把 <code>qpos[2]</code> 减去这个 zmin 再 forward 一次,基座高度自动跟随姿势调整,<strong>最低点永远贴着地面</strong>。这正是文件头承诺的体验:"你看到的是躯干在下降"——屈膝时基座自动下沉,下沉量就是真实的蹲深。</p>
+<h2 id="收尾从-viewer-到代码92-99-行">收尾:从 viewer 到代码(92-99 行)</h2>
+<p>关窗后打印两样东西:逐关节的 <code>CROUCH_POSE = {name: qpos}</code> 字典,弧度保留 4 位小数(:94-95)——恰好是 reward 字典可直接粘贴的格式;外加一行基座最终高度 z 作参考(:97-98)。设计上它把"人类审美的姿势"到"机器可读的奖励目标"之间的翻译做成了自动的:人的输入是拖滑块,输出是精确到万分之一弧度的字典。对比 135 篇的 <code>crouch_pose</code> 奖励项:那份字典里的每个数字,理想流程里都来自这一次关窗。</p>
+<h2 id="你带走的收获">你带走的收获</h2>
+<ul>
+<li>交互式标定工具的三件套:关重力、钉基座、贴地——把问题削减到只剩"摆姿势"这一件事。</li>
+<li>用 <code>geom_xpos - rbound</code> 求最低点做地面贴合,是"让物体站上任意地形"的通用小技巧。</li>
+<li>工具输出应该直接是下游代码的粘贴格式:4 位小数的 Python 字面量,零手工转换。</li>
+<li>复用既有正则键(HOME_FRAME 的 <code>.*hip_pitch.*</code>)时,新工具不必发明新的参数表示。</li>
+</ul>
+<h2 id="延伸">延伸</h2>
+<ul>
+<li>字典的消费方(crouch_pose 奖励):<a href="/learn/deep-135">解读 135</a> 的 RollerCrouch 段</li>
+<li>HOME_FRAME 的来历与 STAND 姿势:<a href="/learn/deep-127">解读 127</a></li>
+<li>本地路径:<code>microduck-replica/upstream/microduck_rl/scripts/crouch_pose_editor.py</code>、<code>.../tasks/microduck_roller_crouch_env_cfg.py</code></li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

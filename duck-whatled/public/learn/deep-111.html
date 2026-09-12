@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>解读 111 · robotd/main.rs(一):启动与参数 · 什么鸭 WhatDuck</title>
+<meta name="description" content="robotd/src/main.rs(8273 行)选段">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="解读 111 · robotd/main.rs(一):启动与参数">
+<meta property="og:description" content="robotd/src/main.rs(8273 行)选段">
+<meta property="og:url" content="https://duck.whatled.com/learn/deep-111">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/deep-111">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">DEEP 111 · 第十辑 · duck-control 逐函数精读 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="解读-111-robotdmainrs一启动与参数">解读 111 · robotd/main.rs(一):启动与参数</h1>
+<blockquote>
+<p><strong>解读对象</strong>:<code>robotd/src/main.rs</code>(8273 行)选段<br />
+<strong>需要的前置</strong>:<a href="/learn/deep-09">解读 09</a>(主循环导览)、<a href="/learn/deep-11">解读 11</a>(参数文件格式)</p>
+</blockquote>
+<p>导览见解读 09,本篇逐函数下钻。源文件已长到 8273 行,09 的行号普遍前移(main 现在在 905 行),本篇与下一篇的行号均按当前文件核对。</p>
+<h2 id="1-参数与开关args-与-paramsload">1. 参数与开关:<code>Args</code> 与 <code>Params::load</code></h2>
+<p><code>Args</code>(main.rs:225-277)由 clap 派生(派生宏自动生成命令行解析代码),选项各有立场:<code>--socket</code> 默认 <code>/run/robotd.sock</code>(:229-230,"updaterd 必须指向同一个");<code>--params</code> 缺省 <code>/etc/robot/robotd.toml</code> 且<strong>可以不存在</strong>——"未配置的板子按默认值起",显式路径则必须存在(:232-235);<code>--port</code> 覆盖串口;<code>--fake</code> 无机器人;<code>--sim</code> 与 <code>--fake</code> 互斥;<code>--no-policy</code>(:262-264)与"策略加载失败"是两回事——后者不健康,前者是给"被测对象是更新器"的台架用的;<code>--unhealthy</code>/<code>--busy</code> 是验证回滚用的诚实开关(:267-273)。子命令 <code>Init</code>(:280-291)的 <code>--duration</code> 默认 <code>2s</code>,由 <code>parse_duration</code>(:293-305)解析。<code>main</code>(:905)把这些落进 <code>Params::load</code>(:924-930),再让 <code>--port</code> 与 <code>--no_policy</code> 覆盖字段(:931-936)。</p>
+<h2 id="2-main-的次序锁先于电机">2. <code>main</code> 的次序:锁先于电机</h2>
+<p><code>main</code> 开头先恢复 SIGPIPE 默认行为(main.rs:906-907,否则 <code>robotd | head</code> 会 panic)。<code>Init</code> 子命令则先 <code>claim_lock</code> 拿实例锁再进 <code>run_init</code>(:938-950)。守护路径的顺序是刻意的:<code>claim_socket</code> <strong>先于</strong>发布身份、先于任何能碰电机的线程(:952-960);<code>RobotState</code>(IPC 侧只读的原子量集合)在 :963 构造;<code>poweroff</code> 闭包用 <code>setsid</code> 拉起 <code>systemctl poweroff</code>,避免被 systemd 连坐杀掉(:981-988);然后 <code>spawn_control_thread</code>(:990)与 <code>serve</code>(:1004)并行,<code>tokio::select!</code>(:1011-1019)等两者之一。收尾(:1021-1025):置 shutdown 标志、<code>control.join()</code>——"让循环做完手里那拍,而不是在事务中途夭折"——最后删 socket 文件。</p>
+<h2 id="3-三种身体fakesim真总线">3. 三种身体:fake、sim、真总线</h2>
+<p><code>spawn_control_thread</code>(:1076-1154)按参数选身体,放进专属 OS 线程加 current-thread 运行时(为什么,解读 09 讲过)。<code>--fake</code> 直接 <code>control_loop(FakeIo::at(DEFAULT_POSITION), …)</code>(:1110-1122);<code>--sim</code> 用 <code>RemoteIo::at(addr)</code>,刻意没有"等总线"的对应物——它懒连接、每拍重试,"鸭子先于仿真器启动,只是报不健康"(:1124-1140);真总线走 <code>open_bus_waiting_with_backend</code>(:1148-1152)。总线本体 <code>BusIo</code>(:1157-1161)是 <code>Dynamixel</code>/<code>Hl2915</code> 两变体的枚举,方法全部 <code>match</code> 转发(:1164-1246)——枚举即开关。等待循环(:1262-1288)是"等,不是放弃":失败把尝试次数写进 <code>startup_bus_failures</code> <strong>再</strong>睡觉,"让 <code>robot.health</code> 立刻说出原因"(:1277-1278),每秒重试。</p>
+<h2 id="4-打开总线收养新舵机与-init">4. 打开总线、收养新舵机与 <code>init</code></h2>
+<p><code>open_bus_for</code>(:1297-1343)第一行定日志节奏:<code>loud = attempt == 0 || attempt.is_multiple_of(30)</code>(:1299,常量在 :1425)——守一夜的板子约 30 秒一行。后端分派(:1301-1311):Dynamixel 走 <code>DynamixelIo::open</code>;HL-2915 走 <code>Hl2915RobotIo::open(port, &amp;DEFAULT_HL2915_IDS, IMU_DXL_ID, FeetechCalibration::default(), 30ms)</code>(见解读 109)。收养是 Dynamixel 独占的(:1323-1327),出厂探测要重开串口到 57 600 波特。<code>adopt_missing_servo</code>(:1356-1404)是决策树:ping 全员;不缺→继续;<strong>15 只全缺</strong>→"不是换舵机,只是没上电"(:1371-1375);恰好缺一只→<code>replacement_target</code> 定顶替者、<code>adopt_replacement</code> 收养;缺多只→分不清谁顶替谁,等人类。最后 <code>prepare()</code> 校验寄存器,<code>Ok(0)</code> 报"本来就对",<code>Ok(n)</code> 报"修正了 n 项"(:1328-1331)。<code>run_init</code>(:1031-1062)与守护进程同一条开总线路径,然后 <code>set_torque(true)</code>、<code>set_gain</code>、<code>interpolate_to</code> 到 home 位。增益必须在斜率<strong>之前</strong>写(:1043-1052):<code>position_p_gain</code> 是 RAM 寄存器,进程死了值还在,上次摔倒留下的 <code>gain_limp</code>(50)会让 init 用三分之一刚度拉起机器人。</p>
+<h2 id="你带走的收获">你带走的收获</h2>
+<ul>
+<li>启动次序是安全设计:锁→状态→控制线程→IPC,端点先于一切能动机器人的东西。</li>
+<li>"打开失败"分两种:配置错误该快死,总线没电该等待并说出原因。</li>
+<li>枚举后端加 <code>match</code> 转发,是最小的新硬件接入面。</li>
+<li>一次性命令(<code>init</code>)与守护进程共用开总线代码,才不会"只有一条路认识新硬件"。</li>
+</ul>
+<h2 id="延伸">延伸</h2>
+<ul>
+<li>循环本身的逐行走读:<a href="/learn/deep-112">解读 112</a></li>
+<li>打开与收养的底层:<a href="/learn/deep-99">解读 99</a>、<a href="/learn/deep-109">解读 109</a></li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

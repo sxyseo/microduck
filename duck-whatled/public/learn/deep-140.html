@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>解读 140 · play_latest.py · 什么鸭 WhatDuck</title>
+<meta name="description" content="microduck-replica/upstream/microduck_rl/scripts/play_latest.py(57 行,全读:1 个字典 + 1 个 main)">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="解读 140 · play_latest.py">
+<meta property="og:description" content="microduck-replica/upstream/microduck_rl/scripts/play_latest.py(57 行,全读:1 个字典 + 1 个 main)">
+<meta property="og:url" content="https://duck.whatled.com/learn/deep-140">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/deep-140">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">DEEP 140 · 第十二辑 · 任务配置与脚本逐文件 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="解读-140-play-latestpy">解读 140 · play_latest.py</h1>
+<blockquote>
+<p><strong>解读对象</strong>:<code>microduck-replica/upstream/microduck_rl/scripts/play_latest.py</code>(57 行,全读:1 个字典 + 1 个 main)<br />
+<strong>需要的前置</strong>:<a href="/learn/deep-129">解读 129</a>(wandb run 从哪来)、<a href="/learn/deep-130">解读 130</a>(<code>uv run play</code> 消费什么)</p>
+</blockquote>
+<p>这是 scripts/ 目录里最短的文件,却回答一个每天都会遇到的问题:"我昨天训了一晚上,现在怎么把它放出来看?" 手工做法要查 task id、翻 wandb 复制 run path、拼一长串命令;<code>play_latest.py</code> 把这串摩擦压成 <code>md-play --crouch</code>。连文件头 docstring(:1-11)都是法语写的,默认用户 <code>coralie</code> 是它的第一位使用者。</p>
+<h2 id="type-substr四个-flag-与子串匹配的陷阱18-23-行">TYPE_SUBSTR:四个 flag 与子串匹配的陷阱(18-23 行)</h2>
+<p>类型路由是一张字典:<code>crouch → "Crouch"</code>、<code>roller → "MicroDuck-Rollers"</code>、<code>swizzle → "Swizzle"</code>、<code>slope → "Slope"</code>,注释逐行给出对应 task id 示例。最讲究的是 roller 这条:子串故意用 <code>"MicroDuck-Rollers"</code> 而不是 <code>"Roller"</code>——注释(:20)点明 <code>Mjlab-Velocity-Flat-MicroDuck-Rollers</code> 与 <code>RollerSlope</code>/<code>RollerCrouch</code> 共享前缀,宽子串会抓错任务族。子串匹配本身发生在 <code>wandb_utils.resolve_run</code>(wandb_utils.py:110-125)里:<code>task_substr.lower() in t.lower()</code> 大小写不敏感地过滤该用户的 run,取最新一条;一个都没有就打印 stderr 并 <code>sys.exit(1)</code>。这个脚本没有自己的业务逻辑,匹配、排序、报错全部委托给 <code>wandb_utils</code>。</p>
+<h2 id="main解析解析拼命令26-53-行">main:解析、解析、拼命令(26-53 行)</h2>
+<p>三个动作按顺序读。第一,参数解析分两层:<code>for t in TYPE_SUBSTR</code> 循环注册 <code>--crouch/--roller/--swizzle/--slope</code> 四个互斥 flag(<code>store_const</code> 把选中键写进 <code>args.type</code>,:36-40);<code>parse_known_args()</code>(:42)把<strong>不认识</strong>的参数(如 <code>--action-scale 0.8</code>)收进 <code>extra</code> 原样放行——docstring(:9-10)承诺"Les arguments inconnus sont transmis tels quels"。第二,<code>resolve_run(args.user, task_substr)</code>(:45)返回 <code>(run, info)</code>,其中 <code>info</code> 是 <code>{"env_name", "run_path", "checkpoints"}</code>(wandb_utils.py:107)——env_name 和 run_path 正是下游要的两个词。第三,拼出命令(:47-52):<code>uv run play &lt;env_name&gt; --wandb-run-path &lt;run_path&gt; *extra</code>,交给 <code>run_command(cmd, args.dry_run)</code>(:53);后者(wandb_utils.py:128-138)先打印整条命令,<code>--dry-run</code> 时到此为止,否则在项目根目录 <code>subprocess.run</code> 执行。</p>
+<h2 id="设计取舍外壳要薄到什么程度">设计取舍:外壳要薄到什么程度</h2>
+<p>值得学的不是这个脚本做了什么,而是它<strong>拒绝</strong>做什么:不 import wandb API、不解析 checkpoint、不知道 play 命令长什么样——它只做"查 + 拼 + 传"。未知参数透传(:42)让上游 <code>play</code> 的任何新 flag 无需改壳即可用;<code>--dry-run</code> 让"要跑什么"变成可先审阅的一行字。与 129 篇的 <code>hf_jobs</code>(把训练送上云)相对,这个 57 行文件是训练闭环的另一端:云端 run 落地后,人机接口被压扁成一个 flag。工程里大量工具的真实形态就是这样——不是框架,是三行胶水,但子串选 <code>"MicroDuck-Rollers"</code> 这种坑,只有踩过一次才写得出注释。</p>
+<h2 id="你带走的收获">你带走的收获</h2>
+<ul>
+<li>"跑最新一次训练"值得一个专用命令:它消灭的是每天复制 run path 的摩擦,不只是省几个键击。</li>
+<li>子串匹配任务族时,边界要选得比直觉更窄(<code>MicroDuck-Rollers</code> vs <code>Roller</code>),否则前缀相近的任务会被抓错。</li>
+<li><code>parse_known_args</code> + 透传是包装 CLI 的标准姿势:壳不认识的功能自动可用。</li>
+<li><code>--dry-run</code> 是所有"拼命令再执行"类工具的标配安全阀。</li>
+</ul>
+<h2 id="延伸">延伸</h2>
+<ul>
+<li>run 的另一端——训练怎么提交上云:<a href="/learn/deep-129">解读 129</a>;play 消费的 ONNX 怎么导出:<a href="/learn/deep-128">解读 128</a></li>
+<li>各任务族本体:swizzle <a href="/learn/deep-134">解读 134</a>、roller 家族 <a href="/learn/deep-135">解读 135</a></li>
+<li>本地路径:<code>microduck-replica/upstream/microduck_rl/scripts/play_latest.py</code>、<code>scripts/wandb_utils.py</code></li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

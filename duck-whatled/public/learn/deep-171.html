@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>解读 171 · feetech_sts3215(7.4V)案例 · 什么鸭 WhatDuck</title>
+<meta name="description" content="bam/bam/params/feetech_sts3215_7_4V/(m1.json–m6.json 六档,m6.json 共 20 个字段)">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="解读 171 · feetech_sts3215(7.4V)案例">
+<meta property="og:description" content="bam/bam/params/feetech_sts3215_7_4V/(m1.json–m6.json 六档,m6.json 共 20 个字段)">
+<meta property="og:url" content="https://duck.whatled.com/learn/deep-171">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/deep-171">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">DEEP 171 · 第十五辑 · 其他舵机案例库 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="解读-171-feetech-sts321574v案例">解读 171 · feetech_sts3215(7.4V)案例</h1>
+<blockquote>
+<p><strong>解读对象</strong>:<code>bam/bam/params/feetech_sts3215_7_4V/</code>(m1.json–m6.json 六档,m6.json 共 20 个字段)<br />
+<strong>需要的前置</strong>:<a href="/learn/deep-169">解读 169</a>(xl330 逐字段基准)· <a href="/learn/deep-78">解读 78</a>(飞特协议)</p>
+</blockquote>
+<h2 id="1-型号是谁">1. 型号是谁</h2>
+<p>深圳飞特(Feetech)STS3215,7.4 V 口径——目录名带 <code>_7_4V</code> 就是标记。<code>执行器选型.md</code> 给过<br />
+它一整套画像:单价约 ¥60–70(xl330 的五分之一)、堵转 1.86 N·m(19 kg·cm)、12-bit 编码器、<br />
+单只约 55–60 g;同架构的 Open Duck Mini v2(2107.1 g、42 cm)就是"STS3215 版双足鸭"。<br />
+BAM 侧是 <code>feetech/actuator.py</code> 的 <code>STS3215Actuator</code>:vin=7.4、kp=32、error_gain=0.166<br />
+(示波器实测)、max_pwm=0.97(注释带 TODO:"能假定 1.0 吗?"——作者也没量实);它还是<br />
+全库唯一的 <strong>stateful</strong> 执行器:固件对内部目标位置限速,<code>compute_control</code> 必须逐时序调用。<br />
+kt 初始值注释原话"docs says 8 kg.cm / A"→0.7845。注意目录名≠键名:json 里<br />
+<code>"actuator": "sts3215"</code> 才是 <code>actuators.py</code> 注册表键(<a href="/learn/deep-73">解读 73</a>)。</p>
+<h2 id="2-m6json-逐字段-与-xl330-基准对比">2. m6.json 逐字段 + 与 xl330 基准对比</h2>
+<p>20 个字段,<strong>全库最多</strong>:比 xl330 多 <code>error_gain_ratio</code>(实测增益与类内 error_gain 之比,<br />
+0.1–10)和 <code>max_velocity</code>(固件目标限速,rad/s)两个独有字段,q_offset 范围放宽到 ±0.2<br />
+(其他 ±0.1):</p>
+<table>
+<thead>
+<tr>
+<th>字段</th>
+<th>sts3215</th>
+<th>xl330</th>
+<th>对比</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>kt</code></td>
+<td>1.275</td>
+<td>0.346</td>
+<td>×3.7</td>
+</tr>
+<tr>
+<td><code>error_gain_ratio</code></td>
+<td>1.162</td>
+<td>—(无此字段)</td>
+<td>独有;比示波器基准大 16%</td>
+</tr>
+<tr>
+<td><code>R</code></td>
+<td>2.75</td>
+<td>2.50</td>
+<td>同档</td>
+</tr>
+<tr>
+<td><code>armature</code></td>
+<td>0.0216</td>
+<td>0.00157</td>
+<td><strong>×13.7</strong></td>
+</tr>
+<tr>
+<td><code>q_offset</code></td>
+<td>−0.0683(≈−3.9°)</td>
+<td>0.0150</td>
+<td>全库最大零位偏移</td>
+</tr>
+<tr>
+<td><code>max_velocity</code></td>
+<td>5.096</td>
+<td>—</td>
+<td>≈默认值 3400×2π/4096≈5.215 的 98%:与手册限速自洽</td>
+</tr>
+<tr>
+<td><code>command_delay</code></td>
+<td>0.00498</td>
+<td>0.0102</td>
+<td>延迟只有一半</td>
+</tr>
+<tr>
+<td><code>friction_base</code></td>
+<td>0.0533</td>
+<td>0.0119</td>
+<td>×4.5</td>
+</tr>
+<tr>
+<td><code>friction_stribeck</code></td>
+<td>4.3e-05</td>
+<td>0.00085</td>
+<td>库仑底扛,低速附加几乎为零</td>
+</tr>
+<tr>
+<td><code>load_friction_motor/external</code></td>
+<td>0.0449 / 0.244</td>
+<td>0.228 / 0.107</td>
+<td>方向反转:外载侧主导</td>
+</tr>
+<tr>
+<td><code>load_friction_*_stribeck</code></td>
+<td>1.2e-04 / 0.142</td>
+<td>1.5e-08 / 0.142</td>
+<td>外载侧相同</td>
+</tr>
+<tr>
+<td><code>load_friction_*_quad</code></td>
+<td>0.00759 / 0.00340</td>
+<td>0.00527 / 0.00299</td>
+<td>同量级</td>
+</tr>
+<tr>
+<td><code>dtheta_stribeck</code> / <code>alpha</code></td>
+<td>0.371 / <strong>9.93</strong></td>
+<td>0.261 / 8.53</td>
+<td>alpha 顶到 10 上限</td>
+</tr>
+<tr>
+<td><code>friction_viscous</code></td>
+<td>0.0282</td>
+<td>0.00579</td>
+<td>×4.9</td>
+</tr>
+</tbody>
+</table>
+<p>两组漂亮的交叉验证:kt·vin/R = 1.275×7.4/2.75 ≈ <strong>3.43 N·m</strong>,对上 Open Duck v2 的<br />
+forcerange ±3.35;friction_base 0.0533 对上它的 frictionloss 0.052——BAM 辨识值与另一个<br />
+开源项目手工填的仿真值几乎重合。存疑点:alpha=9.93 顶格,提示模型在该型号上"顶到了天花板"<br />
+(<a href="/learn/deep-80">解读 80</a>)。</p>
+<h2 id="3-如果用它换掉-xl330五落点具体值">3. 如果用它换掉 xl330:五落点具体值</h2>
+<p>按 <a href="/learn/deep-79">解读 79</a>:① <code>motor_name="feetech_sts3215_7_4V"</code>(目录名);<br />
+kp_fw 换 32 一族口径;vin_range 按 7.4 V 系统实测窗口(2S 口径,Open Duck v2 同款);<br />
+delay 按 json 的 0.005 s 重估。② <code>friction_dr_bam.py</code>:forcerange ±3.35 N·m 量级、摩擦值<br />
+指向本 json。③ 回差角:Open Duck v2 口径 ±0.5°(xl330 是 ±1.0°,选型文档表)。④ 随机化<br />
+按自己台架。⑤ assets 质量重算:15 只 55–60 g 替 18 g,整机 737 g → 2107 g(选型文档硬数据)——<br />
+<strong>机械腔根本装不下</strong>,"换舵机"变成"换一台机器人"(<a href="/learn/deep-52">解读 52</a>)。<br />
+好消息在通信层:同用 rustypot 库换协议模块即可(<a href="/learn/deep-78">解读 78</a>)。</p>
+<h2 id="你带走的收获">你带走的收获</h2>
+<ul>
+<li>字段集本身是信息:<code>error_gain_ratio</code>/<code>max_velocity</code> 两个独有字段,对应 STS3215 固件的<br />
+  增益离散与目标限速——型号个性写进了 json 的 schema。</li>
+<li>alpha=9.93 顶格 + q_offset −3.9° 全库最大:辨识值贴近边界都在提示"模型/台架到极限了"。</li>
+<li>BAM json 与 Open Duck v2 手工仿真参数互相对上(forcerange 3.43↔3.35、frictionloss<br />
+  0.053↔0.052):两套独立来源交叉验证,数字才可信。</li>
+<li>便宜五分之一、力矩大三倍不等于能换:质量 ×3 推倒机械与质量预算,最重的落点是⑤。</li>
+</ul>
+<h2 id="延伸">延伸</h2>
+<ul>
+<li><a href="/learn/deep-172">解读 172</a>:同门师弟 ST3025 · <a href="/learn/deep-169">解读 169</a></li>
+<li><a href="/learn/deep-74">解读 74</a>:四道门展开 · <a href="/learn/deep-85">解读 85</a>:窗口对照</li>
+<li><code>bam/bam/params/feetech_sts3215_7_4V/m6.json</code> · <code>bam/bam/feetech/actuator.py</code></li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

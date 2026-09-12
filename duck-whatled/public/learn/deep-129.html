@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>解读 129 · hf_jobs.py:云训练入口 · 什么鸭 WhatDuck</title>
+<meta name="description" content="microduck-replica/upstream/microduck_rl/src/mjlab_microduck/hf_jobs.py(483 行)">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="解读 129 · hf_jobs.py:云训练入口">
+<meta property="og:description" content="microduck-replica/upstream/microduck_rl/src/mjlab_microduck/hf_jobs.py(483 行)">
+<meta property="og:url" content="https://duck.whatled.com/learn/deep-129">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/deep-129">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">DEEP 129 · 第十一辑 · 服务与训练工具逐函数 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="解读-129-hf-jobspy云训练入口">解读 129 · hf_jobs.py:云训练入口</h1>
+<blockquote>
+<p><strong>解读对象</strong>:<code>microduck-replica/upstream/microduck_rl/src/mjlab_microduck/hf_jobs.py</code>(483 行)<br />
+<strong>需要的前置</strong>:<a href="/learn/deep-32">解读 32</a>(导出与部署)、<a href="/learn/deep-70">解读 70</a>(重训全链路)</p>
+</blockquote>
+<h2 id="在做什么">在做什么</h2>
+<p>本地没有 GPU 也能训练:<code>train &lt;任务名&gt; ... --hf-jobs</code> 会把整个训练搬到 Hugging Face Jobs 的云容器里跑。真正被调用的是本文件的 <code>submit()</code>(hf_jobs.py:241)——<code>--hf-jobs</code> 参数由 <code>train_hook.py</code> 拦截转发到这里;而容器内的环境变量 <code>MICRODUCK_IN_HF_JOB=1</code>(:324)会把拦截 disarm 掉,保证云上的 <code>uv run train</code> 只在本地训练,不会递归再提交一个云任务。</p>
+<p>三个默认值定下一个"标准训练舱":镜像 <code>pytorch/pytorch:2.5.1-cuda12.4-cudnn9-runtime</code>(:41)、硬件 <code>l4x1</code>(:42)、超时 12 小时(:43),分别可被 <code>--image/--flavor/--timeout</code> 覆盖。</p>
+<h2 id="提交流程与-bootstrap-脚本">提交流程与 BOOTSTRAP 脚本</h2>
+<p><code>submit()</code> 的流程是:打 tar 包 → 上传 → 提交 → 盯到结束。开头先由 <code>_pick_namespace()</code>(:171)确定命名空间(个人账号或 org;<code>--namespace</code> 跳过交互提示,非 tty 环境回落个人账号)。</p>
+<ol>
+<li><code>_build_tarball()</code>(:151)用 <code>git ls-files -co --exclude-standard</code> 列文件:已跟踪但未提交的修改也进包,被 ignore 的垃圾(<code>.venv</code>、logs、<code>*.onnx</code>)不进;返回短 SHA 供追溯。</li>
+<li>tar 上传到私有 HF dataset 仓库(默认 <code>&lt;namespace&gt;/mjlab-microduck-src</code>,:318),容器里只读挂载到 <code>/src</code>(:347)。</li>
+<li><code>api.run_job(...)</code> 执行内嵌 shell 脚本 <code>BOOTSTRAP</code>(:47):装基础工具、装<strong>钉死版本</strong>的 uv 0.11.30(浮动 latest 读到旧版缓存条目曾让 sync 必现失败,2026-07-21)、<code>UV_LINK_MODE=copy</code>;<code>uv sync</code> 失败就清缓存自愈重试一次;然后 <code>nohup</code> 拉起 checkpoint 上传看护 <code>scripts/hf/uploader.py</code>,跑训练;训练正常结束且 <code>AUTO_EXPORT=1</code>(默认开)时<strong>顺手导出 ONNX 并上传</strong>(:96-118)——省得再开一个要付全额 bootstrap 的导出任务。</li>
+<li><code>_await_scheduling()</code>(:214)以 1200 秒预算轮询调度阶段(镜像拉取冷启动约 5 分钟;卷挂载失败约 7 分钟才暴露),末尾再循环跟日志;Ctrl-C 只是脱离,任务继续跑(:481-483)。调度期"卷挂载失败"是已知偶发,自动重提、最多 3 次(:402)。</li>
+</ol>
+<h2 id="--dry-run费用与-token-卫生">--dry-run、费用与 Token 卫生</h2>
+<ul>
+<li><strong>--dry-run</strong>(:267):照样打 tar 包(顺带报出大小与 HEAD SHA),然后打印将要提交的完整任务规格就返回,不花一分钱——省冤枉钱的第一道闸。</li>
+<li><strong>费用</strong>:算力按 HF 账户 credits 扣。余额不足时 API 报 402,<code>submit()</code> 译成人话并附充值链接、退出码 2(:419-427);403 则是 token 权限问题,提示去开 fine-grained token 的 Jobs 权限、退出码 3(:428-443)。<code>--uv-cache</code> 默认关:FUSE bucket 挂载不支持硬链接,跨网络全量拷约 6 GB,反而比数据中心从 PyPI 重新下载(约 1 分钟)更慢——注释把这笔账算给你看(:286-295)。</li>
+<li><strong>Token 卫生</strong>:HF token 只经 <code>get_token()</code>(:310)取出、放进 <code>secrets</code> 字典(:328)注入容器,不进普通 env;<code>--dry-run</code> 打印时 secrets 一律打成 <code>***</code>(:377)。wandb key 走 <code>_wandb_api_key()</code>(:124):先查 <code>WANDB_API_KEY</code> 环境变量,再翻 <code>~/.netrc</code> 的 api.wandb.ai 条目;找不到就报错退出(:333-339),而不是带病上线。</li>
+</ul>
+<h2 id="你带走的收获">你带走的收获</h2>
+<ul>
+<li>云训练脚本的核心资产是那份可复现的 BOOTSTRAP:钉死工具链版本 + 自愈式依赖安装 + 训练后顺手导出,把"环境漂移"这类最常见死法提前焊死。</li>
+<li><code>--dry-run</code> 是云任务脚本的第一公民:构建产物、打印规格、不调计费 API。</li>
+<li>402(欠费)与 403(token 权限)是两种病,要翻译成各自的药方与退出码,脚本才能进 CI。</li>
+<li>git worktree 意识:<code>_repo_root()</code> 从 cwd 解析而非脚本位置(:141-148),在哪个 worktree 训练就快照哪个。</li>
+</ul>
+<h2 id="延伸">延伸</h2>
+<ul>
+<li>拦截入口:<code>microduck-replica/upstream/microduck_rl/src/mjlab_microduck/train_hook.py</code>;看护上传:<code>scripts/hf/uploader.py</code></li>
+<li>训练产物怎么变成部署件:<a href="/learn/deep-32">解读 32</a></li>
+<li>本文件:<code>microduck-replica/upstream/microduck_rl/src/mjlab_microduck/hf_jobs.py</code></li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

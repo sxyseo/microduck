@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>解读 146 · 串联电池与节数计算 · 什么鸭 WhatDuck</title>
+<meta name="description" content="概念课 · 以 docs/HL-2915路线全流程教程.md §5.1 为教材(电池:选 3S)">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="解读 146 · 串联电池与节数计算">
+<meta property="og:description" content="概念课 · 以 docs/HL-2915路线全流程教程.md §5.1 为教材(电池:选 3S)">
+<meta property="og:url" content="https://duck.whatled.com/learn/deep-146">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/deep-146">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">DEEP 146 · 第十三辑 · 小白电气课 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="解读-146-串联电池与节数计算">解读 146 · 串联电池与节数计算</h1>
+<blockquote>
+<p><strong>解读对象</strong>:概念课 · 以 <code>docs/HL-2915路线全流程教程.md</code> §5.1 为教材(电池:选 3S)<br />
+<strong>需要的前置</strong>:<a href="/learn/deep-85">解读 85</a>(三代舵机窗口对照)、<a href="/learn/deep-86">解读 86</a>(同题进阶版)、<a href="/learn/deep-145">解读 145</a>(量电池前先学会用表)</p>
+</blockquote>
+<p>"买几节的电池"听起来像购物问题,其实是把两个数凑到一起:电池能给出的电压范围,和舵机肯接受的电压范围。这一篇把"节"和"窗口"从零讲一遍。</p>
+<h2 id="1-一节锂电37-到-42-伏">1. 一节锂电:3.7 到 4.2 伏</h2>
+<p>锂电池一节,标称 <strong>3.7V</strong>,充满是 <strong>4.2V</strong>,越用越低。教程里的 3S 电池"满 12.6V、空 ~9.9V",除以 3 正好是每节 4.2V 与 3.3V——仓库里所有电池电压,都能这样反推出单节。</p>
+<p><strong>串联</strong>就是首尾相接,像老式手电筒把两节电池摞成一排:电压相加,容量不变(类比水塔:两层楼叠起来,水压翻倍,水量还是那么多)。于是:</p>
+<table>
+<thead>
+<tr>
+<th>串联节数</th>
+<th>标称</th>
+<th>满电</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>2S(两节)</td>
+<td>7.4V</td>
+<td>8.4V</td>
+</tr>
+<tr>
+<td>3S(三节)</td>
+<td>11.1V</td>
+<td>12.6V</td>
+</tr>
+</tbody>
+</table>
+<h2 id="2-窗口舵机的铭牌电压">2. 窗口:舵机的"铭牌电压"</h2>
+<p>每个电器都有工作窗,像家电铭牌写 220V。教程 §5.1 给出本项目的三个窗口:换下来的官方舵机 XL330 是 <strong>3.7–6V</strong>,复刻候选 HD-1910 是 <strong>4–8.4V</strong>,现在的 HL-2915 是 <strong>9–14V</strong>。</p>
+<p>判据一句话:<strong>电池从满电到放空的整段,都要落在窗口里</strong>。拿 2S 与 3S 对 HL-2915(9–14V)各算一遍:</p>
+<ul>
+<li>2S:满电 8.4V——比 9V 的门槛还低,连起点都够不着。教程原话:官方 2S"带不动 HL",bench 脚本注释更直白:"接 5V/2S 都不动"。<strong>上电没反应,不是舵机坏,是电压没够到门槛。</strong></li>
+<li>3S:满 12.6V、空 ~9.9V——全程躺在 9–14V 之间。§5.1 说这是"换舵机路线最刚性的约束"。</li>
+</ul>
+<p>注意窗口对的是<strong>带载电压</strong>:电池一带负载就会往下掉(官方 2S 电池带载 6.6–8.2V,不是铭牌 7.4V),所以比较时两端都要留余量。</p>
+<h2 id="3-动手验证一块表搞定">3. 动手验证:一块表搞定</h2>
+<p>这条概念课不用接任何线:万用表直流电压档,红笔搭电池正、黑笔搭负。3S 满电应读到 12.6V 附近(教程 §5.2 验收:空载母线 12.3–12.6V);除以 3,就是当前每节的电压——读数 11.4V,说明每节 3.8V,该考虑充电了。再翻一眼手头舵机的规格书窗口,做个"全程落窗"的减法,节数自己就能算出来。</p>
+<h2 id="你带走的收获">你带走的收获</h2>
+<ul>
+<li>单节锂电标称 3.7V、满 4.2V;串联电压相加:2S 满 8.4V,3S 满 12.6V。</li>
+<li>判据是"整段落在窗口内":HL-2915 要 9–14V,2S 从 8.4V 起步连门都够不着。</li>
+<li>"上电无反应"先对窗口,别先怀疑舵机。</li>
+<li>窗口要比带载电压,不是铭牌电压;两端都要在窗内才算数。</li>
+</ul>
+<h2 id="延伸">延伸</h2>
+<ul>
+<li>三代舵机窗口全景:<a href="/learn/deep-85">解读 85</a> · 同题进阶(含节数联动的架构账):<a href="/learn/deep-86">解读 86</a></li>
+<li>选定 3S 后电怎么分:<a href="/learn/deep-67">解读 67</a> · 供电架构替代:<a href="/learn/deep-66">解读 66</a></li>
+<li>本地:<code>docs/HL-2915路线全流程教程.md</code>(§5.1 电池:选 3S)</li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

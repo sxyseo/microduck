@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>解读 191 · Rust 入门(四):async 与 tokio · 什么鸭 WhatDuck</title>
+<meta name="description" content="概念课 · 以 robotd/src/main.rs 开头的 #[tokio::main] 与 control_loop 为教材">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="解读 191 · Rust 入门(四):async 与 tokio">
+<meta property="og:description" content="概念课 · 以 robotd/src/main.rs 开头的 #[tokio::main] 与 control_loop 为教材">
+<meta property="og:url" content="https://duck.whatled.com/learn/deep-191">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/deep-191">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">DEEP 191 · 第十六辑 · 小白基础课 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="解读-191-rust-入门四async-与-tokio">解读 191 · Rust 入门(四):async 与 tokio</h1>
+<blockquote>
+<p><strong>解读对象</strong>:概念课 · 以 <code>robotd/src/main.rs</code> 开头的 <code>#[tokio::main]</code> 与 <code>control_loop</code> 为教材<br />
+<strong>需要的前置</strong>:<a href="/learn/deep-188">解读 188</a>、<a href="/learn/deep-190">解读 190</a></p>
+</blockquote>
+<p>机器人程序要同时干两件拧巴的事:每 20 毫秒准时走一拍的控制循环,和"随时有人来问都得答"的遥控接口。Rust 的答案叫 async,tokio 是最常用的那套执行引擎。</p>
+<h2 id="为什么机器人程序要异步">为什么机器人程序要异步</h2>
+<p><code>robotd</code> 一个进程里挤着:50 Hz 控制循环、<code>robot.*</code> 套接字服务、电量采样、声音播放。若用"一个循环轮询所有事"的老写法,任何一处等待(串口、网络、定时)都会拖累节拍。文件头注释把规矩立得很硬(main.rs:16-19):<strong>"每个方法都必须在机器人状态很糟时仍可应答"</strong>——所以 IPC 一侧只读控制循环发布的原子变量,从不调用循环本身;卡死的循环要自己报告不健康,而不是把打电话来的人一起挂死。async 的本事是<strong>等待时让出</strong>:像护士同时看几间病房,铃没响就去照看下一个,铃响了再回来——等待不占人手。</p>
+<h2 id="tokiomain把-main-变成异步的地基"><code>#[tokio::main]</code>:把 main 变成异步的地基</h2>
+<p>整个守护进程从这两行开始(robotd/src/main.rs:904-905):</p>
+<pre><code class="language-rust">#[tokio::main]
+async fn main() -&gt; ExitCode {
+</code></pre>
+<p>逐行看:上一行是属性宏,它把普通 <code>main</code> 改写成"搭好 tokio 运行时再调用你";下一行 <code>async fn</code> 声明这是个可等待的异步函数,里面因此允许用 <code>.await</code>。此后代码里到处是它的痕迹:启动重试用 <code>tokio::time::sleep(STARTUP_RETRY_INTERVAL).await</code>(main.rs:1540)——等 1 秒再试舵机,这一秒里运行时去跑别的任务,而不是干等。</p>
+<h2 id="control-loop用-ticker-守住-50-hz">control_loop:用 ticker 守住 50 Hz</h2>
+<p>主循环的心脏是一个定时器(main.rs:1899、1914):</p>
+<pre><code class="language-rust">let mut ticker = tokio::time::interval(period);
+</code></pre>
+<pre><code class="language-rust">ticker.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+</code></pre>
+<p>然后进入"醒来干一拍、睡到下一拍"的循环(main.rs:2073-2074):</p>
+<pre><code class="language-rust">while !state.shutdown.load(Ordering::Relaxed) {
+    ticker.tick().await;
+</code></pre>
+<p><code>tick().await</code> 就是"睡到下一拍,睡时让出线程"。真正值钱的是 <code>Skip</code> 这个选择:错过节拍时<strong>跳过、不补课</strong>。源码注释记录了一次实测:用另一种策略 <code>Delay</code>,每拍的调度延迟会累加进周期,循环"实测 43.1 Hz,却显示 missed = 0"——不是活多干不完,是每次都被推迟;换成 <code>Skip</code> 才守住原定时刻表。机器人宁可丢一拍,也不能让命令堆积成洪峰,这段注释就是"为什么"三个字的实测答案。</p>
+<h2 id="你带走的收获">你带走的收获</h2>
+<ul>
+<li>async 解决"多处等待互相不拖累":<code>.await</code> 等待时让出线程,护士看多间病房。</li>
+<li><code>#[tokio::main]</code> 一行搭起运行时;<code>async fn</code> 里才能 <code>.await</code>;sleep 也是 await,等待不空转。</li>
+<li>50 Hz 主循环 = <code>interval</code> + <code>tick().await</code>;错过节拍选 <code>Skip</code>(丢拍)而不是 <code>Delay</code>(漂移)。</li>
+<li>43.1 Hz 的实测教训:定时器行为选错,症状像硬件问题,根因在调度策略。</li>
+<li>架构铁律:IPC 只读原子变量、绝不调用循环——"糟状态下仍可应答"。</li>
+</ul>
+<h2 id="延伸">延伸</h2>
+<ul>
+<li>这条循环里每一步做什么:<a href="/learn/deep-112">解读 112</a>、<a href="/learn/deep-09">解读 09</a></li>
+<li>循环手里的"合同"从哪来:<a href="/learn/deep-190">解读 190</a>;错误怎么沿 <code>?</code> 上抛:<a href="/learn/deep-189">解读 189</a></li>
+<li>本地路径:<code>robotd/src/main.rs</code>(16–19、904–905、1899–1914、2073–2074)</li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

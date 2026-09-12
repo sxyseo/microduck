@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>解读 150 · 上拉电阻:为什么悬空不可靠 · 什么鸭 WhatDuck</title>
+<meta name="description" content="概念课 · 以 microduck-replica/hardware/imu_to_dxl/imu_to_dxl-接线表.md 为教材(四个上拉电阻表)">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="解读 150 · 上拉电阻:为什么悬空不可靠">
+<meta property="og:description" content="概念课 · 以 microduck-replica/hardware/imu_to_dxl/imu_to_dxl-接线表.md 为教材(四个上拉电阻表)">
+<meta property="og:url" content="https://duck.whatled.com/learn/deep-150">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/deep-150">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">DEEP 150 · 第十三辑 · 小白电气课 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="解读-150-上拉电阻为什么悬空不可靠">解读 150 · 上拉电阻:为什么悬空不可靠</h1>
+<blockquote>
+<p><strong>解读对象</strong>:概念课 · 以 <code>microduck-replica/hardware/imu_to_dxl/imu_to_dxl-接线表.md</code> 为教材(四个上拉电阻表)<br />
+<strong>需要的前置</strong>:<a href="/learn/deep-47">解读 47</a>(接线表怎么读)、<a href="/learn/deep-152">解读 152</a>(CS 与 I²C 模式)、<a href="/learn/deep-43">解读 43</a>(这块板干什么)</p>
+</blockquote>
+<p>数字引脚只认两个词:"高"(3.3V)和"低"(0V)。可还有一种状态没人提——<strong>悬空</strong>:既没接高也没接低,像门牌被风刮得乱翻。上拉电阻就是拴门牌的那根"弹簧"。</p>
+<h2 id="1-悬空不是关是随缘">1. 悬空:不是"关",是"随缘"</h2>
+<p>芯片复位或刚上电时,很多引脚是<strong>高阻态</strong>——既不输出高也不输出低,线上的电压全看环境:电磁噪声、邻近走线的感应,读出来忽高忽低。悬空引脚为什么危险?因为<strong>芯片照常读它</strong>,每次读到的答案还可能不一样。设计包连接表里最著名的一句:"U2.CS 必须拉到 3V3(<strong>勿悬空</strong>)"——LSM6DSV16X 用 CS 脚的电平决定自己是 SPI 还是 I²C 模式,悬空就可能"随缘"进错模式,I²C 怎么都读不到,而板子看起来一切正常。</p>
+<h2 id="2-上拉一根弹簧轻轻拴住">2. 上拉:一根弹簧,轻轻拴住</h2>
+<p>上拉电阻就是一头接信号线、一头接 3.3V 的普通电阻:平时把线轻轻拉在"高"上;当芯片主动输出"低"时,它那点拉力拗不过芯片,线照旧是低。弹簧要软硬合适——太小(太硬)芯片拉低费电流,太大(太软)抗不住噪声。本项目全板统一 <strong>10kΩ</strong> 0603(立创基础库 C25804),软硬刚好。</p>
+<p>接线表"四个上拉电阻"表把道理写成了四行,正好由轻到重读一遍:</p>
+<table>
+<thead>
+<tr>
+<th>位号</th>
+<th>拉住谁</th>
+<th>悬空会怎样</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>R1</td>
+<td>SPI_CS</td>
+<td>上电/复位期间浮着,可能被 IMU <strong>误判成 I²C 模式</strong>,或把噪声当命令(<strong>必须</strong>)</td>
+</tr>
+<tr>
+<td>R2</td>
+<td>NRST</td>
+<td>芯片内部已有 ~40kΩ 弱上拉,外加 10kΩ 提高抗干扰(加强项)</td>
+</tr>
+<tr>
+<td>R4</td>
+<td>DE</td>
+<td>浮成低电平=发送缓冲打开,本板<strong>往总线灌数据、与 15 个舵机撞车</strong>(<strong>必须</strong>)</td>
+</tr>
+<tr>
+<td>R5</td>
+<td>DXL_DATA</td>
+<td>CMOS 输入浮空有穿透电流,UART 可能<strong>把噪声当起始位</strong></td>
+</tr>
+</tbody>
+</table>
+<p>注意四行的风险等级不同:R1 是"读错模式",R4 已经是"总线事故"——可它上电时只表现为"没人发却有人在说话",极难排查。</p>
+<h2 id="3-漏项是怎么补上的">3. 漏项是怎么补上的</h2>
+<p>接线表留了footnote:R4/R5 是 2026-09-06 按<strong>社区评审意见</strong>补的——"此前只在 CS 上做了上拉,<strong>同样的道理没有推广到 DE,这是漏项</strong>"。次日又补了 R7:把接收缓冲使能 <code>2OE</code> 从"硬接 3V3"改成"经 10kΩ 上拉+可由固件拉低"。同一课在板上上了三遍:凡"空闲时必须有确定电平"的引脚,都要有人负责拉住;想出一个,就问一遍"还有谁"。</p>
+<h2 id="4-动手验证">4. 动手验证</h2>
+<p>找一块能读引脚电平的板子(本板调试口 J3 就引出了 3V3/GND):万用表直流电压档,黑笔接 GND,红笔点复位后无人驱动的信号脚——有上拉的应读到稳定的 3.3V;再把上拉电阻临时摘掉,读数开始漂移、跳动。眼见为实地看一次"随缘",你就再也不会省这颗几分钱的电阻了。</p>
+<h2 id="你带走的收获">你带走的收获</h2>
+<ul>
+<li>悬空≠关断:高阻引脚照常被读取,读到的却是噪声。</li>
+<li>上拉=软硬适中的弹簧,10kΩ 是本板标准答案;R2 那种"内部已有弱上拉"属于加强,不是多余。</li>
+<li>危险分两级:R1 读错模式(板子哑了),R4 抢总线(别人哑了)——后者更难查。</li>
+<li>规律要推广:CS 上拉的教训漏了 DE,评审才补上——"还有谁悬空"要问满全板。</li>
+</ul>
+<h2 id="延伸">延伸</h2>
+<ul>
+<li>CS 决定 SPI/I²C 的另一面:<a href="/learn/deep-152">解读 152</a> · 这块板的使命:<a href="/learn/deep-43">解读 43</a></li>
+<li>半双工总线上"撞车"的机制:<a href="/learn/deep-151">解读 151</a> · 接线表逐行精读:<a href="/learn/deep-47">解读 47</a></li>
+<li>本地:<code>microduck-replica/hardware/imu_to_dxl/imu_to_dxl-接线表.md</code>(四个上拉电阻表、悬空脚一节)</li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

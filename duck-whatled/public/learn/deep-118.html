@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>解读 118 · sound.rs(二):合成与混音 · 什么鸭 WhatDuck</title>
+<meta name="description" content="robotd/src/sound.rs(947 行,本篇读 106-669 的合成一半)">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="解读 118 · sound.rs(二):合成与混音">
+<meta property="og:description" content="robotd/src/sound.rs(947 行,本篇读 106-669 的合成一半)">
+<meta property="og:url" content="https://duck.whatled.com/learn/deep-118">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/deep-118">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">DEEP 118 · 第十一辑 · 服务与训练工具逐函数 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="解读-118-soundrs二合成与混音">解读 118 · sound.rs(二):合成与混音</h1>
+<blockquote>
+<p><strong>解读对象</strong>:<code>robotd/src/sound.rs</code>(947 行,本篇读 106-669 的合成一半)<br />
+<strong>需要的前置</strong>:<a href="/learn/deep-117">解读 117</a>(播放主干与 <code>Ride</code>);导览见<a href="/learn/deep-12">解读 12</a></p>
+</blockquote>
+<p><a href="/learn/deep-117">解读 117</a>放的是"形状早已知道的 wav";这一半放<strong>活的声音</strong>:特雷门的音高随手距变,合唱的声部跟着乐谱走——没有文件可挑,只能现场合成:写线程从 <code>sounds::Stream</code> 拉块,读循环最后存下的参数(sound.rs:17-24)。</p>
+<h2 id="1-live参数是电平不是队列">1. <code>Live</code>:参数是电平,不是队列</h2>
+<p>循环(50 Hz)与写线程(48 kHz 出样本)之间靠 <code>Live</code>(sound.rs:111-122):<code>hz</code>、<code>level</code>、<code>open</code> 三个 <code>AtomicU64</code>——Rust 存 <code>f64</code> 进原子的惯用招是 <code>to_bits()/from_bits()</code>;外加 <code>playing: AtomicBool</code>。不用通道的理由:"参数是<strong>电平</strong>——错过更新的写者要的是最新值,不是睡着时错过的每一帧"(sound.rs:106-110)。一物二用:<code>set_position</code> 把<strong>拍数</strong>存进同一个 <code>hz</code> 字段(sound.rs:141-147),特雷门存的是<strong>赫兹</strong>——同一条管道两种货物,读的人知道自己要什么(<code>position()</code>/<code>read()</code>,sound.rs:149-168)。</p>
+<h2 id="2-写线程的公共形状块步调淡出">2. 写线程的公共形状:块、步调、淡出</h2>
+<p><code>theremin_start</code>(sound.rs:324-430)与 <code>sing_start</code>(sound.rs:437-545)的写线程同一个模子:每次渲染 10 ms 块(<code>SYNTH_BLOCK</code>,sound.rs:49),f32 乘 32767 截成 S16LE(sound.rs:402-405),然后<strong>压着写</strong>:领先量 = 已写字节折算的秒数 − 实际经过秒数,超过 <code>SYNTH_LEAD_S = 0.03</code> 就睡掉差额(sound.rs:410-413)。0.03 是乐器与骑乘的全部区别:骑乘领先 0.25 s 只是把松手推迟,乐器领先 0.25 s 就是手和音之间隔着四分之一秒(sound.rs:51-53)。<code>aplay</code> 侧配合短缓冲 <code>--buffer-time=40000 --period-time=10000</code>(封装在 <code>open_synth_pcm</code>,sound.rs:581-607)。放手是<strong>淡出不是拔插头</strong>:<code>playing</code> 清零后电平目标归 0,渲到 <code>is_silent()</code> 才退出(sound.rs:392-397);之后每拍由 <code>theremin_settle</code>(sound.rs:640-644)收尸,收尸前 PCM 仍被占——"放手后立刻的 quack 被丢弃,而不是盖住尾音"。</p>
+<h2 id="3-合唱声部一只鸭子唱一行谱">3. 合唱声部:一只鸭子唱一行谱</h2>
+<p><code>sing_start(score, part)</code>(sound.rs:437-545)幂等:同曲同声部直接返回,换声部才重启(sound.rs:442-447)。开局:把这一声部的谱<strong>一次拍平</strong>成 <code>Vec&lt;Note&gt;</code>——"写线程不得在音频线程上走谱"(sound.rs:467-468);<code>seat_for</code> 查座位,得 <code>detune = 2^(音分/1200)</code>(sound.rs:470-471,几音分的失谐,合唱才不像机器齐唱)和几毫秒的 <code>onset_offset_s</code> 起音差(sound.rs:493);音量乘 <code>CHORALE_LEVEL = 0.55</code>。写线程每块:按 <code>beats × beat_s</code> 找当前音符(sound.rs:494-496);尾段 8% 提前松开(<code>sustain × 0.92</code>),换和弦重新咬字(sound.rs:499-502);音高 <code>midi_hz × detune</code>,口型取元音 <code>open()</code>(sound.rs:503-511)。两个实测量:扬声器 300 Hz 以下就交不了货(<code>SPEAKER_ROLLOFF_HZ</code>,sound.rs:65-70)——130 Hz 低音线在真机上不是小声,是<strong>没有</strong>,于是让低音走发得出的谐波;每声部 0.55 是因为"<strong>四只鸭在一个房间里是声学叠加</strong>",离线预览除得动人声部数,真机没人替你除(sound.rs:56-63)。</p>
+<h2 id="4-嗓子从哪来">4. 嗓子从哪来</h2>
+<p><code>voice()</code>(sound.rs:658-669)读银行目录的 <code>.seed</code> 标记文件,回退硬件 id,并缓存。用标记是刻意的:"它是这块盘上那些 wav 的生成种子——银行先于一次重播种的鸭子,特雷门仍与身旁的 quack 同嗓"(sound.rs:652-657)。closeness→频率的映射也住在嗓子那侧(<code>theremin_hz_at</code>,sound.rs:571-574):低音鸭唱低音域。循环侧入口极薄:<code>theremin_set</code>/<code>sing_at</code> 在没乐器时静默忽略(sound.rs:613-617)——循环可无条件调用,不必镜像本模块的状态。</p>
+<h2 id="你带走的收获">你带走的收获</h2>
+<ul>
+<li>跨线程递参数:电平用原子位模式,事件才用通道;先想清楚漏一帧该要哪一帧。</li>
+<li>音频线程三纪律:块小(10 ms)、领先按内容定(乐器 30 ms/点播 250 ms)、停止是淡出。</li>
+<li>合唱的"像真人"是三个小数:每声部 0.55、座位失谐几音分、几毫秒起音差。</li>
+<li>实测数字(300 Hz 下限)进常量。</li>
+<li>身份(嗓音种子)跟随生成数据的标记,重播种后系统仍自洽。</li>
+</ul>
+<h2 id="延伸">延伸</h2>
+<ul>
+<li>特雷门的仪器侧:<a href="/learn/deep-119">解读 119</a>;合唱的队形与拍子:<a href="/learn/deep-120">解读 120</a>;播放主干:<a href="/learn/deep-117">解读 117</a></li>
+<li>本地:<code>/Volumes/dev/dev/microduck/robotd/src/sound.rs</code></li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

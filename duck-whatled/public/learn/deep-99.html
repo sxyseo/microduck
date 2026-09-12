@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>解读 99 · bus.rs(二):sync_read 与慢速轮询 · 什么鸭 WhatDuck</title>
+<meta name="description" content="duck-control/src/bus.rs(708 行)">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="解读 99 · bus.rs(二):sync_read 与慢速轮询">
+<meta property="og:description" content="duck-control/src/bus.rs(708 行)">
+<meta property="og:url" content="https://duck.whatled.com/learn/deep-99">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/deep-99">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">DEEP 99 · 第十辑 · duck-control 逐函数精读 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="解读-99-busrs二sync-read-与慢速轮询">解读 99 · bus.rs(二):sync_read 与慢速轮询</h1>
+<blockquote>
+<p><strong>解读对象</strong>:<code>duck-control/src/bus.rs</code>(708 行)<br />
+<strong>需要的前置</strong>:<a href="/learn/deep-01">解读 01</a>(总线调度导览)、<a href="/learn/deep-98">解读 98</a>(帧层)</p>
+</blockquote>
+<p>导览见解读 01,本篇逐函数下钻。总线上不是所有数据都配得上每秒 50 次问询;这一篇看慢速读、旧数据计数,以及启动期的一次性轮询。</p>
+<h2 id="1-slow-sensors一秒一笔的第二本账">1. <code>slow_sensors</code>:一秒一笔的第二本账</h2>
+<p>签名(bus.rs:541):<code>fn slow_sensors(&amp;mut self) -&gt; Result&lt;SlowSensors&gt;</code>。一笔 <code>sync_read_raw_data(&amp;JOINT_IDS, 144, 3)</code>(bus.rs:544)同时拿回 15 个舵机的输入电压(<code>u16</code>,每计数 0.1 V,bus.rs:48)与温度。循环里有个容易看漏的过滤:<code>if v &gt; 0.0 { volts.push(v) }</code>(bus.rs:568-570)——答出 0 的设备不许进平均,否则一块正常的电池会被坏读数稀释成"半没电";全空则 <code>volts.is_empty()</code> 直接报 ShortRead(bus.rs:574-580)。返回的电压是 15 个读数的平均(bus.rs:582),温度不是——理由在注释里(bus.rs:531-534):同一块电池,平均是降噪;"一个发热的关节"才是要看的信号,均值会把它藏掉。另外(bus.rs:536-540):rustypot 的 sync_read 等齐所有 ID,一台不应答则<strong>整笔失败</strong>——慢速读是 all-or-nothing,调用方应保留上个样本,别把一次失手当新闻。</p>
+<h2 id="2-staleimutrackerobserve给重复的答案计数">2. <code>StaleImuTracker::observe</code>:给"重复的答案"计数</h2>
+<p>结构体只有 <code>last: Option&lt;[u8; IMU_BLOCK_LEN]&gt;</code> 与计数(bus.rs:80-86)。初值用 <code>Option</code> 而不是全零是刻意的(bus.rs:81-83):SFLP 表还没写时,板子发的恰恰就是全零块——拿它当"上一块",启动第一拍就会误判陈旧。<code>observe</code>(bus.rs:91-99)一行完成比较加存储:<code>self.last.replace(*block) == Some(*block)</code>——<code>replace</code> 存入新值并返回旧值,正好顺手比;相同则 <code>saturating_add</code>(饱和加法,到顶不回绕)累计,不同则 run 清零、total 保留——测试(bus.rs:673)点破分工:"total 是这故障多久来一次,run 是现在是否正在发生"。告警的限流写在 <code>read</code> 里(bus.rs:450-457):run 首次到达 <code>STALE_RUN_WARN = 25</code>(50 Hz 下的半秒,bus.rs:72)报一次,之后每 500 次才再报——"第一次重复就喊,只会教会所有人无视这条消息"(bus.rs:66-69)。<code>imu_stale()</code>/<code>imu_ready()</code>(bus.rs:587-593)把计数器交给 <code>RobotIo</code> trait,供上层健康报告取用。</p>
+<h2 id="3-一次性轮询missing-servos-与-replacement-target">3. 一次性轮询:<code>missing_servos</code> 与 <code>replacement_target</code></h2>
+<p><code>missing_servos</code>(bus.rs:192-204)逐个 ping <code>JOINT_IDS</code>,返回不应答者的名单;每次 ping 受 <code>READ_TIMEOUT</code> 约束,舵机断电时全程约半秒、正常时几毫秒(bus.rs:188-190)。它只在启动跑一次,是收养的"侦察"。<code>replacement_target</code>(bus.rs:418-423)只有四行,却是一道闸——<code>match missing { [one] =&gt; Some(*one), _ =&gt; None }</code>:切片模式 <code>[one]</code> 只匹配"恰好一个"元素,两个静默时分不清新舵机该顶替谁,"猜错就是把腿关节刷成脖子关节"(bus.rs:600-602);零个静默则无事可做。测试(bus.rs:604-609)把 0/1/2/15 四种长度全钉住。</p>
+<h2 id="4-adopt-replacement把出厂舵机变成它一直在">4. <code>adopt_replacement</code>:把出厂舵机变成"它一直在"</h2>
+<p><code>adopt_replacement</code>(bus.rs:221-306)的几个顺序都有注释背书。先在当前波特率下 ping 出厂 ID(<code>ping_fresh</code>,bus.rs:309):已被刷到 1 Mbps 但保留出厂 ID 的舵机会被重开串口弄丢(bus.rs:228-229);找不到再以出厂波特率 <code>reopen</code>(bus.rs:233、320-324)——ttys 独占,旧句柄不死、新口开不了。改 ID 在前、改波特率在后(bus.rs:247-249),两条写命令都在已知速度下得到确认。收尾的 reboot 不只是规矩:刷写会置起硬件错误报警、扣着扭矩不放,所以等 <code>REBOOT_SETTLE = 500 ms</code>(bus.rs:57,早 ping 会把"还在启动"读成"刷写失败")后读 <code>hardware_error_status</code> 复核(bus.rs:284-298)——否则症状是"一条查不出来的瘸腿"(bus.rs:282-283)。</p>
+<h2 id="你带走的收获">你带走的收获</h2>
+<ul>
+<li>慢变量单独成一笔事务;sync_read 等齐所有 ID,慢速读天然 all-or-nothing,调用方要自己保留上一拍。</li>
+<li>"读失败"会抛错,"读到旧值"只有显式计数器能看见——后者必须靠 tracker。</li>
+<li>告警首次设阈值、后续限流,是高频日志唯一可持续的形态。</li>
+<li>有歧义时拒绝行动(只认"恰好一个缺席")比聪明地猜更安全。</li>
+</ul>
+<h2 id="延伸">延伸</h2>
+<ul>
+<li>每 tick 的那一笔读怎么解码:<a href="/learn/deep-98">解读 98</a></li>
+<li>电压温度到上层之后:<a href="/learn/deep-04">解读 04</a></li>
+<li>课程对照:<code>/Volumes/dev/dev/microduck/docs/course/10-舵机从SG90到总线.md</code></li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

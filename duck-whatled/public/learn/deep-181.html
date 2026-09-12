@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>解读 181 · 强化学习是什么:从奖励说起 · 什么鸭 WhatDuck</title>
+<meta name="description" content="docs/course/02-十个必懂概念.md(§4/§6)+ 构建日志 2026-09-06 的 exp001 实验">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="解读 181 · 强化学习是什么:从奖励说起">
+<meta property="og:description" content="docs/course/02-十个必懂概念.md(§4/§6)+ 构建日志 2026-09-06 的 exp001 实验">
+<meta property="og:url" content="https://duck.whatled.com/learn/deep-181">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/deep-181">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">DEEP 181 · 第十六辑 · 小白基础课 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="解读-181-强化学习是什么从奖励说起">解读 181 · 强化学习是什么:从奖励说起</h1>
+<blockquote>
+<p><strong>解读对象</strong>:<code>docs/course/02-十个必懂概念.md</code>(§4/§6)+ 构建日志 2026-09-06 的 exp001 实验<br />
+<strong>需要的前置</strong>:无——这是第十六辑第一课;想看代码里奖励长什么样,可跳 <a href="/learn/deep-24">解读 24</a></p>
+</blockquote>
+<p>教小狗握手:没人给它讲骨骼结构,做对了给零食,做错了没有,几次之后它就会了。<strong>强化学习<br />
+(reinforcement learning,RL)就是这套方法的数学版</strong>——不教规则,只给分数,让机器自己<br />
+试出"怎么做得分高"。这只鸭子就是这么学会走路的。</p>
+<h2 id="1-四个词试错学习的全部零件">1. 四个词:试错学习的全部零件</h2>
+<ul>
+<li><strong>策略(policy)</strong>:小狗的"条件反射"。对鸭子来说是一个神经网络,每 20 毫秒吃 61 个数<br />
+  (身体状态+你的指令),吐 14 个数(每个关节往哪转)。存成 ONNX 文件的就是它。</li>
+<li><strong>环境</strong>:仿真里的虚拟鸭子(MuJoCo)。策略做个动作,环境就告诉你新状态和这次动作的得分。</li>
+<li><strong>奖励(reward)</strong>:训练时的<strong>评分表</strong>。走对方向加分、保持直立加分、滑脚碰撞扣分。<br />
+  关键一句话:部署后的 ONNX <strong>不读取奖励</strong>——评分表只在"上学"时存在,像退役运动员身上<br />
+  长的是动作,不是裁判。</li>
+<li><strong>学习</strong>:哪类动作得了高分,策略就把它做得概率更大;低分的少做。PPO 算法负责这件事,<br />
+  本文不展开公式,只需记住方向:<strong>分数不改动作本身,只改做每个动作的倾向</strong>。配置里<br />
+<code>entropy_coef=0.01</code> 是给"多试试"留的一点随机性,防止它过早只会一招。</li>
+</ul>
+<h2 id="2-分数从哪来一张真实的评分表">2. 分数从哪来:一张真实的评分表</h2>
+<p>velocity(走路)任务的 reward 表在配置里挂满权重:跟踪速度指令 +2.0、保持直立 +2.0、<br />
+抬脚留空(air_time)+3.0、腿姿 +1.0;自碰撞 -1.0、脚滑 -0.1。每一项都由 <code>tasks/mdp.py</code><br />
+里的函数算出——"什么叫走得好"被拆成了十几个可加减的判据。<strong>改这张表就是改鸭子的性格</strong>:<br />
+想让它步子更大,改的是表,不是网络。</p>
+<h2 id="3-鸭子的真实成绩单exp001">3. 鸭子的真实成绩单:exp001</h2>
+<p>2026-09-06,项目跑了一次教科书级的 A/B 实验:两组只差一个开关(A 组:IMU 观测随机化<br />
+ON;B 组:OFF),各 100 迭代 × 64 环境,本机 CPU 一组约 4 分钟、两组 8 分钟跑完。<br />
+结果:B 组(世界更乖)末段 reward 反超,<strong>1.014 vs 0.801</strong>,其余四项指标几乎重合。<br />
+exp001 教的三件事比数字本身值钱:</p>
+<ol>
+<li><strong>先写预注册再看结果</strong>——预期"100 迭代只能得出前期动力学差异"白纸黑字写在跑之前,<br />
+   所以 B 领先时没人慌,也没人喊"随机化没用"。</li>
+<li><strong>reward 高 ≠ 更强</strong>。后续扰动测试 exp001b 里,B 组被打时掉得更狠(-6.0% vs A 的<br />
+   -4.6%)。分数是评分表上的数,不是生存能力。</li>
+<li><strong>训练量要有概念</strong>:exp001 全程 15 万步,官方配方约 49 亿步——只有 0.003%。<br />
+   小实验用来回答"方向对不对",别用来炫技。</li>
+</ol>
+<p>(还有一句同源教训:expD 的 ep_len 从 315 涨到 744、指标全线变好,鸭子却没学会迈步——<br />
+"指标会骗人"的完整案情见 <a href="/learn/deep-183">解读 183</a>。)</p>
+<h2 id="你带走的收获">你带走的收获</h2>
+<ul>
+<li>RL = 试错 + 打分:策略是条件反射,奖励是只存在于训练期的评分表,部署后不读奖励。</li>
+<li>学习改的不是动作,是"做每个动作的倾向";PPO 负责把高分倾向调大。</li>
+<li>exp001 的 1.014 vs 0.801 说明 reward 易测、鲁棒性难测——结论必须带边界。</li>
+<li>训练量差 4 个数量级以上时,小实验只回答方向问题。</li>
+</ul>
+<h2 id="延伸">延伸</h2>
+<ul>
+<li><a href="/learn/deep-182">解读 182</a>:61→14 那个"条件反射"内部长什么样</li>
+<li><a href="/learn/deep-183">解读 183</a>:评分表怎么设计、怎么被骗</li>
+<li>第 02 课:<code>docs/course/02-十个必懂概念.md</code>(十个概念的生活版类比)</li>
+<li><a href="https://huggingface.co/learn/deep-rl-course/unit0/introduction">Hugging Face 深度强化学习课</a>(系统学算法)</li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

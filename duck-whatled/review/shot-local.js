@@ -3,7 +3,7 @@ const { chromium } = require('playwright-core');
 (async () => {
   const browser = await chromium.launch({
     executablePath:
-      '/Users/abel/Library/Caches/ms-playwright/chromium_headless_shell-1237/chrome-headless-shell-mac-arm64/chrome-headless-shell',
+      '/Users/abel/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-arm64/chrome-headless-shell',
   });
   const shots = [
     { name: 'local-home-desktop', url: 'http://127.0.0.1:8787/', viewport: { width: 1440, height: 900 }, dsf: 1 },

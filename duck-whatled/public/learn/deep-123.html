@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>解读 123 · mdp.py(二):观测函数精选 · 什么鸭 WhatDuck</title>
+<meta name="description" content="microduck-replica/upstream/microduck_rl/src/mjlab_microduck/tasks/mdp.py,抽读四个代表性观测/读数函数(全文">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="解读 123 · mdp.py(二):观测函数精选">
+<meta property="og:description" content="microduck-replica/upstream/microduck_rl/src/mjlab_microduck/tasks/mdp.py,抽读四个代表性观测/读数函数(全文">
+<meta property="og:url" content="https://duck.whatled.com/learn/deep-123">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/deep-123">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">DEEP 123 · 第十一辑 · 服务与训练工具逐函数 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="解读-123-mdppy二观测函数精选">解读 123 · mdp.py(二):观测函数精选</h1>
+<blockquote>
+<p><strong>解读对象</strong>:<code>microduck-replica/upstream/microduck_rl/src/mjlab_microduck/tasks/mdp.py</code>,抽读四个代表性观测/读数函数(全文件 7188 行)<br />
+<strong>需要的前置</strong>:<a href="/learn/deep-25">解读 25</a>(观测函数的统一签名与 IMU 错装家族)、<a href="/learn/deep-23">解读 23</a>(obs term 怎么装配)</p>
+</blockquote>
+<p>观测函数是策略的眼睛。25 篇看了"原子形态",本篇挑四个更有戏的:给策略时间感的、故意只给 critic 的、替编码器穿过齿隙的、从命令里解相位的。</p>
+<h2 id="时间观测standing-phase">时间观测:standing_phase</h2>
+<p><code>standing_phase</code>(3774-3796 行)正文四行:<code>(episode_length_buf * step_dt) % 2.0 / 2.0</code>,返回 <code>(num_envs, 1)</code> 的相位——每回合从 0 起每 2 秒循环一次的锯齿波。站着不动的任务里关节状态几乎不变,这条时间信号让策略能区分"刚站定"和"站了很久",是给无事件任务的最小时间感。</p>
+<h2 id="非对称-actor-criticball-pos-in-base-与-ball-vel-in-base">非对称 actor-critic:ball_pos_in_base 与 ball_vel_in_base</h2>
+<p><code>ball_pos_in_base</code>(5827-5841 行)返回球相对机器人根体的位置,经 <code>matrix_from_quat</code> 旋转到机体系;<code>ball_vel_in_base</code>(5844-5853 行)同理给速度。两者的 docstring 都写着 CRITIC-ONLY:<strong>非对称 actor-critic</strong>(演员-评论家看不同观测的训练法)——部署时机器没有球传感器,所以演员(真正上机的策略网络)必须对球全盲;评论家(只在训练里估计回报的网络)可以偷看,用来更准地预测"这一脚值多少"。同样一维观测,谁看什么是 sim-to-real 的契约的一部分。</p>
+<h2 id="编码器穿过齿隙joint-pos-rel-backlash-深读">编码器穿过齿隙:joint_pos_rel_backlash 深读</h2>
+<p>25 篇概述过这对函数,这里深一层。<code>_backlash_encoder_ids</code>(6145-6181 行)是公共底座:按 <code>(实体名, 关节选择)</code> 缓存三元组 <code>(main_ids, backlash_ids, mask)</code>——对每个舵机关节找同名 <code>passive_&lt;joint&gt;_backlash</code> 齿隙铰,找不到就 mask=0。<code>joint_pos_rel_backlash</code>(6184-6201 行)返回 <code>qpos[伺服] + qpos[齿隙] * mask − default[伺服]</code>:真实编码器装在减速器输出侧,读的正是两者之和。还有个 <code>biased=True</code> 开关(6186、6197 行)改读 <code>joint_pos_biased</code>,给每环境一条编码器标定偏置——齿隙加数保持原始值,偏置只属于伺服侧。<code>joint_vel_rel_backlash</code>(6204-6218 行)的理由更妙:注释说固件的速度就是从编码器位置差分出来的,所以速度也必须含齿隙项,否则训练与真机的读数口径不一致。</p>
+<h2 id="从命令解相位spin-phase-from-command">从命令解相位:spin_phase_from_command</h2>
+<p><code>spin_phase_from_command</code>(5910-5912 行)一行:<code>(atan2(cmd[:,1], cmd[:,0]) / 2π) % 1.0</code>。spin 任务的命令槽不装速度装相位(编码成 <code>[cos 2πφ, sin 2πφ, 0]</code>,见 4966 行的 GroundPickPhaseCommand),这个函数就是反向解码:两个数还原出一个 <code>[0,1)</code> 的周期相位。命令当"乐谱"、观测/奖励当"读谱人",<code>_gp_phase</code>(2982-2984 行)是 ground_pick 任务的同款。</p>
+<h2 id="你带走的收获">你带走的收获</h2>
+<ul>
+<li>观测不限于物理量:时间相位也是观测,静态任务靠它获得时间感。</li>
+<li>非对称 actor-critic 的原则:部署时看不到的量,演员必须全盲;评论家偷看只影响训练效率,不影响部署契约。</li>
+<li>"编码器读到什么"是个建模决定:齿隙模型里和=伺服+齿隙,速度也要同样口径, biases 只加在伺服侧。</li>
+<li>把周期信号编码成 (cos, sin) 对塞进命令槽,一个槽就能传相位,atan2 即解码。</li>
+</ul>
+<h2 id="延伸">延伸</h2>
+<ul>
+<li>观测函数原子形态与 IMU 错装:<a href="/learn/deep-25">解读 25</a></li>
+<li>齿隙模型怎么造:<a href="/learn/deep-31">解读 31</a>; GroundPickPhaseCommand 详见<a href="/learn/deep-126">解读 126</a></li>
+<li>本地路径:<code>microduck-replica/upstream/microduck_rl/src/mjlab_microduck/tasks/mdp.py</code></li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

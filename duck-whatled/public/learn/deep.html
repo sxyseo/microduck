@@ -124,17 +124,48 @@
   <main class="doc-card doc-body">
 <h1 id="深读-microduck-代码-结构-电路-舵机-解读系列">深读 Microduck · 代码 / 结构 / 电路 / 舵机 解读系列</h1>
 <blockquote>
-<p>一个 60 篇的深度解读系列:逐文件、逐模块地读这个复刻项目里<strong>真实存在的</strong>代码与资源。<br />
+<p>一个 200 篇的深度解读系列:逐文件、逐模块地读这个复刻项目里<strong>真实存在的</strong>代码与资源。<br />
 与《什么鸭公开课》(30 课,教学习方法)不同,这个系列是"拆开讲":每篇文章盯住一个真实的<br />
 源文件、一块板子或一个部件,讲它是什么、为什么这样设计、你能从中学到什么可迁移的知识。</p>
 <p>每篇固定结构:<strong>解读对象</strong>(真实文件路径 + 规模)→ 逐段解读(引用真实的函数名、常量、参数)<br />
 → 设计取舍(为什么这样写)→ <strong>你带走的收获</strong> → 延伸。<br />
 铁律不变:所有代码引用必须能在仓库里找到;数字必须有出处;没有证据的写"待验证"。</p>
 </blockquote>
+<h2 id="从这里开始">从这里开始</h2>
 <ul>
-<li>网页版:<a href="https://duck.whatled.com/learn/deep">https://duck.whatled.com/learn/deep</a>(由 <code>duck-whatled/build_learn.py</code> 自动发现 <code>docs/deep-dive/</code> 下的文章生成)</li>
-<li>配套课程:先读<a href="/learn/course">什么鸭公开课</a>建立框架,再来本系列深挖。</li>
+<li><strong>完全新手</strong>:先去读<a href="/learn/course">什么鸭公开课</a>的前 2 课建立框架,然后回来自<a href="/learn/deep-01">解读 01</a>按编号顺序读——十六辑的编排就是一条"控制核心 → 感知服务 → 训练代码 → 结构 → 电路 → 舵机 → 换舵机 → 电压 → 基础课"的坡道,每篇 5–10 分钟。</li>
+<li><strong>带着问题来</strong>:直接用下面的目录表定位。常见入口——想看懂机器人的主循环:<a href="/learn/deep-112">解读 112</a>;想换舵机:<a href="/learn/deep-73">解读 73</a>;电压不一样怎么办:<a href="/learn/deep-85">解读 85</a>;想查某个舵机的参数:<a href="/learn/deep-169">解读 169</a> 起的案例库;卡在报错:<a href="/learn/deep-193">解读 193</a>。</li>
+<li><strong>只想查资料</strong>:第 169–180 篇是 8 个舵机型号的参数案例库,第 178 篇有横向对比总表,第 200 篇是全项目知识图谱。</li>
 </ul>
+<p>每篇文章的数字和代码引用都能在仓库里找到出处;发现讲得不清楚的地方,欢迎去<a href="https://github.com/fanhao375/microduck-replica">复刻仓库</a>提 issue。</p>
+<h2 id="内容版图-200-篇在讲什么">内容版图 · 200 篇在讲什么</h2>
+<p><strong>拆代码 · 80 篇</strong>——机器人的软件是怎么写出来的:</p>
+<ul>
+<li><strong>第一辑 01–12 运动控制核心</strong>:总线调度、61 维观测拼装、ONNX 策略加载、安全层、摔倒检测、姿态解算(<a href="/learn/deep-01">解读 01</a> 起)</li>
+<li><strong>第二辑 13–20 感知与系统服务</strong>:运动学、里程估计、ToF 驱动、OTA 更新与回滚、配置与 IPC(<a href="/learn/deep-13">解读 13</a> 起)</li>
+<li><strong>第三辑 21–32 训练代码</strong>:任务注册表、velocity 配置三段拆解、mdp 函数库、导出与回放(<a href="/learn/deep-21">解读 21</a> 起)</li>
+<li><strong>第十~十二辑 95–142 逐函数精读</strong>:上面这些文件的函数级下钻——每个函数讲签名、真实行号与设计取舍(<a href="/learn/deep-95">解读 95</a> 起)</li>
+</ul>
+<p><strong>读硬件 · 28 篇</strong>——机械、电路与舵机的真实设计:</p>
+<ul>
+<li><strong>第四辑 33–40 结构</strong>:从 47 个 STL 反推装配体,躯干/髋/腿/踝脚/头颈逐个拆,紧固件与轴承(<a href="/learn/deep-33">解读 33</a> 起)</li>
+<li><strong>第五辑 41–50 电路</strong>:电控架构、官方开源 HAT、imu_to_dxl 自绘板、电源树、打样全流程(<a href="/learn/deep-41">解读 41</a> 起)</li>
+<li><strong>第六辑 51–60 舵机与执行器</strong>:尺寸链、协议寄存器、BAM 建模、单摆辨识、辨识进仿真与验证(<a href="/learn/deep-51">解读 51</a> 起)</li>
+</ul>
+<p><strong>换舵机与电压 · 46 篇</strong>——"换成别的舵机怎么改?电压不一样怎么改?"的完整答案:</p>
+<ul>
+<li><strong>第七辑 61–72 HL-2915-C001 换装全流程</strong>:七阶段路线,从单舵机台架六课、协议寄存器、ID 校准,到软件适配、辨识重训、整机部署(<a href="/learn/deep-61">解读 61</a> 起)</li>
+<li><strong>第八辑 73–84 通用换舵机方法论</strong>:决策树、选型六维、机械/电气/协议适配、五个参数落点、混装策略与总检查清单(<a href="/learn/deep-73">解读 73</a> 起)</li>
+<li><strong>第九辑 85–94 电压专项</strong>:三代舵机电压窗对照、电池节数的数学、代码里的 vin_range、过压保护、LDO/buck/UBEC、换电压改造清单(<a href="/learn/deep-85">解读 85</a> 起)</li>
+<li><strong>第十五辑 169–180 型号案例库</strong>:xl330/xl320/STS3215/ST3025/MX-64/MX-106/eRob80 逐个参数精读 + 两篇端到端换装推演(<a href="/learn/deep-169">解读 169</a> 起)</li>
+</ul>
+<p><strong>小白基础课 · 46 篇</strong>——零基础也能看懂上面所有内容:</p>
+<ul>
+<li><strong>第十三辑 143–156 电气课</strong>:电压电流功率、万用表、蜂鸣档、LDO/buck、电容、上拉、UART/I2C/SPI、PCB、焊接、安全(<a href="/learn/deep-143">解读 143</a> 起)</li>
+<li><strong>第十四辑 157–168 机械课</strong>:自由度、轴承、紧固件、打印材料与参数、公差配合、减速比、惯量、质心、CAD、装配、强度(<a href="/learn/deep-157">解读 157</a> 起)</li>
+<li><strong>第十六辑 181–200 基础课</strong>:强化学习、策略网络、奖励设计、域随机化、TensorBoard、uv/Git、Rust 入门四讲、调试、ONNX/MuJoCo/MJCF/50Hz/PID,第 200 篇是全项目知识图谱(<a href="/learn/deep-181">解读 181</a> 起)</li>
+</ul>
+<hr />
 <h2 id="第一辑-运动控制核心duck-control-逐文件">第一辑 · 运动控制核心(duck-control 逐文件)</h2>
 <table>
 <thead>
@@ -656,6 +687,754 @@
 <td><a href="/learn/deep-72">一次性投入与下一次换舵机</a></td>
 <td>教程 §9–11</td>
 <td>降本路线、故障速查、总验收</td>
+</tr>
+</tbody>
+</table>
+<h2 id="第八辑-通用换舵机方法论换成其他舵机怎么改">第八辑 · 通用换舵机方法论(换成其他舵机怎么改)</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>标题</th>
+<th>解读对象</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>73</td>
+<td><a href="/learn/deep-73">换舵机决策树:从需求到型号</a></td>
+<td><code>bam/bam/params/</code>(8 型号库)总览</td>
+</tr>
+<tr>
+<td>74</td>
+<td><a href="/learn/deep-74">选型六维:扭矩/电压/编码器/协议/尺寸/价格</a></td>
+<td><code>docs/执行器选型.md</code> 方法论</td>
+</tr>
+<tr>
+<td>75</td>
+<td><a href="/learn/deep-75">机械适配:尺寸链与打印件修改</a></td>
+<td><code>硬件方案逆向.md</code> 尺寸章节</td>
+</tr>
+<tr>
+<td>76</td>
+<td><a href="/learn/deep-76">电气适配:插头/线序/调试板</a></td>
+<td><code>macOS舵机调试指南.md</code> §2</td>
+</tr>
+<tr>
+<td>77</td>
+<td><a href="/learn/deep-77">协议适配:Dynamixel 系(STS/SCS 兼容)</a></td>
+<td><code>bam/bam/feetech/actuator.py</code>、<code>docs/硬件规格速查.md</code></td>
+</tr>
+<tr>
+<td>78</td>
+<td><a href="/learn/deep-78">协议适配:飞特系与厂商私有协议</a></td>
+<td><code>hl2915_bench.py</code> 协议表、<code>docs/新手学习文档.md</code> §12</td>
+</tr>
+<tr>
+<td>79</td>
+<td><a href="/learn/deep-79">参数适配:训练侧五个落点</a></td>
+<td><code>microduck_constants.py</code>(<code>_BAM_ACTUATOR_KWARGS</code> 等)</td>
+</tr>
+<tr>
+<td>80</td>
+<td><a href="/learn/deep-80">BAM 参数:m6.json 逐字段</a></td>
+<td><code>bam/bam/params/xl330/m6.json</code> 等</td>
+</tr>
+<tr>
+<td>81</td>
+<td><a href="/learn/deep-81">策略影响评估:什么时候必须重训</a></td>
+<td><code>docs/换舵机重训全流程.md</code> §4</td>
+</tr>
+<tr>
+<td>82</td>
+<td><a href="/learn/deep-82">混装与渐进替换:一次换一只</a></td>
+<td><code>构建日志.md</code> 采购与门控</td>
+</tr>
+<tr>
+<td>83</td>
+<td><a href="/learn/deep-83">换舵机检查清单大全</a></td>
+<td>教程 §11 + 全流程 §2 汇总</td>
+</tr>
+<tr>
+<td>84</td>
+<td><a href="/learn/deep-84">案例复盘:HL-1910→HL-2915 的真实决策</a></td>
+<td><code>docs/HL-2915路线全流程教程.md</code> §9 + 构建日志</td>
+</tr>
+</tbody>
+</table>
+<h2 id="第九辑-电压专项电压不一样怎么改">第九辑 · 电压专项(电压不一样怎么改)</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>标题</th>
+<th>解读对象</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>85</td>
+<td><a href="/learn/deep-85">电压全景:三代舵机窗口对照</a></td>
+<td><code>执行器选型.md</code> 电压真相章节</td>
+</tr>
+<tr>
+<td>86</td>
+<td><a href="/learn/deep-86">电池节数怎么定:1S/2S/3S 的数学</a></td>
+<td>教程 §5.1 + bench 硬件前提</td>
+</tr>
+<tr>
+<td>87</td>
+<td><a href="/learn/deep-87">代码里的电压:<code>vin_range</code> 与 BAM</a></td>
+<td><code>microduck_constants.py</code>、<code>bam/model.py</code></td>
+</tr>
+<tr>
+<td>88</td>
+<td><a href="/learn/deep-88">过压保护与 14 号寄存器</a></td>
+<td><code>hl2915_bench.py</code>(<code>--volt-max</code>)、接线表</td>
+</tr>
+<tr>
+<td>89</td>
+<td><a href="/learn/deep-89">LDO:从 12.6V 到 3.3V 的路径</a></td>
+<td><code>imu_to_dxl-设计包/</code> 框图</td>
+</tr>
+<tr>
+<td>90</td>
+<td><a href="/learn/deep-90">buck 降压:5V 逻辑从哪来</a></td>
+<td><code>硬件方案逆向.md</code> §四</td>
+</tr>
+<tr>
+<td>91</td>
+<td><a href="/learn/deep-91">UBEC 选择与电流计算</a></td>
+<td><code>电控采购清单.md</code> + 教程 §5.2</td>
+</tr>
+<tr>
+<td>92</td>
+<td><a href="/learn/deep-92">电压遥测与电量计:<code>BATTERY_FULL_V/EMPTY_V</code></a></td>
+<td><code>duck-control/src/model.rs</code></td>
+</tr>
+<tr>
+<td>93</td>
+<td><a href="/learn/deep-93">换电压的完整改造清单</a></td>
+<td>三代舵机路线交叉汇总</td>
+</tr>
+<tr>
+<td>94</td>
+<td><a href="/learn/deep-94">电压事故与保护:经验案例</a></td>
+<td><code>构建日志.md</code>、<code>macOS舵机指南.md</code> §2.2</td>
+</tr>
+</tbody>
+</table>
+<h2 id="第十辑-duck-control-逐函数精读非常详细的代码解读">第十辑 · duck-control 逐函数精读(非常详细的代码解读)</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>标题</th>
+<th>解读对象</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>95</td>
+<td><a href="/learn/deep-95">policy.rs(一):<code>Net</code> 与技能枚举</a></td>
+<td><code>duck-control/src/policy.rs</code>(811 行)</td>
+</tr>
+<tr>
+<td>96</td>
+<td><a href="/learn/deep-96">policy.rs(二):<code>validate</code> 与加载门</a></td>
+<td>同上</td>
+</tr>
+<tr>
+<td>97</td>
+<td><a href="/learn/deep-97">policy.rs(三):推理路径与切换阈值</a></td>
+<td>同上</td>
+</tr>
+<tr>
+<td>98</td>
+<td><a href="/learn/deep-98">bus.rs(一):<code>transact</code> 帧层</a></td>
+<td><code>duck-control/src/bus.rs</code>(708 行)</td>
+</tr>
+<tr>
+<td>99</td>
+<td><a href="/learn/deep-99">bus.rs(二):sync_read 与慢速轮询</a></td>
+<td>同上</td>
+</tr>
+<tr>
+<td>100</td>
+<td><a href="/learn/deep-100">obs.rs(一):61 维观测逐位</a></td>
+<td><code>duck-control/src/obs.rs</code>(406 行)</td>
+</tr>
+<tr>
+<td>101</td>
+<td><a href="/learn/deep-101">obs.rs(二):<code>scatter_action</code> 写回</a></td>
+<td>同上</td>
+</tr>
+<tr>
+<td>102</td>
+<td><a href="/learn/deep-102">safety.rs(一):<code>gate</code> 死手开关</a></td>
+<td><code>duck-control/src/safety.rs</code>(612 行)</td>
+</tr>
+<tr>
+<td>103</td>
+<td><a href="/learn/deep-103">safety.rs(二):<code>apply</code> 与受限动作</a></td>
+<td>同上</td>
+</tr>
+<tr>
+<td>104</td>
+<td><a href="/learn/deep-104">fall.rs 全函数走读</a></td>
+<td><code>duck-control/src/fall.rs</code>(272 行)</td>
+</tr>
+<tr>
+<td>105</td>
+<td><a href="/learn/deep-105">imu.rs:SFLP 解码与滤波</a></td>
+<td><code>duck-control/src/imu.rs</code>(355 行)</td>
+</tr>
+<tr>
+<td>106</td>
+<td><a href="/learn/deep-106">io.rs:trait 六方法逐个</a></td>
+<td><code>duck-control/src/io.rs</code>(351 行)</td>
+</tr>
+<tr>
+<td>107</td>
+<td><a href="/learn/deep-107">model.rs:常量、关节表与电池</a></td>
+<td><code>duck-control/src/model.rs</code>(241 行)</td>
+</tr>
+<tr>
+<td>108</td>
+<td><a href="/learn/deep-108">hl2915.rs(一):<code>Hl2915Bus</code> 帧层</a></td>
+<td><code>duck-control/src/hl2915.rs</code>(620 行)</td>
+</tr>
+<tr>
+<td>109</td>
+<td><a href="/learn/deep-109">hl2915.rs(二):<code>Hl2915RobotIo</code> 实现</a></td>
+<td>同上</td>
+</tr>
+<tr>
+<td>110</td>
+<td><a href="/learn/deep-110">sim.rs:仿真 IO 后端</a></td>
+<td><code>duck-control/src/sim.rs</code>(441 行)</td>
+</tr>
+<tr>
+<td>111</td>
+<td><a href="/learn/deep-111">robotd/main.rs(一):启动与参数</a></td>
+<td><code>robotd/src/main.rs</code>(8273 行)选段</td>
+</tr>
+<tr>
+<td>112</td>
+<td><a href="/learn/deep-112">robotd/main.rs(二):<code>control_loop</code> 全走读</a></td>
+<td>同上</td>
+</tr>
+<tr>
+<td>113</td>
+<td><a href="/learn/deep-113">robotd/control.rs:<code>Controller</code> 抽象</a></td>
+<td><code>robotd/src/control.rs</code>(747 行)</td>
+</tr>
+<tr>
+<td>114</td>
+<td><a href="/learn/deep-114">robotd/intents.rs:槽、快照与权力</a></td>
+<td><code>robotd/src/intents.rs</code>(703 行)</td>
+</tr>
+</tbody>
+</table>
+<h2 id="第十一辑-服务与训练工具逐函数">第十一辑 · 服务与训练工具逐函数</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>标题</th>
+<th>解读对象</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>115</td>
+<td><a href="/learn/deep-115">params.rs 与 robotd-params crate</a></td>
+<td><code>robotd/src/params.rs</code>、<code>robotd-params/</code></td>
+</tr>
+<tr>
+<td>116</td>
+<td><a href="/learn/deep-116">soc.rs:电池电量监测</a></td>
+<td><code>robotd/src/soc.rs</code>(84 行)</td>
+</tr>
+<tr>
+<td>117</td>
+<td><a href="/learn/deep-117">sound.rs(一):播放管线</a></td>
+<td><code>robotd/src/sound.rs</code>(947 行)</td>
+</tr>
+<tr>
+<td>118</td>
+<td><a href="/learn/deep-118">sound.rs(二):合成与混音</a></td>
+<td>同上</td>
+</tr>
+<tr>
+<td>119</td>
+<td><a href="/learn/deep-119">theremin.rs:特雷门琴彩蛋</a></td>
+<td><code>robotd/src/theremin.rs</code>(489 行)</td>
+</tr>
+<tr>
+<td>120</td>
+<td><a href="/learn/deep-120">chorale.rs(一):合唱结构</a></td>
+<td><code>robotd/src/chorale.rs</code>(1320 行)</td>
+</tr>
+<tr>
+<td>121</td>
+<td><a href="/learn/deep-121">chorale.rs(二):曲子数据与调度</a></td>
+<td>同上</td>
+</tr>
+<tr>
+<td>122</td>
+<td><a href="/learn/deep-122">mdp.py(一):文件结构与公共设施</a></td>
+<td><code>tasks/mdp.py</code>(7188 行,254 函数)</td>
+</tr>
+<tr>
+<td>123</td>
+<td><a href="/learn/deep-123">mdp.py(二):观测函数精选</a></td>
+<td>同上</td>
+</tr>
+<tr>
+<td>124</td>
+<td><a href="/learn/deep-124">mdp.py(三):reward 函数精选</a></td>
+<td>同上</td>
+</tr>
+<tr>
+<td>125</td>
+<td><a href="/learn/deep-125">mdp.py(四):事件与随机化函数</a></td>
+<td>同上</td>
+</tr>
+<tr>
+<td>126</td>
+<td><a href="/learn/deep-126">mdp.py(五):命令与课程函数</a></td>
+<td>同上</td>
+</tr>
+<tr>
+<td>127</td>
+<td><a href="/learn/deep-127">microduck_constants.py 逐段</a></td>
+<td><code>robot/microduck_constants.py</code>(275 行)</td>
+</tr>
+<tr>
+<td>128</td>
+<td><a href="/learn/deep-128">export.py 全函数</a></td>
+<td><code>mjlab_microduck/export.py</code>(311 行)</td>
+</tr>
+<tr>
+<td>129</td>
+<td><a href="/learn/deep-129">hf_jobs.py:云训练入口</a></td>
+<td><code>mjlab_microduck/hf_jobs.py</code>(483 行)</td>
+</tr>
+<tr>
+<td>130</td>
+<td><a href="/learn/deep-130">infer_policy.py 主流程</a></td>
+<td><code>scripts/infer_policy.py</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="第十二辑-任务配置与脚本逐文件">第十二辑 · 任务配置与脚本逐文件</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>标题</th>
+<th>解读对象</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>131</td>
+<td><a href="/learn/deep-131">velocity reward 表逐项</a></td>
+<td><code>microduck_velocity_env_cfg.py</code> 639–950 行</td>
+</tr>
+<tr>
+<td>132</td>
+<td><a href="/learn/deep-132">velocity 课程六门逐门</a></td>
+<td>同上 781–910 行</td>
+</tr>
+<tr>
+<td>133</td>
+<td><a href="/learn/deep-133">velstand 配置精读</a></td>
+<td><code>microduck_velstand_env_cfg.py</code></td>
+</tr>
+<tr>
+<td>134</td>
+<td><a href="/learn/deep-134">swizzle 配置精读</a></td>
+<td><code>microduck_velocity_swizzle_env_cfg.py</code></td>
+</tr>
+<tr>
+<td>135</td>
+<td><a href="/learn/deep-135">roller 家族四配置</a></td>
+<td><code>microduck_roller_*.py</code></td>
+</tr>
+<tr>
+<td>136</td>
+<td><a href="/learn/deep-136">slope_terrain.py:坡地生成</a></td>
+<td><code>tasks/slope_terrain.py</code></td>
+</tr>
+<tr>
+<td>137</td>
+<td><a href="/learn/deep-137">testbench_env_cfg.py</a></td>
+<td><code>tasks/testbench_env_cfg.py</code></td>
+</tr>
+<tr>
+<td>138</td>
+<td><a href="/learn/deep-138">symmetry.py 全函数</a></td>
+<td><code>tasks/symmetry.py</code></td>
+</tr>
+<tr>
+<td>139</td>
+<td><a href="/learn/deep-139">backlash.py 全函数</a></td>
+<td><code>tasks/backlash.py</code>(92 行)</td>
+</tr>
+<tr>
+<td>140</td>
+<td><a href="/learn/deep-140">play_latest.py</a></td>
+<td><code>scripts/play_latest.py</code></td>
+</tr>
+<tr>
+<td>141</td>
+<td><a href="/learn/deep-141">crouch_pose_editor.py</a></td>
+<td><code>scripts/crouch_pose_editor.py</code></td>
+</tr>
+<tr>
+<td>142</td>
+<td><a href="/learn/deep-142">testbench 双脚本函数级</a></td>
+<td><code>scripts/testbench_sim2real.py</code>、<code>validate_bam_testbench.py</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="第十三辑-小白电气课">第十三辑 · 小白电气课</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>标题</th>
+<th>解读对象</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>143</td>
+<td><a href="/learn/deep-143">电是什么:电压/电流/功率(鸭子实例)</a></td>
+<td><code>新手学习文档.md</code> §12.1/§12.3 + 教程 §5.1</td>
+</tr>
+<tr>
+<td>144</td>
+<td><a href="/learn/deep-144">万用表怎么用</a></td>
+<td>教程 §5.2 + <code>新手学习文档.md</code> §7/§9</td>
+</tr>
+<tr>
+<td>145</td>
+<td><a href="/learn/deep-145">蜂鸣档与通断检查</a></td>
+<td>教程 §5.2</td>
+</tr>
+<tr>
+<td>146</td>
+<td><a href="/learn/deep-146">串联电池与节数计算</a></td>
+<td>教程 §5.1</td>
+</tr>
+<tr>
+<td>147</td>
+<td><a href="/learn/deep-147">什么是 LDO(线性稳压)</a></td>
+<td><code>imu_to_dxl-设计包/</code></td>
+</tr>
+<tr>
+<td>148</td>
+<td><a href="/learn/deep-148">什么是 buck(开关降压)</a></td>
+<td><code>硬件方案逆向.md</code> §四</td>
+</tr>
+<tr>
+<td>149</td>
+<td><a href="/learn/deep-149">电容:去耦与储能</a></td>
+<td>设计包 BOM</td>
+</tr>
+<tr>
+<td>150</td>
+<td><a href="/learn/deep-150">上拉电阻:为什么悬空不可靠</a></td>
+<td><code>imu_to_dxl-接线表.md</code></td>
+</tr>
+<tr>
+<td>151</td>
+<td><a href="/learn/deep-151">半双工 UART 入门</a></td>
+<td><code>bus.rs</code> + <code>hl2915_bench.py</code></td>
+</tr>
+<tr>
+<td>152</td>
+<td><a href="/learn/deep-152">I2C 入门</a></td>
+<td>设计包连接表</td>
+</tr>
+<tr>
+<td>153</td>
+<td><a href="/learn/deep-153">SPI 入门</a></td>
+<td>接线表 SPI 方案</td>
+</tr>
+<tr>
+<td>154</td>
+<td><a href="/learn/deep-154">PCB 是什么:层、走线、过孔</a></td>
+<td><code>hardware/imu_to_dxl/README.md</code></td>
+</tr>
+<tr>
+<td>155</td>
+<td><a href="/learn/deep-155">焊接入门</a></td>
+<td><code>docs/硬件入门.md</code></td>
+</tr>
+<tr>
+<td>156</td>
+<td><a href="/learn/deep-156">静电、短路与安全习惯</a></td>
+<td><code>新手学习文档.md</code> §10</td>
+</tr>
+</tbody>
+</table>
+<h2 id="第十四辑-小白机械课">第十四辑 · 小白机械课</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>标题</th>
+<th>解读对象</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>157</td>
+<td><a href="/learn/deep-157">自由度与关节类型</a></td>
+<td><code>新手学习文档.md</code> §6.2</td>
+</tr>
+<tr>
+<td>158</td>
+<td><a href="/learn/deep-158">轴承怎么选:两个规格的故事</a></td>
+<td><code>docs/硬件规格速查.md</code></td>
+</tr>
+<tr>
+<td>159</td>
+<td><a href="/learn/deep-159">螺丝与紧固件体系</a></td>
+<td><code>docs/紧固件反推.md</code></td>
+</tr>
+<tr>
+<td>160</td>
+<td><a href="/learn/deep-160">3D 打印材料:PLA/TPU/PETG</a></td>
+<td><code>docs/打印工艺调整表.md</code></td>
+</tr>
+<tr>
+<td>161</td>
+<td><a href="/learn/deep-161">打印参数:层高/填充/方向</a></td>
+<td>同上</td>
+</tr>
+<tr>
+<td>162</td>
+<td><a href="/learn/deep-162">公差与配合:测试片的数学</a></td>
+<td>同上 + 构建日志</td>
+</tr>
+<tr>
+<td>163</td>
+<td><a href="/learn/deep-163">齿轮与减速比</a></td>
+<td><code>bam/bam/model.py</code>(执行器建模)</td>
+</tr>
+<tr>
+<td>164</td>
+<td><a href="/learn/deep-164">转动惯量入门</a></td>
+<td><code>docs/硬件方案逆向.md</code> 质量章节</td>
+</tr>
+<tr>
+<td>165</td>
+<td><a href="/learn/deep-165">质心与配重:头的 189g</a></td>
+<td><code>microduck-replica/README.md</code> 装配结构</td>
+</tr>
+<tr>
+<td>166</td>
+<td><a href="/learn/deep-166">CAD 软件入门</a></td>
+<td><code>microduck-replica-cad/README.md</code></td>
+</tr>
+<tr>
+<td>167</td>
+<td><a href="/learn/deep-167">装配设计:基准与顺序</a></td>
+<td><code>新手学习文档.md</code> §6.6</td>
+</tr>
+<tr>
+<td>168</td>
+<td><a href="/learn/deep-168">强度入门:材料失效</a></td>
+<td><code>docs/打印工艺调整表.md</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="第十五辑-其他舵机案例库bam-8-型号-pwm">第十五辑 · 其他舵机案例库(bam 8 型号 + PWM)</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>标题</th>
+<th>解读对象</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>169</td>
+<td><a href="/learn/deep-169">xl330:m6.json 逐字段</a></td>
+<td><code>bam/bam/params/xl330/</code></td>
+</tr>
+<tr>
+<td>170</td>
+<td><a href="/learn/deep-170">xl320 案例研究</a></td>
+<td><code>bam/bam/params/xl320/</code></td>
+</tr>
+<tr>
+<td>171</td>
+<td><a href="/learn/deep-171">feetech_sts3215(7.4V)案例</a></td>
+<td><code>bam/bam/params/feetech_sts3215_7_4V/</code></td>
+</tr>
+<tr>
+<td>172</td>
+<td><a href="/learn/deep-172">waveshare_st3025 案例</a></td>
+<td><code>bam/bam/params/waveshare_st3025/</code></td>
+</tr>
+<tr>
+<td>173</td>
+<td><a href="/learn/deep-173">mx64 案例研究</a></td>
+<td><code>bam/bam/params/mx64/</code></td>
+</tr>
+<tr>
+<td>174</td>
+<td><a href="/learn/deep-174">mx106 案例研究</a></td>
+<td><code>bam/bam/params/mx106/</code></td>
+</tr>
+<tr>
+<td>175</td>
+<td><a href="/learn/deep-175">erob80_50 案例研究</a></td>
+<td><code>bam/bam/params/erob80_50/</code></td>
+</tr>
+<tr>
+<td>176</td>
+<td><a href="/learn/deep-176">erob80_100 案例研究</a></td>
+<td><code>bam/bam/params/erob80_100/</code></td>
+</tr>
+<tr>
+<td>177</td>
+<td><a href="/learn/deep-177">SG90:PWM 舵机台架六课</a></td>
+<td><code>rl-series/scripts/pi_sg90_bench.py</code></td>
+</tr>
+<tr>
+<td>178</td>
+<td><a href="/learn/deep-178">八型号横向对比总表</a></td>
+<td><code>bam/bam/params/</code> 全量 + <code>actuators.py</code></td>
+</tr>
+<tr>
+<td>179</td>
+<td><a href="/learn/deep-179">端到端推演:换成 STS3215</a></td>
+<td>型号库 + 换舵机方法论(73–84)</td>
+</tr>
+<tr>
+<td>180</td>
+<td><a href="/learn/deep-180">端到端推演:换成 MX-64</a></td>
+<td>同上</td>
+</tr>
+</tbody>
+</table>
+<h2 id="第十六辑-小白基础课rl工具rust">第十六辑 · 小白基础课(RL/工具/Rust)</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>标题</th>
+<th>解读对象</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>181</td>
+<td><a href="/learn/deep-181">强化学习是什么:从奖励说起</a></td>
+<td><code>docs/course/02</code> 延伸、HuggingFace RL 课</td>
+</tr>
+<tr>
+<td>182</td>
+<td><a href="/learn/deep-182">策略网络:61→14 在学什么</a></td>
+<td><code>obs.rs</code>+<code>policy.rs</code> 交叉</td>
+</tr>
+<tr>
+<td>183</td>
+<td><a href="/learn/deep-183">奖励设计的艺术与陷阱</a></td>
+<td><code>mdp.py</code> reward 章</td>
+</tr>
+<tr>
+<td>184</td>
+<td><a href="/learn/deep-184">域随机化细讲</a></td>
+<td><code>mdp.py</code> 随机化函数</td>
+</tr>
+<tr>
+<td>185</td>
+<td><a href="/learn/deep-185">TensorBoard 逐指标</a></td>
+<td><code>构建日志.md</code>、实验记录</td>
+</tr>
+<tr>
+<td>186</td>
+<td><a href="/learn/deep-186">Python 环境:uv 入门</a></td>
+<td><code>进阶学习文档.md</code> §1</td>
+</tr>
+<tr>
+<td>187</td>
+<td><a href="/learn/deep-187">Git 入门:commit 是证据</a></td>
+<td><code>30day README</code> 记录原则</td>
+</tr>
+<tr>
+<td>188</td>
+<td><a href="/learn/deep-188">Rust 入门(一):变量与所有权</a></td>
+<td><code>duck-control</code> 代码实例</td>
+</tr>
+<tr>
+<td>189</td>
+<td><a href="/learn/deep-189">Rust 入门(二):Result 与错误处理</a></td>
+<td><code>io.rs</code> 的 <code>IoError</code></td>
+</tr>
+<tr>
+<td>190</td>
+<td><a href="/learn/deep-190">Rust 入门(三):trait 与泛型</a></td>
+<td><code>io.rs</code> 的 <code>RobotIo</code></td>
+</tr>
+<tr>
+<td>191</td>
+<td><a href="/learn/deep-191">Rust 入门(四):async 与 tokio</a></td>
+<td><code>robotd/src/main.rs</code> 选段</td>
+</tr>
+<tr>
+<td>192</td>
+<td><a href="/learn/deep-192">调试程序:打印、断言与日志</a></td>
+<td><code>bus.rs</code> 日志实例</td>
+</tr>
+<tr>
+<td>193</td>
+<td><a href="/learn/deep-193">读报错的艺术</a></td>
+<td><code>构建日志.md</code> 踩坑案例</td>
+</tr>
+<tr>
+<td>194</td>
+<td><a href="/learn/deep-194">什么是 ONNX</a></td>
+<td><code>export.py</code></td>
+</tr>
+<tr>
+<td>195</td>
+<td><a href="/learn/deep-195">什么是 MuJoCo</a></td>
+<td><code>infer_policy.py</code></td>
+</tr>
+<tr>
+<td>196</td>
+<td><a href="/learn/deep-196">MJCF 文件结构</a></td>
+<td><code>docs/硬件方案逆向.md</code> MJCF 章节</td>
+</tr>
+<tr>
+<td>197</td>
+<td><a href="/learn/deep-197">URDF vs MJCF</a></td>
+<td>同上</td>
+</tr>
+<tr>
+<td>198</td>
+<td><a href="/learn/deep-198">50Hz 控制环的由来</a></td>
+<td><code>model.rs:80</code> 起</td>
+</tr>
+<tr>
+<td>199</td>
+<td><a href="/learn/deep-199">PID 控制入门:舵机内部的黑盒</a></td>
+<td><code>set_gain</code> 与 21/22 寄存器</td>
+</tr>
+<tr>
+<td>200</td>
+<td><a href="/learn/deep-200">第 200 篇:整个项目的知识图谱</a></td>
+<td>全系列收束</td>
 </tr>
 </tbody>
 </table>

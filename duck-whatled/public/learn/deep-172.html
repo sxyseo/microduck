@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>解读 172 · waveshare_st3025 案例 · 什么鸭 WhatDuck</title>
+<meta name="description" content="bam/bam/params/waveshare_st3025/(m1.json–m6.json 六档,m6.json 共 18 个字段)">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="解读 172 · waveshare_st3025 案例">
+<meta property="og:description" content="bam/bam/params/waveshare_st3025/(m1.json–m6.json 六档,m6.json 共 18 个字段)">
+<meta property="og:url" content="https://duck.whatled.com/learn/deep-172">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/deep-172">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">DEEP 172 · 第十五辑 · 其他舵机案例库 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="解读-172-waveshare-st3025-案例">解读 172 · waveshare_st3025 案例</h1>
+<blockquote>
+<p><strong>解读对象</strong>:<code>bam/bam/params/waveshare_st3025/</code>(m1.json–m6.json 六档,m6.json 共 18 个字段)<br />
+<strong>需要的前置</strong>:<a href="/learn/deep-169">解读 169</a>(xl330 逐字段基准)· <a href="/learn/deep-171">解读 171</a>(飞特系同门)</p>
+</blockquote>
+<h2 id="1-型号是谁">1. 型号是谁</h2>
+<p>微雪(Waveshare)ST3025,<code>waveshare/actuator.py</code> 类 docstring 一句话:"operated at 12 V"。<br />
+这是全库"最年轻"的一份参数:<code>waveshare/actuator.py</code> 文件头版权 2026 Theo Moore-Calters,<br />
+其他执行器类都是 2025 年 BAM 原作者(Marc Duclusaud &amp; Grégoire Passault)的——ST3025 是<br />
+后来者按同一套流水线补进来的。类里的注释把每个初始值的来历都写明了:kt 初始 0.8825985<br />
+= 数据手册"9 kgf.cm/A";R 初始 2.7273 = 12 V ÷ 4.4 A 堵转电流的估算;error_gain=0.166<br />
+"继承自 STS3215",由 <code>error_gain_ratio</code> 来拟合差异;max_pwm=1.0 是"BAM 默认,ST3025 极限<br />
+没量过"。协议与额定电压窗口的正式规格:参数库外信息,待验证(12 V 恰好是 3S 锂电口径,<br />
+但未经验证不要当规格用)。</p>
+<h2 id="2-m6json-逐字段-与-xl330-基准对比">2. m6.json 逐字段 + 与 xl330 基准对比</h2>
+<p>18 个字段:比 xl330 多独有字段 <code>error_gain_ratio</code>,比它少 <code>command_delay</code>(缺失=没辨识,<br />
+加载回落 0.0,同 xl320 的处理):</p>
+<table>
+<thead>
+<tr>
+<th>字段</th>
+<th>st3025</th>
+<th>xl330</th>
+<th>对比</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>kt</code></td>
+<td>1.651</td>
+<td>0.346</td>
+<td><strong>×4.8</strong>(初始 0.8826,拟合出近 2 倍)</td>
+</tr>
+<tr>
+<td><code>error_gain_ratio</code></td>
+<td>1.253</td>
+<td>—</td>
+<td>独有;比 STS3215 的 1.162 更大</td>
+</tr>
+<tr>
+<td><code>R</code></td>
+<td>3.10</td>
+<td>2.50</td>
+<td>同档,略高</td>
+</tr>
+<tr>
+<td><code>armature</code></td>
+<td>0.00478</td>
+<td>0.00157</td>
+<td>×3.0</td>
+</tr>
+<tr>
+<td><code>q_offset</code></td>
+<td>0.0032(0.18°)</td>
+<td>0.0150</td>
+<td>极小:这台架装得正</td>
+</tr>
+<tr>
+<td><code>friction_base</code></td>
+<td>0.0488</td>
+<td>0.0119</td>
+<td>×4.1</td>
+</tr>
+<tr>
+<td><code>friction_stribeck</code></td>
+<td>0.00357</td>
+<td>0.00085</td>
+<td>×4.2</td>
+</tr>
+<tr>
+<td><code>load_friction_motor</code></td>
+<td>0.226</td>
+<td>0.228</td>
+<td>几乎相同</td>
+</tr>
+<tr>
+<td><code>load_friction_external</code></td>
+<td><strong>8.5e-08</strong></td>
+<td>0.107</td>
+<td>≈0:外载侧载荷摩擦消失</td>
+</tr>
+<tr>
+<td><code>load_friction_motor_stribeck</code></td>
+<td>0.173</td>
+<td>1.5e-08</td>
+<td>与 xl330 完全反向</td>
+</tr>
+<tr>
+<td><code>load_friction_external_stribeck</code></td>
+<td>3.7e-08</td>
+<td>0.142</td>
+<td>≈0</td>
+</tr>
+<tr>
+<td><code>load_friction_motor_quad</code></td>
+<td>0.00989</td>
+<td>0.00527</td>
+<td>贴 0.01 上限</td>
+</tr>
+<tr>
+<td><code>load_friction_external_quad</code></td>
+<td><strong>0.01000</strong></td>
+<td>0.00299</td>
+<td>顶格(范围 0–0.01)</td>
+</tr>
+<tr>
+<td><code>dtheta_stribeck</code> / <code>alpha</code></td>
+<td>0.461 / 2.53</td>
+<td>0.261 / 8.53</td>
+<td>峰更宽更缓</td>
+</tr>
+<tr>
+<td><code>friction_viscous</code></td>
+<td>0.0222</td>
+<td>0.00579</td>
+<td>×3.8</td>
+</tr>
+</tbody>
+</table>
+<p>画像:12 V 电压档把 kt 抬到 1.65,kt·vin/R = 1.651×12/3.10 ≈ <strong>6.4 N·m</strong> 的电压堵转力矩<br />
+(模型口径的理论值,厂商标称待验证)。摩擦结构又是另一个形状:外载侧载荷项全部归零、<br />
+电机侧主导,和 xl330 同方向但更极端;两个二次项双双顶到 0.01 上限——辨识值连续贴边,<br />
+提示二次项在"够着天花板",这是模型档位对该型号略紧的信号(推断,待验证)。</p>
+<h2 id="3-如果用它换掉-xl330五落点具体值">3. 如果用它换掉 xl330:五落点具体值</h2>
+<p>按 <a href="/learn/deep-79">解读 79</a>:① <code>motor_name="waveshare_st3025"</code>;kp_fw 换 32 一族<br />
+口径;vin_range 按 12 V 系统实测窗口填(3S 满电 12.6 V 是否越界,看规格书——待验证);<br />
+延迟无 json 值,要么按 0、要么台架重测。② <code>friction_dr_bam.py</code>:forcerange 按 6.4 N·m 量级<br />
+重估,摩擦值指向本 json。③ 回差角台架实测。④ 随机化范围按自己台架离散度。⑤ assets 质量:<br />
+单只重量/尺寸参数库外待验证——但 12 V 供电已决定它过不了"直接换"的捷径,供电架构先按<br />
+<a href="/learn/deep-93">解读 93</a> 走一遍。协议是微雪串行总线舵机私有协议,不走<br />
+Dynamixel/飞特兼容层(<a href="/learn/deep-78">解读 78</a> 的"厂商私有"分支)。</p>
+<h2 id="你带走的收获">你带走的收获</h2>
+<ul>
+<li>类注释连 R 都是"12V÷4.4A 堵转电流"估出来的:初始值的来历可以很朴素,辨识才负责精细。</li>
+<li><code>error_gain_ratio</code> 的设计思想:硬件没量到的增益差,交给一个无量纲比例参数去拟合。</li>
+<li>外载侧载荷项全零 + 二次项双双顶格:同一 M6 模型在不同舵机上会"用不同的部分"。</li>
+<li>齿轮传动的直觉再次应验:kt ×4.8、viscous ×3.8——力矩大了,摩擦税也同步涨。</li>
+</ul>
+<h2 id="延伸">延伸</h2>
+<ul>
+<li><a href="/learn/deep-171">解读 171</a>:error_gain 0.166 的出处 · <a href="/learn/deep-169">解读 169</a></li>
+<li><a href="/learn/deep-78">解读 78</a>:厂商私有协议分支 · <a href="/learn/deep-93">解读 93</a></li>
+<li><code>bam/bam/params/waveshare_st3025/m6.json</code> · <code>bam/bam/waveshare/actuator.py</code></li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

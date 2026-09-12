@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>解读 176 · erob80_100 案例研究 · 什么鸭 WhatDuck</title>
+<meta name="description" content="bam/bam/params/erob80_100/(m1.json–m6.json 六档,m6.json 共 15 个字段)">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="解读 176 · erob80_100 案例研究">
+<meta property="og:description" content="bam/bam/params/erob80_100/(m1.json–m6.json 六档,m6.json 共 15 个字段)">
+<meta property="og:url" content="https://duck.whatled.com/learn/deep-176">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/deep-176">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">DEEP 176 · 第十五辑 · 其他舵机案例库 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="解读-176-erob80-100-案例研究">解读 176 · erob80_100 案例研究</h1>
+<blockquote>
+<p><strong>解读对象</strong>:<code>bam/bam/params/erob80_100/</code>(m1.json–m6.json 六档,m6.json 共 15 个字段)<br />
+<strong>需要的前置</strong>:<a href="/learn/deep-175">解读 175</a>(erob80_50 案例)· <a href="/learn/deep-163">解读 163</a>(减速比)</p>
+</blockquote>
+<h2 id="1-型号是谁">1. 型号是谁</h2>
+<p>eRob80:100——<a href="/learn/deep-175">解读 175</a> 那颗 eRob80 的减速比翻倍版:同一个<br />
+<code>ErobActuator</code> 电流控制类(48 V / 12 A、amps 控制律、etherban protobuf 协议),注册表里<br />
+唯一差别是构造参数 <code>damping=2.0</code>(50 版是 1.0)——同一台架电流律,阻尼项加倍。<br />
+<code>:100</code> 指减速比(命名惯例,厂商背景:参数库外待验证)。它是全库 kt、armature、<br />
+friction_viscous 三项的冠军,也是<strong>唯一一份缺 <code>R</code> 的 json</strong>。</p>
+<h2 id="2-m6json-逐字段-与-xl330-基准对比">2. m6.json 逐字段 + 与 xl330 基准对比</h2>
+<p>15 个字段——比 erob80_50 还少一个 <code>R</code>(缺失=加载时回落类初始值 2.0 Ω;<a href="/learn/deep-80">解读 80</a><br />
+的猜测是辨识时被 <code>fit --set</code> 锁参冻结,待验证):</p>
+<table>
+<thead>
+<tr>
+<th>字段</th>
+<th>erob80_100</th>
+<th>erob80_50</th>
+<th>xl330</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>kt</code></td>
+<td><strong>9.396</strong></td>
+<td>4.897</td>
+<td>0.346</td>
+</tr>
+<tr>
+<td><code>R</code></td>
+<td><strong>缺失</strong>(回落 2.0)</td>
+<td>1.07</td>
+<td>2.50</td>
+</tr>
+<tr>
+<td><code>armature</code></td>
+<td><strong>1.135</strong></td>
+<td>0.362</td>
+<td>0.00157</td>
+</tr>
+<tr>
+<td><code>friction_base</code></td>
+<td>4.8e-04</td>
+<td>3.26</td>
+<td>0.0119</td>
+</tr>
+<tr>
+<td><code>friction_stribeck</code></td>
+<td><strong>5.23</strong></td>
+<td>0.320</td>
+<td>0.00085</td>
+</tr>
+<tr>
+<td><code>load_friction_motor/external</code></td>
+<td>0.0489 / 7.6e-08</td>
+<td>0.0357 / 8.4e-04</td>
+<td>0.228 / 0.107</td>
+</tr>
+<tr>
+<td><code>load_friction_*_stribeck</code></td>
+<td>8.8e-06 / 0.0512</td>
+<td>0.00377 / 0.0414</td>
+<td>1.5e-08 / 0.142</td>
+</tr>
+<tr>
+<td><code>load_friction_*_quad</code></td>
+<td>0.00270 / 0.00256</td>
+<td>0.00187 / 0.00160</td>
+<td>0.00527 / 0.00299</td>
+</tr>
+<tr>
+<td><code>dtheta_stribeck</code></td>
+<td>2.03</td>
+<td>2.83</td>
+<td>0.261</td>
+</tr>
+<tr>
+<td><code>alpha</code></td>
+<td>3.00</td>
+<td>1.79</td>
+<td>8.53</td>
+</tr>
+<tr>
+<td><code>friction_viscous</code></td>
+<td><strong>9.709</strong></td>
+<td>1.403</td>
+<td>0.00579</td>
+</tr>
+</tbody>
+</table>
+<p>孪生对照是这篇的正戏,<strong>减速比翻倍的物理后果逐项显形</strong>:<br />
+- kt 4.897→9.396,×1.92 ≈ 2:输出端力矩常数 ∝ 减速比——4.897×2=9.79,与辨识值 9.396<br />
+  差 4%,教科书级的自洽(<a href="/learn/deep-163">解读 163</a>:扭矩放大、转速减半)。<br />
+- armature ×3.1:若按反射惯量 ∝ 减速比² 的口径,0.362×4≈1.45,与 1.135 同量级(推断口径,待验证)。<br />
+- 摩擦预算换了个放法:50 版是"库仑底 3.26 扛大头",100 版变成"Stribeck 5.23 扛大头、<br />
+  库仑底归零"——同为 M6 档,形状完全不同。<br />
+- viscous ×6.9:9.709 N·m/(rad/s),常规档上限 1.0 的近 10 倍,靠 ErobActuator 放宽到 30 才装下。<br />
+- 力矩天花板:kt×12 A ≈ <strong>112.8 N·m</strong>;而速度被减速比压半——力矩-速度守恒的代价。<br />
+- 存疑点:dtheta_stribeck=2.03 超 1.0 上限(同 175,旧版范围拟合推断);R 缺失回落 2.0,<br />
+  意味着任何用到 R 的计算(如电压边界 (kt/R)×48≈226 N·m)都在用"没辨识过的默认值"。</p>
+<h2 id="3-如果用它换掉-xl330五落点具体值">3. 如果用它换掉 xl330:五落点具体值</h2>
+<p>与 <a href="/learn/deep-175">解读 175</a> 同构,四道门一门不过(48 V/12 A 供电、外形、<br />
+etherban 私有协议、质量量级),只列差异:① <code>motor_name="erob80_100"</code>;② forcerange 按<br />
+100 N·m 量级、摩擦值指向本 json;⑤ 质量/惯量按 100 版重算。它的真正用途同 175:<br />
+<strong>方法论边界测试 + 高扭矩参照系</strong>。给读者的实用启示反而是负面的——连 R 都没有的 json<br />
+照样能进库被加载,说明 <code>load_model</code> 对字段缺失是"静默回落默认值":用别人的 json 前,<br />
+先数一遍字段数,再对一遍类里的初始值,否则你在用两个没辨识过的数做仿真。</p>
+<h2 id="你带走的收获">你带走的收获</h2>
+<ul>
+<li>kt ≈ 2×、减速比 ×2:输出端力矩常数与减速比成正比,辨识值 9.396 对公式值 9.79 差 4%,<br />
+  json 也能验算。</li>
+<li>同一执行器族换减速比,摩擦预算会"换形状"(库仑底扛 → Stribeck 扛),而不是简单缩放。</li>
+<li>缺失字段静默回落类初始值(R=2.0 从未被辨识):用 json 前先数字段,警惕"没测过的默认值"。</li>
+<li>viscous 9.709 vs xl330 的 0.00579(×1677):全库最悬殊的一对数,跨量级选型没有"微调"可言。</li>
+</ul>
+<h2 id="延伸">延伸</h2>
+<ul>
+<li><a href="/learn/deep-175">解读 175</a>:同门 50 版 · <a href="/learn/deep-163">解读 163</a>:减速比数学</li>
+<li><a href="/learn/deep-80">解读 80</a>:字段缺失回落机制 · <a href="/learn/deep-73">解读 73</a>:八型号总览</li>
+<li><code>bam/bam/params/erob80_100/m6.json</code> · <code>bam/bam/erob/actuator.py</code> · <code>bam/bam/actuators.py</code></li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

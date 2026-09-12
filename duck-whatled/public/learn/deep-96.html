@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>解读 96 · policy.rs(二):`validate` 与加载门 · 什么鸭 WhatDuck</title>
+<meta name="description" content="duck-control/src/policy.rs(811 行;validate 在 450–453,open 在 583–687)">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="解读 96 · policy.rs(二):`validate` 与加载门">
+<meta property="og:description" content="duck-control/src/policy.rs(811 行;validate 在 450–453,open 在 583–687)">
+<meta property="og:url" content="https://duck.whatled.com/learn/deep-96">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/deep-96">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">DEEP 96 · 第十辑 · duck-control 逐函数精读 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="解读-96-policyrs二validate-与加载门">解读 96 · policy.rs(二):<code>validate</code> 与加载门</h1>
+<blockquote>
+<p><strong>解读对象</strong>:<code>duck-control/src/policy.rs</code>(811 行;<code>validate</code> 在 450–453,<code>open</code> 在 583–687)<br />
+<strong>需要的前置</strong>:<a href="/learn/deep-95">解读 95</a>(<code>Net</code> 与技能枚举)、<a href="/learn/deep-03">解读 03</a>(导览篇)</p>
+</blockquote>
+<p><code>validate</code>(policy.rs:450-453)只有两行:<code>ensure_runtime()?</code> 之后 <code>catching_ort_panics(|| open(path).map(drop))</code>。学问一半在注释里(policy.rs:430-449),一半在被它调用的 <code>open</code> 里——文件真正的大门:一个 <code>.onnx</code> 要过八道检查才能变成 <code>Network</code>。</p>
+<h2 id="1-validate回答一个问题不开一场会">1. <code>validate</code>:回答一个问题,不开一场会</h2>
+<p>两个调用方,需求的两端:IPC 的 <code>robot.loadPolicy</code> 要<strong>同步</strong>回答客户端,而真正的切换发生在几秒后的 home pose——在这里先验,才能把"接受了却没生效"变成一句即时的 <code>observation width is 51, expected 61</code>;启动检查则逐槽验证 override,让一个坏槽只废那一槽,不废整个策略(policy.rs:434-439)。</p>
+<p>它刻意<strong>不做预热推理</strong>:"这是对文件的问题,不是对即将被驱动的会话"(policy.rs:441-443)。所以它证明的更少——能打开且形状对,不等于能跑;没人把通过当保证,home pose 加载失败时控制器保留旧策略。成本也写在注释里:<strong>开会话要几十毫秒,tick 只有 20</strong>,所以绝不进 tick,IPC 调用方用自己的 runtime 跑(policy.rs:447-449)。</p>
+<h2 id="2-open八道门逐道走">2. <code>open</code>:八道门逐道走</h2>
+<p><code>Result&lt;T, E&gt;</code> 是 Rust 的"可能失败"类型(<code>Ok</code>/<code>Err</code> 两个变体),<code>?</code> 把错误向上返回。<code>open</code>(policy.rs:583-687)就是一条 <code>Result</code> 流水线:</p>
+<ol>
+<li><strong>读文件</strong>(584-587):失败进 <code>PolicyError::Read</code>,错误里带路径;</li>
+<li><strong>算指纹</strong>(588):<code>Sha256</code> 摘要存进 <code>Network.digest</code>,<code>carry_over</code> 靠它判断"是不是同一份模型字节"(policy.rs:395);</li>
+<li><strong>开会话</strong>(589-596):优化级别 Level3、单线程(<code>INTRA_THREADS = 1</code>,policy.rs:36——四核 A55 上线程池的同步开销大于收益);</li>
+<li><strong>观测宽度</strong>(600):<code>check_matrix(…, "obs", OBS_LEN = 61)</code>;</li>
+<li><strong>输入/输出契约</strong>(601-612):<code>(1,1)</code> 是前馈,<code>(3,3)</code> 是 LSTM(obs/h_in/c_in → actions/h_out/c_out),<strong>其他数量直接拒</strong>,错误消息把合法契约写出来;</li>
+<li><strong>动作宽度</strong>(619):输出 14;</li>
+<li><strong>LSTM 状态形状</strong>(621-651):h/c 四个张量的 <code>[层数, 批, 隐宽]</code> 必须一致,层数/隐宽为正,批可动态 <code>-1</code>;</li>
+<li><strong>配额与分配</strong>(653-676):状态元素数上限 <code>1_048_576</code>(policy.rs:656)——损坏的模型不能让它申请无穷内存;全过才分配两个全零张量当状态缓冲。</li>
+</ol>
+<h2 id="3-三把尺子与错误的讲究">3. 三把尺子与错误的讲究</h2>
+<p><code>tensor_shape</code>(policy.rs:539-553)要求张量且 <code>float32</code>,否则报出实际类型。<code>outlet</code>(policy.rs:555-568)按名字找张量,签名 <code>outlet&lt;'a&gt;(path, outlets: &amp;'a [Outlet], name) -&gt; Result&lt;&amp;'a Outlet, _&gt;</code> 里的 <code>'a</code> 是<strong>生命周期标注</strong>:告诉编译器"返回的引用与传入的切片活一样久"——借来的东西不能比原件活得长。<code>check_matrix</code>(policy.rs:570-581)只收二维 <code>[1 或 -1, width]</code>:最后一维必须精确,前导维是批,可以是动态 <code>-1</code>。</p>
+<p>错误侧同样讲究。<code>PolicyError::Shape</code>(policy.rs:54-60)同时带 <code>expected</code> 和 <code>got</code>——"错误的策略文件"和"错误的守护进程"长得一样,不报两个数分不开;<code>path()</code>(policy.rs:83-92)让 <code>RuntimeMissing</code>/<code>RuntimePanic</code> <strong>不怪罪任何文件</strong>:缺运行库是装机问题,报成"这个文件坏了"会骗人去换一个没坏的文件。panic 契约测试(policy.rs:743-765)钉着一块真板子的案发记录:<code>expected version &gt;= '1.23.x', got '1.20.1'</code>——两个版本号就是全部诊断,必须活着抵达调用方。</p>
+<h2 id="你带走的收获">你带走的收获</h2>
+<ul>
+<li>"验形"与"能跑"是两个证明等级:<code>validate</code> 只卖前者,定价是同步、廉价、可立刻报错。</li>
+<li>契约检查枚举合法形状而非拉黑坏的:<code>(1,1)</code>/<code>(3,3)</code> 之外全拒,新格式须显式开门。</li>
+<li>对外部输入设资源配额:状态张量上限是给溢出和恶意文件画的线。</li>
+<li>错误要带 <code>expected/got</code> 两个数,还要带"该怪谁"的判断——不是所有错误都姓"文件"。</li>
+<li>加载时校验的全部意义:把失败挪到机器人还站着、还能说话的时候。</li>
+</ul>
+<h2 id="延伸">延伸</h2>
+<ul>
+<li><code>Net</code> 与技能枚举(上半场):<a href="/learn/deep-95">解读 95</a></li>
+<li>导览版三道门与预热:<a href="/learn/deep-03">解读 03</a></li>
+<li>校验失败的消费端(健康与回滚):<a href="/learn/deep-09">解读 09</a></li>
+<li>本地:<code>/Volumes/dev/dev/microduck/duck-control/src/policy.rs</code></li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

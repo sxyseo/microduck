@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>解读 77 · 协议适配:Dynamixel 系(STS/SCS 兼容) · 什么鸭 WhatDuck</title>
+<meta name="description" content="bam/bam/feetech/actuator.py(155 行)+ microduck-replica/docs/硬件规格速查.md(执行器与总线)">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="解读 77 · 协议适配:Dynamixel 系(STS/SCS 兼容)">
+<meta property="og:description" content="bam/bam/feetech/actuator.py(155 行)+ microduck-replica/docs/硬件规格速查.md(执行器与总线)">
+<meta property="og:url" content="https://duck.whatled.com/learn/deep-77">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/deep-77">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">DEEP 77 · 第八辑 · 通用换舵机方法论 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="解读-77-协议适配dynamixel-系stsscs-兼容">解读 77 · 协议适配:Dynamixel 系(STS/SCS 兼容)</h1>
+<blockquote>
+<p><strong>解读对象</strong>:<code>bam/bam/feetech/actuator.py</code>(155 行)+ <code>microduck-replica/docs/硬件规格速查.md</code>(执行器与总线)<br />
+<strong>需要的前置</strong>:<a href="/learn/deep-53">解读 53</a>(两家协议映射)· <a href="/learn/deep-01">解读 01</a>(sync_read 调度)</p>
+</blockquote>
+<p>换舵机时最省钱的路线,是待在<strong>协议兼容圈</strong>里——包格式不变或高度相似,代码只改常量。<br />
+本篇讲 Dynamixel 系内部怎么换,以及飞特 STS/SCS 为什么算"半兼容",还有兼容圈的一个反例:<br />
+协议通了,固件行为也可能不一样。</p>
+<h2 id="1-dynamixel-系内换型号改的是常量不是架构">1. Dynamixel 系内换型号:改的是常量,不是架构</h2>
+<p>官方总线的契约写在 《硬件规格速查》(<code>microduck-replica/docs/硬件规格速查.md</code>):单线半双工 TTL<br />
+3.3 V、Dynamixel Protocol V2、1 Mbps(EEPROM <code>baud_rate = 3</code>)、16 个设备一次 <code>sync_read</code><br />
+读寄存器 124–136。在这个圈里换型号(XL330-M077 ↔ M288,甚至 MX 系),运行时架构不动,<br />
+要核对的只有:ID 表、<code>return_delay_time</code>、力矩/速度档位——全是寄存器值层面的常量。</p>
+<p>MX-64/MX-106 还提示一件事:Dynamixel 家族本身有 TTL 与 RS-485 两种物理层,<br />
+官方 HAT 上 <code>J3/J11</code> 就是 RS-485 4P(SIT3088E 驱动),Microduck 的 XL330 走的是 <code>J13/J14</code> TTL。<br />
+同家族换型号,先确认它站在哪个物理层上。</p>
+<h2 id="2-stsscs物理层完全相同包格式不同">2. STS/SCS:物理层完全相同,包格式不同</h2>
+<p>飞特 STS/SCS 与 Dynamixel 的关系,逆向文档的对照表说得很准:</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Dynamixel V2</th>
+<th>飞特 STS/SCS</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>物理层</td>
+<td>单线半双工 TTL、3 线、1 Mbps</td>
+<td><strong>完全相同</strong></td>
+</tr>
+<tr>
+<td>包头</td>
+<td><code>FF FF FD 00</code> + CRC-16</td>
+<td><code>FF FF</code> + 取反和(~sum)</td>
+</tr>
+<tr>
+<td>批量读</td>
+<td><code>sync read</code>(官方没用更快的 0x8A)</td>
+<td><code>sync read 0x82</code></td>
+</tr>
+<tr>
+<td>出厂延时</td>
+<td>250(=500 µs/设备,16 台吃掉 8 ms,40% 预算,必须写 0)</td>
+<td>第 7 号默认 0,"Not functional on STS"</td>
+</tr>
+</tbody>
+</table>
+<p>所以"把 IMU 做成总线上第 16 个设备"的思路在飞特上依然成立;软件侧也不必重写通信层——<br />
+Open Duck Mini 用的就是 <code>rustypot.feetech(port, 1000000)</code>,<strong>同一个库,换协议模块</strong>,<br />
+波特率同样 1 Mbps。飞特还占一个反直觉的便宜:出厂延时代价为零,普通写指令再配<br />
+第 8 号 Response Level=0(只读/回 ping)就能进一步省总线时间。</p>
+<h2 id="3-协议兼容-固件行为兼容">3. 协议兼容 ≠ 固件行为兼容</h2>
+<p>真正的深坑在 <code>bam/bam/feetech/actuator.py</code> 里。<code>STS3215Actuator</code> 与 XL330 同属<br />
+<code>VoltageControlledActuator</code>(电压级模型),却多了一层<strong>有状态的目标限速</strong>:</p>
+<ul>
+<li>固件不直接追目标位置,而是移动一个内部目标 <code>q_target_smooth</code>,每步最多走<br />
+<code>max_velocity × dt</code>——所以 <code>compute_control</code> 必须<strong>按时序逐拍调用</strong>(<code>stateful = True</code>);</li>
+<li>占空比 = 位置误差 × kp(32)× <code>error_gain</code>(0.166,注释注明"用示波器在实物上测出"),<br />
+  钳到 <code>max_pwm = 0.97</code>;XL330 的同款参数是 kp=400、<code>error_gain</code> 由 4096 编码计数/256/885 推出。</li>
+</ul>
+<p>这意味着:<strong>即使你完美移植了协议,固件内部的位置环行为仍是另一套</strong>——限速、增益换算、<br />
+PWM 饱和点都不同,它们最终都落进 BAM 辨识参数里(见 <a href="/learn/deep-80">解读 80</a>)。<br />
+协议适配的完成标志不是"能通",是"辨识数据对得上"。</p>
+<h2 id="你带走的收获">你带走的收获</h2>
+<ul>
+<li>Dynamixel 系内换型号改的是常量(ID/延时/波特率档位);换物理层(TTL↔RS-485)才是硬件问题。</li>
+<li>STS/SCS 与 Dynamixel 物理层相同、包格式不同:<code>rustypot</code> 换协议模块即可,通信层不用重写。</li>
+<li>出厂延时上飞特反而占优(XL330 出厂 250 要写 0,STS 天然没有),高频控制环的默认值必须逐个核对。</li>
+<li>协议兼容不等于行为兼容:STS3215 固件有目标限速,<code>compute_control</code> 是有状态的——这是 bam 用一个 <code>stateful</code> 标记记录的事实。</li>
+<li>"能通"不是协议适配的验收线,"辨识数据对得上"才是。</li>
+</ul>
+<h2 id="延伸">延伸</h2>
+<ul>
+<li><a href="/learn/deep-78">解读 78</a>:飞特帧格式逐段与厂商私有协议</li>
+<li><a href="/learn/deep-64">解读 64</a>:飞特寄存器表逐段解读</li>
+<li><a href="/learn/deep-69">解读 69</a>:<code>RobotIo</code> trait 接缝上写新控制器</li>
+<li><code>bam/bam/feetech/actuator.py</code>(<code>STS3215Actuator</code> 注释含示波器测参过程)</li>
+<li><code>microduck-replica/docs/硬件方案逆向.md</code> 五之二(协议对照表与 fast sync read 更正)</li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

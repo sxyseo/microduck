@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>解读 184 · 域随机化细讲 · 什么鸭 WhatDuck</title>
+<meta name="description" content="microduck_velocity_env_cfg.py 的随机化开关与范围(L48–89)+ tasks/mdp.py 的 randomize_ 函数">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="解读 184 · 域随机化细讲">
+<meta property="og:description" content="microduck_velocity_env_cfg.py 的随机化开关与范围(L48–89)+ tasks/mdp.py 的 randomize_ 函数">
+<meta property="og:url" content="https://duck.whatled.com/learn/deep-184">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/deep-184">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">DEEP 184 · 第十六辑 · 小白基础课 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="解读-184-域随机化细讲">解读 184 · 域随机化细讲</h1>
+<blockquote>
+<p><strong>解读对象</strong>:<code>microduck_velocity_env_cfg.py</code> 的随机化开关与范围(L48–89)+ <code>tasks/mdp.py</code> 的 randomize_<em> 函数<br />
+</em><em>需要的前置</em>*:<a href="/learn/deep-183">解读 183</a>(同一课包上一篇)· <a href="/learn/deep-125">解读 125</a>(函数逐个版)</p>
+</blockquote>
+<p>在有风的天气练投篮,正式比赛时反而觉得球场安静——域随机化(domain randomization,DR)<br />
+就是这句话的工程版:训练时<strong>故意</strong>把虚拟世界的参数抖开,让同一条策略见过千万个"略不相同<br />
+的世界",真机那个世界只是其中之一。反直觉:仿真明明可以很精确,我们偏要把它做糙。</p>
+<h2 id="1-为什么要故意做糙">1. 为什么要故意做糙</h2>
+<p>物理引擎永远不是现实。摩擦模型近似、通信延迟、传感器装歪、齿轮间隙……每一项单看都小,<br />
+叠在一只 737 g、靠 14 个关节动态平衡的鸭子上,足以让仿真满分策略在真机第一步摔跤<br />
+(sim2real gap)。DR 的答案是:与其假装差距不存在,不如把每种差距都变成训练科目。</p>
+<h2 id="2-随机化什么这张鸭子的真实清单">2. 随机化什么:这张鸭子的真实清单</h2>
+<p>velocity 配置里开着的(L48–89 逐行核对):</p>
+<table>
+<thead>
+<tr>
+<th>抖什么</th>
+<th>范围</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>躯干质心</td>
+<td>±3 mm 起,课程爬到 ±15 mm</td>
+<td>曾想爬到 ±30 mm 被砍:脚跟只在踝后 20 mm,质心会被抖出支撑面,后向平衡直接没法训</td>
+</tr>
+<tr>
+<td>头部质心</td>
+<td>±3 mm → ±10 mm</td>
+<td>头是大杠杆臂</td>
+</tr>
+<tr>
+<td>质量+惯量</td>
+<td>(0.95, 1.05) 倍</td>
+<td>必须同因子,独立随机会造出非法惯量张量</td>
+</tr>
+<tr>
+<td>BAM 摩擦预算</td>
+<td>(0.9, 1.1) 倍</td>
+<td>走执行器的 <code>friction_scale</code>,不是 MuJoCo 字段</td>
+</tr>
+<tr>
+<td>转子反射惯量</td>
+<td>(0.9, 1.1) 倍</td>
+<td>BAM 的 armature 照常生效</td>
+</tr>
+<tr>
+<td>编码器偏置</td>
+<td>±0.015 rad(±0.86°)</td>
+<td><strong>每环境恒定</strong>,模拟标定误差</td>
+</tr>
+<tr>
+<td>IMU 安装误差</td>
+<td>随机轴最大 6°</td>
+<td>零中心;真板 ~5° 俯仰偏移在运行时源头修,不靠 DR</td>
+</tr>
+<tr>
+<td>推搡</td>
+<td>每 3–6 s,±0.3 m/s</td>
+<td>从 ±0.5 收紧:大脚会训出"神经质的救步步态"</td>
+</tr>
+<tr>
+<td>电池电压</td>
+<td>(6.5, 8.2) V+负载压降 (0, 0.2)</td>
+<td>官方超压特例,换舵机别照抄</td>
+</tr>
+<tr>
+<td>指令延迟</td>
+<td>3–6 控制步</td>
+<td>通信+固件滞后</td>
+</tr>
+</tbody>
+</table>
+<p>关着但留了范围的也值得看:kP (0.85,1.15)/kD (0.9,1.1) 注释写着 "Was True",初始姿态<br />
+±10°/±5° 也关着——<strong>DR 清单是开关面板,不是常量协议</strong>。</p>
+<h2 id="3-怎么抖才科学四条工程卫生">3. 怎么抖才科学:四条工程卫生</h2>
+<p>读 <code>randomize_*</code> 函数(mdp.py)能总结出统一纪律:一,<strong>先恢复标称、再采新值</strong>——<br />
+<code>randomize_delayed_actuator_gains</code> 每次先 <code>reset_gains</code> 再 <code>set_gains</code>,否则随机值逐回合<br />
+累积,世界越练越歪;二,<strong>物理量成对动</strong>:质量与惯量同一因子;三,<strong>传感器错装用每环境<br />
+恒定偏置</strong>,不搞每步噪声——装歪的 IMU 不会每 20 ms 换个方向;四,<strong>抖到正确的边界</strong>:<br />
+BAM 自己管摩擦,DR 就得写进执行器接口(<code>friction_scale</code>),MuJoCo 的 <code>dof_frictionloss</code><br />
+早被清零了。彩蛋:<code>expand_bam_friction_fields</code> 是带装饰器的空函数,装饰器本身就是<br />
+注册副作用——让 mjlab 把摩擦字段按环境展开。</p>
+<h2 id="4-范围怎么定覆盖实测误差不是想象最坏">4. 范围怎么定:覆盖实测误差,不是想象最坏</h2>
+<p>指南原话:DR 要覆盖实测误差,不是想象中的最坏情况。范围开太大,策略为了"所有虚构机器人<br />
+都不倒"会学成紧张、保守、迈不开腿的折中动作(±30 mm 质心被砍就是活例)。每个范围的<br />
+依据只能是你台架实测的离散度;DR 有没有用,用扰动测试验:exp001b 给 IMU 加扰动扫描,<br />
+开随机化的 A 组最大衰减 -4.6%、关掉的 B 组 -6.0%——方向对,但 1–2% 在单种子噪声内,<br />
+诚实结论是"待长训练复测"。故意做糙是手段,<strong>知道糙了多少</strong>才是本事。</p>
+<h2 id="你带走的收获">你带走的收获</h2>
+<ul>
+<li>DR = 把 sim2real 差距变成训练科目:质心、质量、摩擦、延迟、电压、传感器误差、推搡。</li>
+<li>范围有出处(±30 mm 被砍的脚跟几何、±0.5 推搡的神经质步态),不是拍脑袋。</li>
+<li>四条卫生:先恢复再采样、成对量同因子、传感器误差用恒定偏置、抖到执行器边界内。</li>
+<li>开关面板思维:留范围不等于开;kp/kD 现在就是关的。</li>
+<li>验证靠扰动测试看"被打时掉多少",不看训练分数。</li>
+</ul>
+<h2 id="延伸">延伸</h2>
+<ul>
+<li><a href="/learn/deep-125">解读 125</a>:randomize_* 函数逐个版</li>
+<li><a href="/learn/deep-22">解读 22</a>:这些常量所在文件的上半部</li>
+<li>第 15 课:<code>docs/course/15-sim2real与域随机化.md</code>(exp001b 全过程)</li>
+<li><code>microduck-replica/docs/训练参数调整与新动作开发指南.md</code> §6.7(随机化与噪声全表)</li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

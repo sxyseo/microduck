@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>解读 127 · microduck_constants.py 逐段 · 什么鸭 WhatDuck</title>
+<meta name="description" content="microduck-replica/upstream/microduck_rl/src/mjlab_microduck/robot/microduck_constants.py(2">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="解读 127 · microduck_constants.py 逐段">
+<meta property="og:description" content="microduck-replica/upstream/microduck_rl/src/mjlab_microduck/robot/microduck_constants.py(2">
+<meta property="og:url" content="https://duck.whatled.com/learn/deep-127">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/deep-127">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">DEEP 127 · 第十一辑 · 服务与训练工具逐函数 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="解读-127-microduck-constantspy-逐段">解读 127 · microduck_constants.py 逐段</h1>
+<blockquote>
+<p><strong>解读对象</strong>:<code>microduck-replica/upstream/microduck_rl/src/mjlab_microduck/robot/microduck_constants.py</code>(275 行,全读,无函数只有常量与配置对象)<br />
+<strong>需要的前置</strong>:<a href="/learn/deep-79">解读 79</a>(换舵机时这个文件要动哪五处)、<a href="/learn/deep-57">解读 57</a>(BAM 参数怎么进仿真)</p>
+</blockquote>
+<p>训练侧的"机器人身份证"全在这一个文件:用哪个 XML、出生摆什么姿势、装什么执行器。逐段读。</p>
+<h2 id="第一段模型目录与开机自检14-44-行">第一段:模型目录与开机自检(14-44 行)</h2>
+<p>八个 XML 路径常量:<code>MICRODUCK_WALK_XML</code>(行走碰撞集)、<code>MICRODUCK_GROUNDCONTACT_XML</code>(注释说明它是<strong>精选</strong>地面碰撞集——只有脚底、腿、躯干壳、头壳、下颌、电池等真会着地的部件,前身名字才叫 "allcollisions")、<code>MICRODUCK_ALLCOLLISIONS_XML</code>(真全碰撞:70 geom、37 mesh,"还没有任务用它",2026-09 导出备用)、ball、rollers 与三个 backlash 变体(31-35 行,每个舵机关节串一个 ±1° 齿隙被动铰,由 <code>add_backlash.py</code> 后处理生成)。37-44 行跟八个 <code>assert ...exists()</code>:文件在 <strong>import 时</strong>就要齐,缺一个当场崩——比训练半路才发现强得多。</p>
+<h2 id="第二段spec-工厂与-home-姿势47-109-行">第二段:spec 工厂与 HOME 姿势(47-109 行)</h2>
+<p><code>get_walk_spec()</code> 等九个函数各自 <code>mujoco.MjSpec.from_file</code> 返回模型对象,任务配置经 <code>spec_fn=</code> 引用。<code>get_walk_rollers_spec</code> 里留着一条事故注释(60-62 行):曾误加载无轮模型,roller 环境<strong>静默地</strong>跑在错误机器人上。<code>HOME_FRAME</code>(85-109 行)是 <code>EntityCfg.InitialStateCfg</code>(出生姿势配置),键为关节名正则、值为弧度:hip_pitch -0.4579、ankle 0.4530、knee -0.0049、hip_roll ±0.0873、颈/头俯仰 0.3491。注释交代这是 STAND2 姿势:躯干前移约 5 mm 让质心压在踝轴上(旧 HOME 质心偏后,standup 策略被迫用点头当配重),与 scene.xml 的 STAND keyframe 一致。</p>
+<h2 id="第三段碰撞与执行器-kwargs111-158-行">第三段:碰撞与执行器 kwargs(111-158 行)</h2>
+<p><code>FULL_COLLISION</code>(111-116 行)一条规则集:脚底碰撞 condim=3(三维接触,带摩擦锥)、摩擦 1.0、优先级 1,其余 geom condim=1。执行器段先留着两段注释掉的旧方案(XML 位置执行器 + 延迟、BAM M4),现行的是 <code>_BAM_ACTUATOR_KWARGS</code>(132-144 行):<code>motor_name="xl330"</code>、<code>model="m6"</code>、<code>target_names_expr=(r"^(?!passive_).*",)</code>(负向正则排除全部被动关节)、<code>kp_fw=200.0</code>(注释:microduck 保留的固件刚度,microban 用 125)、<code>vin_range=(6.5, 8.2)</code>(电池电压随机化窗口)、<code>vin_drop_gain_range=(0.0, 0.2)</code>(负载压降系数)、<code>vin_min=6.0</code>、<code>delay_min_lag/delay_max_lag=3/6</code>(动作延迟 3–6 拍)。这份 dict 被两份配置共用:<code>actuators = FrictionDRBamActuatorCfg(**...)</code>(145 行)与 <code>backlash_actuators = BacklashEncoderBamActuatorCfg(**...)</code>(151 行,固件位置环改读<strong>穿过齿隙</strong>的编码器,只配齿隙模型)。</p>
+<h2 id="第四段配置表与首匹配获胜技巧166-262-行">第四段:配置表与"首匹配获胜"技巧(166-262 行)</h2>
+<p>六个 <code>EntityCfg</code>(机器人整体配置对象)各由 <code>spec_fn + init_state + collisions + actuators</code> 拼成,全部 <code>soft_joint_pos_limit_factor=0.9</code>(软限位收到硬限位九成,留缓冲)。WALK/STANDUP/GROUND_PICK 共用 groundcontact 模型;BACKLASH 三兄弟用 <code>BACKLASH_HOME_FRAME</code>(166-169 行),这里有个正则细节值得抄:HOME_FRAME 的 <code>.*left_hip_roll.*</code> 会连 <code>passive_left_hip_roll_backlash</code> 一起匹配,把 ±1° 的齿隙铰初始化到 -0.0873 rad 直接超程——解法是利用 dict 声明顺序的"首匹配获胜",把 <code>r".*_backlash$": 0.0</code> 放最前钉死齿隙铰,舵机键自然落空到后面的正常值。BALL 配置(244-247 行)是个自由浮球,初始位置 (0.3, 0, 0.035) 只管首次重置前;末尾 264-275 行的 <code>__main__</code> 块把 WALK 配置装进场景直开 viewer——<code>python microduck_constants.py</code> 即目检。</p>
+<h2 id="你带走的收获">你带走的收获</h2>
+<ul>
+<li>资源路径在 import 时 assert,把"找不到文件"从运行时错误提前到加载错误。</li>
+<li>出生姿势不是拍脑袋:质心对踝轴的 5 mm 挪动背后是一次头前倾代偿的修复。</li>
+<li>共享 kwargs dict 让两代执行器配置永远不漂移;<code>^(?!passive_).*</code> 一个负向正则守住 14 维动作空间。</li>
+<li>带正则键的姿势表要防"误伤":首匹配获胜的声明顺序就是作用域控制。</li>
+</ul>
+<h2 id="延伸">延伸</h2>
+<ul>
+<li>换舵机时本文件的五个改动点:<a href="/learn/deep-79">解读 79</a>;电压窗口的含义:<a href="/learn/deep-87">解读 87</a></li>
+<li>齿隙模型与观测:<a href="/learn/deep-31">解读 31</a>、<a href="/learn/deep-123">解读 123</a></li>
+<li>本地路径:<code>microduck-replica/upstream/microduck_rl/src/mjlab_microduck/robot/microduck_constants.py</code></li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>
