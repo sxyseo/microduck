@@ -1560,6 +1560,12 @@ pub struct Bus {
     pub port: String,
     /// Protocol/backend used on that port. The default preserves the shipped XL330 robot.
     pub backend: BusBackend,
+    /// HL-2915 IDs in the same order as the robot's 15 joint arrays.
+    pub hl2915_ids: Vec<u8>,
+    /// Encoder count that means mechanical joint angle 0 for each HL-2915.
+    pub hl2915_zero_raw: Vec<u16>,
+    /// Encoder direction for a positive model angle: every entry must be `1` or `-1`.
+    pub hl2915_direction: Vec<i8>,
 }
 
 /// Motor-bus implementation selected explicitly per robot.
@@ -1636,6 +1642,9 @@ impl Default for Bus {
         Self {
             port: "/dev/ttyS2".into(),
             backend: BusBackend::Dynamixel,
+            hl2915_ids: (1..=15).collect(),
+            hl2915_zero_raw: vec![2048; 15],
+            hl2915_direction: vec![1; 15],
         }
     }
 }
@@ -1691,6 +1700,8 @@ pub enum ParamsError {
         min: u32,
         max: u32,
     },
+    #[error("{path}: invalid HL-2915 bus configuration: {reason}")]
+    Hl2915Bus { path: String, reason: String },
 }
 
 /// The band `media.bitrate` is accepted in, bits per second.
@@ -1778,6 +1789,42 @@ impl Params {
                 min: BITRATE_MIN,
                 max: BITRATE_MAX,
             });
+        }
+        if self.bus.backend == BusBackend::Hl2915 {
+            let bad = |reason: String| ParamsError::Hl2915Bus {
+                path: path.display().to_string(),
+                reason,
+            };
+            for (name, len) in [
+                ("hl2915_ids", self.bus.hl2915_ids.len()),
+                ("hl2915_zero_raw", self.bus.hl2915_zero_raw.len()),
+                ("hl2915_direction", self.bus.hl2915_direction.len()),
+            ] {
+                if len != 15 {
+                    return Err(bad(format!("bus.{name} needs 15 values, got {len}")));
+                }
+            }
+            let mut ids = self.bus.hl2915_ids.clone();
+            ids.sort_unstable();
+            if ids.windows(2).any(|pair| pair[0] == pair[1]) {
+                return Err(bad("bus.hl2915_ids contains a duplicate".into()));
+            }
+            if ids.iter().any(|&id| id >= 254 || id == 200) {
+                return Err(bad(
+                    "bus.hl2915_ids must use 0..=253 and must not contain IMU ID 200".into(),
+                ));
+            }
+            if self.bus.hl2915_zero_raw.iter().any(|&raw| raw > 4095) {
+                return Err(bad("bus.hl2915_zero_raw must stay inside 0..=4095".into()));
+            }
+            if self
+                .bus
+                .hl2915_direction
+                .iter()
+                .any(|&direction| !matches!(direction, -1 | 1))
+            {
+                return Err(bad("bus.hl2915_direction entries must be 1 or -1".into()));
+            }
         }
         Ok(())
     }
@@ -2622,8 +2669,29 @@ mod tests {
         let path = write(dir.path(), "[bus]\nport = \"/dev/ttyUSB0\"\n");
         let p = Params::load(&path, true).unwrap();
         assert_eq!(p.bus.port, "/dev/ttyUSB0");
+        assert_eq!(p.bus.backend, BusBackend::Dynamixel);
         assert_eq!(p.control.hz, 50);
         assert_eq!(p.update_gate.stall_periods, 25);
+    }
+
+    #[test]
+    fn hl2915_bus_backend_is_explicit() {
+        let parsed: Params = toml::from_str("[bus]\nbackend = \"hl2915\"\n").unwrap();
+        assert_eq!(parsed.bus.backend, BusBackend::Hl2915);
+        assert_eq!(parsed.bus.hl2915_ids.len(), 15);
+        assert_eq!(parsed.bus.hl2915_zero_raw, vec![2048; 15]);
+        assert!(toml::from_str::<Params>("[bus]\nbackend = \"unknown\"\n").is_err());
+    }
+
+    #[test]
+    fn hl2915_calibration_must_cover_all_joints() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = write(
+            dir.path(),
+            "[bus]\nbackend = \"hl2915\"\nhl2915_ids = [1, 2]\n",
+        );
+        let error = Params::load(&path, true).unwrap_err().to_string();
+        assert!(error.contains("needs 15 values"), "{error}");
     }
 
     /// [`QUALITY_LABELS`] is what the registry offers and what the file may contain, and

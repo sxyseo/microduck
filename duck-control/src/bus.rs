@@ -56,7 +56,7 @@ const READ_TIMEOUT: Duration = Duration::from_millis(30);
 /// taught everyone to ignore this message. Kept in step with `ImuHealth::FROZEN_RUN`, which is
 /// where the same threshold is applied to the health report — this crate is the hardware layer
 /// and deliberately does not depend on the IPC vocabulary, so the number lives in both places.
-const STALE_RUN_WARN: u64 = 25;
+pub const IMU_FROZEN_RUN: u64 = 25;
 
 /// Detects an IMU board that answers without refreshing, by remembering the last block.
 ///
@@ -64,25 +64,39 @@ const STALE_RUN_WARN: u64 = 25;
 /// describes is one nothing else on the robot reports, and it would otherwise be verifiable
 /// only against broken hardware.
 #[derive(Debug, Default)]
-struct StaleImuTracker {
+pub struct StaleImuTracker {
     /// `None` until the first block. A fixed initial value cannot work here: it would have to
     /// be all zeros, and an all-zero block is exactly what a board whose SFLP table is still
     /// empty sends — scoring a stale read against a predecessor that never existed.
     last: Option<[u8; IMU_BLOCK_LEN]>,
     stale: ImuStale,
+    max_run: u64,
 }
 
 impl StaleImuTracker {
     /// Records one block and returns the length of the run it belongs to — 0 when the block is
     /// fresh, which is the overwhelmingly common answer.
-    fn observe(&mut self, block: &[u8; IMU_BLOCK_LEN]) -> u64 {
+    pub fn observe(&mut self, block: &[u8; IMU_BLOCK_LEN]) -> u64 {
         if self.last.replace(*block) == Some(*block) {
             self.stale.total = self.stale.total.saturating_add(1);
             self.stale.run = self.stale.run.saturating_add(1);
+            self.max_run = self.max_run.max(self.stale.run);
         } else {
             self.stale.run = 0;
         }
         self.stale.run
+    }
+
+    pub fn stale(&self) -> ImuStale {
+        self.stale
+    }
+
+    pub fn max_run(&self) -> u64 {
+        self.max_run
+    }
+
+    pub fn frozen(&self) -> bool {
+        self.max_run >= IMU_FROZEN_RUN
     }
 }
 
@@ -267,7 +281,7 @@ impl RobotIo for DynamixelIo {
             // has stopped refreshing produces one of these every single tick, and 50 Hz of
             // identical warnings would evict the journal.
             let run = self.stale_imu.observe(&raw);
-            if run == STALE_RUN_WARN || (run > STALE_RUN_WARN && run.is_multiple_of(500)) {
+            if run == IMU_FROZEN_RUN || (run > IMU_FROZEN_RUN && run.is_multiple_of(500)) {
                 tracing::warn!(
                     consecutive = run,
                     total = self.stale_imu.stale.total,
@@ -395,7 +409,7 @@ impl RobotIo for DynamixelIo {
     }
 
     fn imu_stale(&self) -> ImuStale {
-        self.stale_imu.stale
+        self.stale_imu.stale()
     }
 
     fn imu_ready(&self) -> bool {
@@ -484,11 +498,13 @@ mod tests {
     fn a_dead_board_runs_past_the_warning_threshold() {
         let mut t = StaleImuTracker::default();
         t.observe(&block(7));
-        for _ in 0..STALE_RUN_WARN {
+        for _ in 0..IMU_FROZEN_RUN {
             t.observe(&block(7));
         }
-        assert_eq!(t.stale.run, STALE_RUN_WARN);
-        assert_eq!(t.stale.total, STALE_RUN_WARN);
+        assert_eq!(t.stale.run, IMU_FROZEN_RUN);
+        assert_eq!(t.stale.total, IMU_FROZEN_RUN);
+        assert_eq!(t.max_run(), IMU_FROZEN_RUN);
+        assert!(t.frozen());
     }
 
     /// Runs accumulate into the same total across separate episodes: the total is "how often

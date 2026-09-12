@@ -18,6 +18,12 @@
 # `robotd --port`, which is the dev escape hatch rather than the thing to edit here.
 port = "/dev/ttyS2"
 
+# Servo protocol/backend. "dynamixel" is the shipped XL330 robot. "hl2915" selects
+# Feetech protocol v1 for servo IDs 1..15 while keeping the existing protocol-v2 IMU at ID 200.
+# Do not switch this until all 15 servo IDs, joint zeroes/directions and mixed-bus timing have
+# passed the HL-2915 bring-up gates.
+backend = "dynamixel"
+
 # Every value below that is commented out shows the built-in default. LEAVE IT COMMENTED
 # unless this robot genuinely needs a different value: install.sh copies this file to
 # /etc/robot/robotd.toml once and never overwrites it, so an uncommented value is frozen on

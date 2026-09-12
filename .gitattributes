@@ -1,0 +1,4 @@
+# Board/runtime shell scripts must stay LF when the repository is edited on Windows.
+*.sh text eol=lf
+*.bash text eol=lf
+*.ps1 text eol=crlf

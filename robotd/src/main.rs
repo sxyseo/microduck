@@ -36,8 +36,8 @@ use arc_swap::{ArcSwap, ArcSwapOption};
 use clap::{Parser, Subcommand};
 use duck_control::bus::DynamixelIo;
 use duck_control::fall::{FallPredictor, FallPredictorConfig};
-use duck_control::hl2915::{DEFAULT_HL2915_IDS, FeetechCalibration, Hl2915RobotIo};
-use duck_control::io::RobotIo;
+use duck_control::hl2915::{FeetechCalibration, Hl2915RobotIo};
+use duck_control::io::{IoError, RobotIo};
 use duck_control::obs::{BodyPose, Command as PolicyCommand};
 use duck_control::policy::{DEFAULT_STANDING_THRESHOLD, Policy, PolicyError, PolicyPaths};
 use duck_control::safety::{Safety, SafetyConfig};
@@ -48,7 +48,7 @@ use tokio::net::{UnixListener, UnixStream};
 
 use control::{Controller, Driving, SkillTuning, Tuning};
 use intents::Intents;
-use params::{BusBackend, Mode, Params, Slot};
+use params::{Bus, BusBackend, Mode, Params, Slot};
 
 /// What to do when the shutdown sequence completes. Injected so the tests can observe the
 /// call instead of powering off the machine running them.
@@ -973,7 +973,7 @@ async fn main() -> ExitCode {
 /// Enable torque and ramp to the home pose.
 #[cfg(target_os = "linux")]
 fn run_init(params: &Params, duration: Duration) -> ExitCode {
-    let mut io = match open_bus_for(&params.bus.port, params.bus.backend, 0) {
+    let mut io = match open_bus_for(&params.bus, 0) {
         Some(io) => io,
         None => return ExitCode::FAILURE,
     };
@@ -1023,8 +1023,7 @@ fn spawn_control_thread(
 ) -> std::io::Result<std::thread::JoinHandle<()>> {
     let period = params.period();
     let fake = args.fake;
-    let port = params.bus.port.clone();
-    let backend = params.bus.backend;
+    let bus = params.bus.clone();
     let params = params.clone();
     // So a reload can re-read `[policy]` without a restart. The path rather than the loaded
     // params, because the point is to pick up what has been written since.
@@ -1068,7 +1067,7 @@ fn spawn_control_thread(
             // loop has not completed a cycle yet", forever, whatever happened to the robot
             // afterwards. Retrying the read alone was not enough: execution never got there.
             runtime.block_on(async move {
-                if let Some(io) = open_bus_waiting_with_backend(&port, backend, &state).await {
+                if let Some(io) = open_bus_waiting(&bus, &state).await {
                     control_loop(io, state, intents, params, params_path, period, poweroff).await;
                 }
             });
@@ -1177,21 +1176,13 @@ type BusIo = FakeIo;
 /// one to abandon the control loop over.
 ///
 /// Returns `None` only if shutdown is requested while waiting.
-async fn open_bus_waiting(port: &str, state: &RobotState) -> Option<BusIo> {
-    open_bus_waiting_with_backend(port, BusBackend::Dynamixel, state).await
-}
-
-async fn open_bus_waiting_with_backend(
-    port: &str,
-    backend: BusBackend,
-    state: &RobotState,
-) -> Option<BusIo> {
+async fn open_bus_waiting(bus: &Bus, state: &RobotState) -> Option<BusIo> {
     let mut attempt = 0u32;
 
     while !state.shutdown.load(Ordering::Relaxed) {
-        // Logging lives in `open_bus`, which is chatty by design on the first attempt and
+        // Logging lives in `open_bus_for`, which is chatty by design on the first attempt and
         // quiet thereafter — a board waiting overnight must not fill the journal.
-        if let Some(io) = open_bus_for(port, backend, attempt) {
+        if let Some(io) = open_bus_for(bus, attempt) {
             state.startup_bus_failures.store(0, Ordering::Relaxed);
             return Some(io);
         }
@@ -1209,39 +1200,60 @@ async fn open_bus_waiting_with_backend(
     None
 }
 
-/// Open and verify the bus, or explain why not.
+/// Open and verify the selected bus, or explain why not.
 #[cfg(target_os = "linux")]
-fn open_bus(port: &str, attempt: u32) -> Option<BusIo> {
-    open_bus_for(port, BusBackend::Dynamixel, attempt)
-}
-
-#[cfg(target_os = "linux")]
-fn open_bus_for(port: &str, backend: BusBackend, attempt: u32) -> Option<BusIo> {
+fn open_bus_for(bus: &Bus, attempt: u32) -> Option<BusIo> {
     // First attempt and every thirtieth — about one line per 30 s while waiting.
     let loud = attempt == 0 || attempt.is_multiple_of(STARTUP_READ_LOG_EVERY);
 
-    let opened = match backend {
-        BusBackend::Dynamixel => DynamixelIo::open(port).map(BusIo::Dynamixel),
-        BusBackend::Hl2915 => Hl2915RobotIo::open(
-            port,
-            &DEFAULT_HL2915_IDS,
-            duck_control::model::IMU_DXL_ID,
-            FeetechCalibration::default(),
-            Duration::from_millis(30),
-        )
-        .map(BusIo::Hl2915),
+    let opened = match bus.backend {
+        BusBackend::Dynamixel => DynamixelIo::open(&bus.port).map(BusIo::Dynamixel),
+        BusBackend::Hl2915 => {
+            let ids: [u8; NUM_JOINTS] = match bus.hl2915_ids.clone().try_into() {
+                Ok(ids) => ids,
+                Err(_) => {
+                    tracing::error!("HL-2915 ID list must contain 15 values");
+                    return None;
+                }
+            };
+            let zero_raw: [u16; NUM_JOINTS] = match bus.hl2915_zero_raw.clone().try_into() {
+                Ok(zero_raw) => zero_raw,
+                Err(_) => {
+                    tracing::error!("HL-2915 zero list must contain 15 values");
+                    return None;
+                }
+            };
+            let direction: [i8; NUM_JOINTS] = match bus.hl2915_direction.clone().try_into() {
+                Ok(direction) => direction,
+                Err(_) => {
+                    tracing::error!("HL-2915 direction list must contain 15 values");
+                    return None;
+                }
+            };
+            Hl2915RobotIo::open(
+                &bus.port,
+                &ids,
+                duck_control::model::IMU_DXL_ID,
+                FeetechCalibration {
+                    zero_raw,
+                    direction,
+                },
+                Duration::from_millis(30),
+            )
+            .map(BusIo::Hl2915)
+        }
     };
     let mut io = match opened {
         Ok(io) => io,
         Err(e) => {
             if loud {
-                tracing::error!(error = %e, port, ?backend, attempt, "cannot open the bus; waiting");
+                tracing::error!(error = %e, port = %bus.port, backend = ?bus.backend, attempt, "cannot open the bus; waiting");
             }
             return None;
         }
     };
     match io.prepare() {
-        Ok(0) => tracing::info!("motor registers already correct"),
+        Ok(0) => tracing::info!("motor bus ready"),
         Ok(n) => tracing::warn!(corrected = n, "motor registers corrected"),
         Err(e) => {
             if loud {
@@ -1258,12 +1270,7 @@ fn open_bus_for(port: &str, backend: BusBackend, attempt: u32) -> Option<BusIo> 
 }
 
 #[cfg(not(target_os = "linux"))]
-fn open_bus(_port: &str, _attempt: u32) -> Option<BusIo> {
-    open_bus_for(_port, BusBackend::Dynamixel, _attempt)
-}
-
-#[cfg(not(target_os = "linux"))]
-fn open_bus_for(_port: &str, _backend: BusBackend, _attempt: u32) -> Option<BusIo> {
+fn open_bus_for(_bus: &Bus, _attempt: u32) -> Option<BusIo> {
     tracing::error!("no bus on this platform; use --fake");
     None
 }
@@ -1759,6 +1766,10 @@ async fn control_loop<T: RobotIo>(
     let mut last_summary = Instant::now();
     let mut was_driving = false;
     let mut bringup = Bringup::Limp;
+    // A servo-reported fault is latched for this daemon run. Ordinary bus drops still use the
+    // short coast window, but an actuator saying "over-temperature/under-voltage/fault" must not
+    // be retried into motion until a human has inspected it and restarted the run.
+    let mut actuator_faulted = false;
     // A mode switch in flight: the mode to end up in, once the robot is home. `None` the rest of
     // the time, which is nearly always.
     let mut mode_change: Option<Mode> = None;
@@ -1906,6 +1917,15 @@ async fn control_loop<T: RobotIo>(
                 Some(sensors)
             }
             Err(e) => {
+                if matches!(&e, IoError::ActuatorFault(_)) && !actuator_faulted {
+                    actuator_faulted = true;
+                    intents.set_enabled(false);
+                    bringup = Bringup::Limp;
+                    tracing::error!(error = %e, "actuator fault; disabling policy and cutting torque");
+                    if let Err(cut) = safety.set_torque(false) {
+                        tracing::error!(error = %cut, "could not cut torque after actuator fault");
+                    }
+                }
                 let n = state.consecutive_errors.fetch_add(1, Ordering::Relaxed) + 1;
                 // One dropped transaction is ordinary on a serial bus; a run of them is not.
                 // Log the first and then every tenth, so a persistent fault is visible
@@ -1951,6 +1971,9 @@ async fn control_loop<T: RobotIo>(
             // avoid.
             Some(intents::PowerRequest::Init) if powered_off => {
                 tracing::warn!("robot.init ignored: the robot is powering off")
+            }
+            Some(intents::PowerRequest::Init) if actuator_faulted => {
+                tracing::warn!("robot.init ignored: actuator fault is latched")
             }
             Some(intents::PowerRequest::Init) => match (bringup, sensors.as_ref()) {
                 // Unlike `enable`, this needs no policy: "stand up" is a reasonable thing to ask of
@@ -2451,6 +2474,7 @@ async fn control_loop<T: RobotIo>(
         // back on and started ramping the robot to home. Seen on the robot as "sits, stands back
         // up, switches off", or when the poweroff was quicker, "sits, switches off, stiff".
         if !powered_off
+            && !actuator_faulted
             && let (Bringup::Limp, true, true, Some(sensors)) = (
                 bringup,
                 snapshot.enabled,
@@ -2649,6 +2673,7 @@ async fn control_loop<T: RobotIo>(
         let driving = snapshot.enabled
             && bringup == Bringup::Ready
             && controller.is_some()
+            && !actuator_faulted
             // The limp-fall sequence owns the robot for its duration: the whole point is
             // that the policy is *not* driving while the robot falls, lands and is posed.
             && !in_limp_fall
@@ -2945,9 +2970,11 @@ async fn control_loop<T: RobotIo>(
                 duck_control::model::mouth_target(snapshot.mouth);
         }
 
-        match safety.apply(targets, hold, gain) {
-            Ok(applied) => limits.extend(applied.limits),
-            Err(e) => tracing::warn!(error = %e, "bus write failed"),
+        if !actuator_faulted {
+            match safety.apply(targets, hold, gain) {
+                Ok(applied) => limits.extend(applied.limits),
+                Err(e) => tracing::warn!(error = %e, "bus write failed"),
+            }
         }
 
         // Only assemble a frame when somebody is subscribed. On a robot nobody usually is,
@@ -6352,9 +6379,11 @@ mod tests {
         ));
         let waiter_state = Arc::clone(&s);
         let handle = tokio::spawn(async move {
-            open_bus_waiting("/dev/definitely-not-a-bus", &waiter_state)
-                .await
-                .is_none()
+            let bus = Bus {
+                port: "/dev/definitely-not-a-bus".into(),
+                ..Bus::default()
+            };
+            open_bus_waiting(&bus, &waiter_state).await.is_none()
         });
 
         // Bounded, so a regression fails rather than hanging CI.

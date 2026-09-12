@@ -22,19 +22,24 @@
 use std::collections::HashMap;
 use std::io;
 use std::path::{Path, PathBuf};
+#[cfg(unix)]
 use std::time::Duration;
 
 use duck_ipc_proto as proto;
+#[cfg(unix)]
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+#[cfg(unix)]
 use tokio::net::UnixStream;
 use tokio::sync::mpsc;
 
 /// Long enough for a loaded board, short enough that a peer gets an answer rather than a spinner.
 /// A unix socket connect either succeeds immediately or the daemon is not there.
+#[cfg(unix)]
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(3);
 
 /// Cap on a single write. A blocked write means the daemon has stopped reading, which is a dead
 /// peer rather than a slow one.
+#[cfg(unix)]
 const WRITE_TIMEOUT: Duration = Duration::from_secs(5);
 
 /// Where each service listens. Defaults are `proto::socket`, which is where they live so that a
@@ -72,9 +77,13 @@ impl Sockets {
     }
 }
 
+#[cfg(unix)]
 struct Conn {
     write: tokio::net::unix::OwnedWriteHalf,
 }
+
+#[cfg(not(unix))]
+struct Conn;
 
 /// One connection per (service, lane), opened on demand and kept for the session.
 ///
@@ -83,6 +92,7 @@ struct Conn {
 /// time, so calls that share a connection share a queue — [`proto::Lane`] records the two
 /// orderings that a single connection per service breaks. At most four sockets per service per
 /// session, and in practice two.
+#[cfg_attr(not(unix), allow(dead_code))]
 pub struct Pool {
     sockets: Sockets,
     conns: HashMap<(proto::Service, proto::Lane), Conn>,
@@ -103,6 +113,7 @@ impl Pool {
     }
 
     /// Send one line to `service` on `lane`'s connection, connecting first if needed.
+    #[cfg(unix)]
     pub async fn send(
         &mut self,
         service: proto::Service,
@@ -142,6 +153,22 @@ impl Pool {
         }
     }
 
+    #[cfg(not(unix))]
+    pub async fn send(
+        &mut self,
+        _service: proto::Service,
+        _lane: proto::Lane,
+        _line: &str,
+    ) -> io::Result<()> {
+        // The daemon runs on Linux; keeping a small stub lets the portable route/web/config tests
+        // compile on a developer laptop without pretending Windows can reach Unix IPC sockets.
+        Err(io::Error::new(
+            io::ErrorKind::Unsupported,
+            "mediad upstream sockets require a Unix host",
+        ))
+    }
+
+    #[cfg(unix)]
     async fn open(&self, service: proto::Service, lane: proto::Lane) -> io::Result<Conn> {
         let path = self.sockets.path(service);
         let stream = tokio::time::timeout(CONNECT_TIMEOUT, UnixStream::connect(path))
