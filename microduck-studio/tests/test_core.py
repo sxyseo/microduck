@@ -512,6 +512,29 @@ def test_project_settings_api_round_trips_preferences(
     assert app_module.get_project_settings(project["id"])["data"] == saved["data"]
 
 
+def test_hardware_api_reports_invalid_stage_as_bad_request(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    import microduck_studio.app as app_module
+
+    store = StudioStore(tmp_path / "studio.db")
+    project = store.create_project("duck", tmp_path)
+    monkeypatch.setattr(app_module, "store", store)
+
+    with pytest.raises(app_module.HTTPException) as exc:
+        app_module.hardware(
+            project["id"],
+            app_module.HardwareIn(
+                data={
+                    "servos": {"model": "HL-2915", "candidates": ["HL-2915"]},
+                    "components": {"camera": {"state": "maybe"}},
+                }
+            ),
+        )
+
+    assert exc.value.status_code == 400
+
+
 def test_hardware_profile_reports_completeness_without_changing_route_status(tmp_path: Path):
     store = StudioStore(tmp_path / "studio.db")
     project = store.create_project("档案显示", tmp_path)

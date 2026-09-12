@@ -345,7 +345,10 @@ def support_bundle(project_id: str, body: SupportBundleIn):
 def hardware(project_id: str, body: HardwareIn):
     if not store.get_project(project_id):
         raise HTTPException(status_code=404, detail="project not found")
-    return store.save_hardware(project_id, body.data)
+    try:
+        return store.save_hardware(project_id, body.data)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @app.get("/api/projects/{project_id}/settings")
