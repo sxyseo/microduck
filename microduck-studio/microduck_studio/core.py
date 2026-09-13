@@ -6,6 +6,7 @@ import hashlib
 import math
 import os
 import platform as platform_module
+import queue
 import re
 import signal
 import shutil
@@ -24,11 +25,13 @@ RULE_VERSIONS = {
     "continuous_test": "continuous-test-v1",
     "probe_process": "probe-process-v2",
     "training_smoke": "training-smoke-v1",
+    "training": "training-v1",
     "tensorboard_summary": "tensorboard-summary-v1",
     "controller_health": "controller-health-v1",
     "compatibility": "compatibility-v2",
     "bam_record_plan": "bam-record-plan-v1",
     "bam_record_run": "bam-record-run-v1",
+    "hardware_acceptance": "hardware-acceptance-v1",
 }
 
 EVIDENCE_SCOPES = {
@@ -37,6 +40,7 @@ EVIDENCE_SCOPES = {
     "deployment_preflight": "local_software",
     "support_bundle": "local_software",
     "training_smoke": "training_or_simulation",
+    "training": "training_or_simulation",
     "tensorboard_summary": "training_or_simulation",
     "bench_continuous": "bench_evidence",
     "continuous_test": "bench_evidence",
@@ -44,6 +48,7 @@ EVIDENCE_SCOPES = {
     "hl2915_bam_record": "real_hardware",
     "controller_diagnostic": "real_hardware",
     "deployment": "real_hardware",
+    "hardware_acceptance": "real_hardware",
 }
 
 RUN_TASKS = {
@@ -53,12 +58,96 @@ RUN_TASKS = {
     "hl2915_read_only_probe": "servo_read",
     "hl2915_bam_record": "identification",
     "training_smoke": "smoke",
+    "training": "training",
     "deployment_preflight": "deployment_preflight",
     "deployment": "deployment",
+    "hardware_acceptance": "acceptance",
 }
 RUN_TERMINAL_STATUSES = {"passed", "failed", "insufficient_evidence", "interrupted"}
 
 SCHEMA_VERSION = 1
+ACCEPTANCE_STAGES = (
+    "lifted_enable",
+    "supported_stand",
+    "free_stand",
+    "supported_step",
+    "free_walk",
+)
+COMPONENT_STATES = {"planned", "owned", "installed", "detected", "verified", "failed"}
+DEBUG_CAPABILITIES = {
+    "controller": "controller_debug",
+    "servo_bench": "servo_bench_debug",
+    "joint_group": "joint_group_debug",
+    "imu": "imu_debug",
+    "camera": "camera_debug",
+    "whole_robot": "whole_robot_debug",
+}
+VISIBLE_METRICS = {
+    "position",
+    "voltage_v",
+    "current_a",
+    "temperature_c",
+    "latency_ms",
+    "packet_loss",
+    "reward",
+    "loss",
+    "episode_length",
+    "throughput",
+}
+TRAINING_RECIPES = {
+    "walk": {
+        "task": "Mjlab-Velocity-Flat-MicroDuck",
+        "defaults": {
+            "num_envs": 4096,
+            "steps_per_env": 24,
+            "max_iterations": 3000,
+            "gpu_ids": "[0]",
+            "seed": 42,
+            "run_name": "studio-walk",
+        },
+    },
+}
+
+_TRAINING_ITERATION = re.compile(r"Learning iteration\s+(?P<step>\d+)\s*/\s*(?P<total>\d+)")
+_TRAINING_METRICS = {
+    "reward": re.compile(r"Mean reward:\s*(?P<value>[-+\w.]+)"),
+    "loss": re.compile(r"Mean value_function loss:\s*(?P<value>[-+\w.]+)"),
+    "episode_length": re.compile(r"Mean episode length:\s*(?P<value>[-+\w.]+)"),
+    "throughput": re.compile(r"Computation:\s*(?P<value>[-+\w.]+)\s+steps/s"),
+}
+_TRAINING_TIMESTEPS = re.compile(r"Total timesteps:\s*(?P<value>\d+)")
+_RUN_LOG_EVENT_LIMIT = 8192
+
+
+def parse_training_metric_block(text: str) -> dict[str, Any] | None:
+    iteration = _TRAINING_ITERATION.search(text)
+    if not iteration:
+        return None
+    step = int(iteration.group("step"))
+    total = int(iteration.group("total"))
+    metrics: dict[str, float] = {}
+    for name, pattern in _TRAINING_METRICS.items():
+        match = pattern.search(text)
+        if match:
+            try:
+                value = float(match.group("value"))
+            except ValueError:
+                continue
+            if math.isfinite(value):
+                metrics[name] = value
+    if not metrics:
+        return None
+    result: dict[str, Any] = {
+        "step": step,
+        "total_steps": total,
+        "progress": min(1.0, (step + 1) / total) if total else 0.0,
+        "provisional": True,
+        "metrics": metrics,
+    }
+    timesteps = _TRAINING_TIMESTEPS.search(text)
+    if timesteps:
+        result["total_timesteps"] = int(timesteps.group("value"))
+    return result
 
 
 def _now() -> str:
@@ -121,6 +210,32 @@ def hardware_completeness(data: dict[str, Any]) -> dict[str, Any]:
     ):
         missing.append("power.voltage_v")
     return {"status": "complete" if not missing else "incomplete", "missing_fields": missing}
+
+
+def hardware_stage_summary(data: dict[str, Any]) -> dict[str, Any]:
+    components = data.get("components", {})
+    if not isinstance(components, dict):
+        raise ValueError("hardware components must be an object")
+    normalized: dict[str, dict[str, Any]] = {}
+    capabilities: list[str] = []
+    for name, component in components.items():
+        if name not in DEBUG_CAPABILITIES or not isinstance(component, dict):
+            raise ValueError("hardware component is invalid")
+        state = component.get("state")
+        if state not in COMPONENT_STATES:
+            raise ValueError("hardware component state is invalid")
+        normalized[name] = {**component, "state": state}
+        if state in {"installed", "detected", "verified"}:
+            capabilities.append(DEBUG_CAPABILITIES[name])
+    return {
+        "components": normalized,
+        "capabilities": sorted(capabilities),
+        "next_components": sorted(
+            name
+            for name, component in normalized.items()
+            if component["state"] in {"planned", "owned", "failed"}
+        ),
+    }
 
 
 def hardware_physical_contract(data: dict[str, Any] | None) -> dict[str, Any]:
@@ -407,6 +522,9 @@ _PROBE_FAULT_SUMMARY = re.compile(
 )
 _SSH_HOST = re.compile(r"[A-Za-z0-9_.:\-\[\]]{1,255}")
 _SSH_USER = re.compile(r"[A-Za-z0-9_.-]{1,64}")
+_EXECUTION_NAME = re.compile(r"[A-Za-z0-9_.-]{1,64}")
+_GPU_IDS = re.compile(r"(?:None|\[(?:\d+(?:,\s*\d+)*)?\])")
+_RUN_NAME = re.compile(r"[A-Za-z0-9_.-]{1,80}")
 _REMOTE_POLICY_PATH = re.compile(r"/(?:[A-Za-z0-9_.-]+/)*[A-Za-z0-9_.-]+")
 _PROBE_RUN_LOCK = threading.Lock()
 _ACTIVE_PROCESS_LOCK = threading.Lock()
@@ -425,8 +543,95 @@ _PRIVATE_KEY_BLOCK = re.compile(
 _BEARER_TOKEN = re.compile(r"(?i)(authorization\s*:\s*bearer\s+)[^\s]+")
 _GITHUB_TOKEN = re.compile(r"\b(?:gh[pousr]_[A-Za-z0-9_]{6,}|github_pat_[A-Za-z0-9_]{6,})\b")
 _SECRET_ENV = re.compile(
-    r"(?im)^(\s*[A-Za-z_][A-Za-z0-9_]*(?:TOKEN|PASSWORD|PASSPHRASE|PSK|PIN|SECRET|PRIVATE_KEY)\s*=\s*).+$"
+    r"(?im)^(\s*(?:[A-Za-z_][A-Za-z0-9_]*)?(?:TOKEN|PASSWORD|PASSPHRASE|PSK|PIN|SECRET|PRIVATE_KEY)\s*=\s*).+$"
 )
+
+
+def validate_project_settings(data: dict[str, Any]) -> dict[str, Any]:
+    if not isinstance(data, dict):
+        raise ValueError("project settings must be an object")
+    unknown = set(data) - {"visible_metrics", "alert_thresholds", "execution_target"}
+    if unknown:
+        raise ValueError(f"unknown project setting: {sorted(unknown)[0]}")
+    metrics = data.get("visible_metrics", [])
+    if (
+        not isinstance(metrics, list)
+        or any(not isinstance(metric, str) or metric not in VISIBLE_METRICS for metric in metrics)
+        or len(metrics) != len(set(metrics))
+    ):
+        raise ValueError("visible metric is invalid")
+    thresholds = data.get("alert_thresholds", {})
+    if not isinstance(thresholds, dict):
+        raise ValueError("alert thresholds must be an object")
+    for metric, value in thresholds.items():
+        if metric not in VISIBLE_METRICS:
+            raise ValueError("alert threshold metric is invalid")
+        if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(float(value)):
+            raise ValueError("alert threshold must be finite")
+    target = data.get("execution_target", {"kind": "local"})
+    if not isinstance(target, dict) or target.get("kind") not in {"local", "wsl", "ssh"}:
+        raise ValueError("execution target is invalid")
+    normalized_target: dict[str, Any] = {"kind": target["kind"]}
+    if target["kind"] == "wsl":
+        distro = target.get("distro")
+        if not isinstance(distro, str) or not _EXECUTION_NAME.fullmatch(distro):
+            raise ValueError("WSL distro is invalid")
+        normalized_target["distro"] = distro
+        path = target.get("path")
+        if path is not None:
+            if not isinstance(path, str) or not path.startswith("/") or any(char in path for char in "\r\n\0"):
+                raise ValueError("WSL training path is invalid")
+            normalized_target["path"] = path
+    if target["kind"] == "ssh":
+        host = target.get("host")
+        user = target.get("user", "rock")
+        port = target.get("port", 22)
+        if not isinstance(host, str) or not _SSH_HOST.fullmatch(host):
+            raise ValueError("SSH host is invalid")
+        if not isinstance(user, str) or not _SSH_USER.fullmatch(user):
+            raise ValueError("SSH user is invalid")
+        if isinstance(port, bool) or not isinstance(port, int) or not 1 <= port <= 65535:
+            raise ValueError("SSH port is invalid")
+        normalized_target.update({"host": host, "user": user, "port": port})
+    return {
+        "visible_metrics": list(metrics),
+        "alert_thresholds": {key: float(value) for key, value in thresholds.items()},
+        "execution_target": normalized_target,
+    }
+
+
+def training_recipes() -> list[dict[str, Any]]:
+    return [
+        {"id": name, "task": recipe["task"], "defaults": dict(recipe["defaults"])}
+        for name, recipe in TRAINING_RECIPES.items()
+    ]
+
+
+def validate_training_parameters(recipe_id: str, parameters: dict[str, Any]) -> dict[str, Any]:
+    recipe = TRAINING_RECIPES.get(recipe_id)
+    if not recipe:
+        raise ValueError("unknown training recipe")
+    if not isinstance(parameters, dict):
+        raise ValueError("training parameters must be an object")
+    defaults = dict(recipe["defaults"])
+    unknown = set(parameters) - set(defaults)
+    if unknown:
+        raise ValueError(f"unknown training parameter: {sorted(unknown)[0]}")
+    config = {**defaults, **parameters}
+    for key, lower, upper in (
+        ("num_envs", 1, 16384),
+        ("steps_per_env", 1, 4096),
+        ("max_iterations", 1, 50000),
+        ("seed", 0, 2_147_483_647),
+    ):
+        value = config[key]
+        if isinstance(value, bool) or not isinstance(value, int) or not lower <= value <= upper:
+            raise ValueError(f"training parameter {key} is invalid")
+    if not isinstance(config["gpu_ids"], str) or not _GPU_IDS.fullmatch(config["gpu_ids"]):
+        raise ValueError("training parameter gpu_ids is invalid")
+    if not isinstance(config["run_name"], str) or not _RUN_NAME.fullmatch(config["run_name"]):
+        raise ValueError("training parameter run_name is invalid")
+    return config
 
 
 def _terminate_active_processes() -> None:
@@ -491,6 +696,137 @@ def redact_data(value: Any) -> Any:
     if isinstance(value, str):
         return redact_text(value)
     return value
+
+
+def _collect_process_output(
+    process: subprocess.Popen,
+    timeout_s: float,
+    *,
+    on_log: Any = None,
+    on_metrics: Any = None,
+) -> dict[str, Any]:
+    streams = {"stdout": getattr(process, "stdout", None), "stderr": getattr(process, "stderr", None)}
+    if any(not callable(getattr(stream, "readline", None)) for stream in streams.values()):
+        timed_out = False
+        try:
+            stdout, stderr = process.communicate(timeout=timeout_s)
+        except subprocess.TimeoutExpired:
+            timed_out = True
+            _stop_process(process, force=True)
+            stdout, stderr = process.communicate()
+        metric = parse_training_metric_block(_output_text(stdout))
+        if metric and on_metrics:
+            on_metrics(metric)
+        return {
+            "stdout": _output_text(stdout),
+            "stderr": _output_text(stderr),
+            "timed_out": timed_out,
+            "metrics": metric,
+            "stream_errors": [],
+        }
+
+    messages: queue.Queue[tuple[str, str, Any]] = queue.Queue()
+    output = {"stdout": [], "stderr": []}
+    buffers = {"stdout": [], "stderr": []}
+    metric_lines: list[str] = []
+    latest_metric = None
+    stream_errors: list[str] = []
+
+    def read_stream(name: str, stream: Any) -> None:
+        try:
+            while True:
+                line = stream.readline()
+                if line == "":
+                    break
+                messages.put(("line", name, _output_text(line)))
+        except Exception as exc:
+            messages.put(("error", name, str(exc)))
+        finally:
+            messages.put(("done", name, None))
+
+    def record_event(callback: Any, data: dict[str, Any]) -> None:
+        if not callback:
+            return
+        try:
+            callback(data)
+        except Exception as exc:
+            stream_errors.append(str(exc))
+
+    def flush_logs() -> None:
+        for name, lines in buffers.items():
+            if not lines:
+                continue
+            text = redact_text("".join(lines))
+            lines.clear()
+            record_event(on_log, {
+                "stream": name,
+                "text": text[:_RUN_LOG_EVENT_LIMIT],
+                "truncated": len(text) > _RUN_LOG_EVENT_LIMIT,
+            })
+
+    def flush_metrics() -> None:
+        nonlocal latest_metric
+        if not metric_lines:
+            return
+        metric = parse_training_metric_block("".join(metric_lines))
+        metric_lines.clear()
+        if metric:
+            latest_metric = metric
+            record_event(on_metrics, metric)
+
+    for name, stream in streams.items():
+        threading.Thread(target=read_stream, args=(name, stream), daemon=True).start()
+
+    open_streams = len(streams)
+    timed_out = False
+    timeout_at = time.monotonic() + timeout_s
+    force_deadline = None
+    next_flush = time.monotonic() + 0.25
+    while open_streams or process.poll() is None:
+        now = time.monotonic()
+        if not timed_out and now >= timeout_at:
+            timed_out = True
+            _stop_process(process, force=True)
+            force_deadline = now + 5
+        if force_deadline is not None and now >= force_deadline:
+            break
+        try:
+            kind, stream_name, value = messages.get(timeout=0.1)
+        except queue.Empty:
+            if time.monotonic() >= next_flush:
+                flush_logs()
+                next_flush = time.monotonic() + 0.25
+            continue
+        if kind == "done":
+            open_streams -= 1
+            continue
+        if kind == "error":
+            stream_errors.append(f"{stream_name}: {value}")
+            continue
+        output[stream_name].append(value)
+        buffers[stream_name].append(value)
+        if stream_name == "stdout":
+            if _TRAINING_ITERATION.search(value):
+                flush_metrics()
+                metric_lines.append(value)
+            elif metric_lines:
+                metric_lines.append(value)
+                if re.match(r"\s*ETA:", value):
+                    flush_logs()
+                    flush_metrics()
+                    next_flush = time.monotonic() + 0.25
+        if sum(len(item) for item in buffers[stream_name]) >= _RUN_LOG_EVENT_LIMIT:
+            flush_logs()
+            next_flush = time.monotonic() + 0.25
+    flush_logs()
+    flush_metrics()
+    return {
+        "stdout": "".join(output["stdout"]),
+        "stderr": "".join(output["stderr"]),
+        "timed_out": timed_out,
+        "metrics": latest_metric,
+        "stream_errors": stream_errors,
+    }
 
 
 def evaluate_probe_process(
@@ -1222,6 +1558,54 @@ def validate_assembly(data: dict[str, Any]) -> tuple[dict[str, Any], str]:
     return normalized, completion
 
 
+def validate_hardware_acceptance(data: dict[str, Any]) -> tuple[dict[str, Any], str, list[str]]:
+    if not isinstance(data, dict) or data.get("stage") not in ACCEPTANCE_STAGES:
+        raise ValueError("hardware acceptance stage is invalid")
+    operator = data.get("operator")
+    if not isinstance(operator, str) or not operator.strip():
+        raise ValueError("hardware acceptance requires operator")
+    checks = data.get("checks")
+    if not isinstance(checks, list) or not checks:
+        raise ValueError("hardware acceptance checks must be a non-empty list")
+    normalized_checks: list[dict[str, Any]] = []
+    check_ids: set[str] = set()
+    for index, check in enumerate(checks):
+        if not isinstance(check, dict):
+            raise ValueError(f"hardware acceptance check {index} must be an object")
+        check_id = str(check.get("id", "")).strip()
+        title = str(check.get("title", "")).strip()
+        if not check_id or not title:
+            raise ValueError(f"hardware acceptance check {index} requires id and title")
+        if check_id in check_ids:
+            raise ValueError("hardware acceptance check ids must be unique")
+        check_ids.add(check_id)
+        status = check.get("status")
+        if status not in {"passed", "failed"}:
+            raise ValueError(f"hardware acceptance check {index} status is invalid")
+        evidence = check.get("evidence")
+        if not isinstance(evidence, list) or not evidence or any(
+            not isinstance(ref, str) or not ref.strip() for ref in evidence
+        ):
+            raise ValueError(f"hardware acceptance check {index} requires evidence")
+        normalized_checks.append({
+            "id": check_id,
+            "title": title,
+            "status": status,
+            "evidence": [ref.strip() for ref in evidence],
+        })
+    failed = [check["id"] for check in normalized_checks if check["status"] == "failed"]
+    normalized = {
+        "stage": data["stage"],
+        "operator": operator.strip(),
+        "checks": normalized_checks,
+    }
+    if "notes" in data:
+        if not isinstance(data["notes"], str):
+            raise ValueError("hardware acceptance notes must be a string")
+        normalized["notes"] = data["notes"].strip()
+    return normalized, "failed" if failed else "passed", [f"check_failed:{check_id}" for check_id in failed]
+
+
 def summarize_assembly_materials(materials: list[dict[str, Any]]) -> dict[str, Any]:
     status_counts: dict[str, int] = {}
     quantity_total = 0.0
@@ -1368,8 +1752,10 @@ TASKS = (
     ("calibration", "标定记录确认", ("hardware", "servo_read"), "blocked"),
     ("identification", "执行器辨识", ("hardware", "servo_read"), "blocked"),
     ("smoke", "训练 smoke test", ("preflight", "hardware"), "blocked"),
+    ("training", "模型训练与续训", ("smoke",), "blocked"),
     ("deployment_preflight", "部署前兼容性预检", ("hardware", "preflight", "smoke"), "blocked"),
     ("deployment", "部署策略与健康检查", ("deployment_preflight", "assembly", "calibration"), "blocked"),
+    ("acceptance", "逐级实机验收", ("deployment",), "blocked"),
     ("report", "生成复刻报告", ("hardware", "preflight"), "blocked"),
 )
 
@@ -1478,6 +1864,19 @@ TASK_CARDS = {
         "risk": "writes_training_checkout",
         "read_only": False,
     },
+    "training": {
+        "preconditions": ["训练 smoke 已通过", "训练 checkout 与执行目标可用"],
+        "estimated_minutes": 180,
+        "tools": ["Linux/macOS/WSL2", "训练 checkout", "uv", "GPU（长训练）"],
+        "steps": ["选择受控配方", "核对生效参数和来源", "确认后运行", "检查 checkpoint 与指标", "按需显式续训"],
+        "operation_scope": "运行工作台内置训练配方；续训只加载明确且已校验的 checkpoint",
+        "evidence_required": ["代码和硬件契约", "生效参数", "训练日志", "checkpoint SHA-256", "父运行血缘"],
+        "acceptance": "训练进程成功且至少产生一个本次新 checkpoint",
+        "failure_handling": "保留日志和完整 checkpoint；中止后不自动续跑或部署",
+        "outputs": ["training_run", "checkpoint_hashes", "training_provenance"],
+        "risk": "writes_training_checkout",
+        "read_only": False,
+    },
     "deployment_preflight": {
         "preconditions": ["硬件、预检和 smoke 均成功", "策略 manifest 可读取；生成部署计划还需当前装配和已核验标定成功"],
         "estimated_minutes": 10,
@@ -1503,6 +1902,20 @@ TASK_CARDS = {
         "outputs": ["deployment_run", "rollback_evidence"],
         "risk": "confirmed_remote_mutation",
         "read_only": False,
+    },
+    "acceptance": {
+        "preconditions": ["当前硬件上的最新部署成功", "每一级均具备实体急停、规定约束和操作者"],
+        "estimated_minutes": 45,
+        "tools": ["实体急停", "支撑/约束装置", "照片或视频和运行日志"],
+        "steps": ["按固定顺序选择当前阶段", "执行应用外的人工验收", "逐项记录通过或失败及证据", "失败时停止升级并复测"],
+        "operation_scope": "仅保存人工实机验收证据；工作台不会从此任务触发机器人运动",
+        "evidence_required": ["操作者", "每项检查结论", "每项照片、视频或日志证据", "对应部署运行"],
+        "acceptance": "五个阶段按顺序全部通过，且仍对应当前硬件和最新成功部署",
+        "failure_handling": "任一级失败即停止升级；保留证据，修复后从失败级重新记录",
+        "outputs": ["hardware_acceptance_runs"],
+        "risk": "manual_real_hardware_evidence",
+        "read_only": False,
+        "stages": list(ACCEPTANCE_STAGES),
     },
     "report": {
         "preconditions": ["项目和预检记录存在"],
@@ -1644,6 +2057,19 @@ class StudioStore:
                     updated_at TEXT NOT NULL,
                     UNIQUE(project_id, kind)
                 );
+                CREATE TABLE IF NOT EXISTS project_settings (
+                    project_id TEXT PRIMARY KEY,
+                    data TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                );
+                CREATE TABLE IF NOT EXISTS run_events (
+                    run_id TEXT NOT NULL,
+                    sequence INTEGER NOT NULL,
+                    timestamp TEXT NOT NULL,
+                    type TEXT NOT NULL,
+                    data TEXT NOT NULL,
+                    PRIMARY KEY (run_id, sequence)
+                );
                 """
             )
             columns = {row[1] for row in conn.execute("PRAGMA table_info(tasks)")}
@@ -1679,6 +2105,12 @@ class StudioStore:
                 conn.execute(
                     "UPDATE runs SET status = 'interrupted', ended_at = ?, result = ? WHERE id = ?",
                     (_now(), _json(result), run["id"]),
+                )
+                self._append_run_event(
+                    conn,
+                    run["id"],
+                    "finished",
+                    {"status": "interrupted", "reasons": reasons},
                 )
                 task_id = RUN_TASKS.get(run["kind"])
                 if task_id:
@@ -1719,9 +2151,43 @@ class StudioStore:
             rows = conn.execute("SELECT * FROM projects ORDER BY created_at DESC").fetchall()
         return [_with_schema(dict(row)) for row in rows]
 
+    def save_project_settings(self, project_id: str, data: dict[str, Any]) -> dict[str, Any]:
+        if not self.get_project(project_id):
+            raise KeyError(project_id)
+        normalized = validate_project_settings(data)
+        record = _with_schema({
+            "project_id": project_id,
+            "data": normalized,
+            "updated_at": _now(),
+        })
+        with self._connect() as conn:
+            conn.execute(
+                "INSERT INTO project_settings VALUES (?, ?, ?) "
+                "ON CONFLICT(project_id) DO UPDATE SET data = excluded.data, updated_at = excluded.updated_at",
+                (project_id, _json(normalized), record["updated_at"]),
+            )
+        return record
+
+    def get_project_settings(self, project_id: str) -> dict[str, Any]:
+        if not self.get_project(project_id):
+            raise KeyError(project_id)
+        with self._connect() as conn:
+            row = conn.execute(
+                "SELECT project_id, data, updated_at FROM project_settings WHERE project_id = ?",
+                (project_id,),
+            ).fetchone()
+        if not row:
+            return _with_schema({
+                "project_id": project_id,
+                "data": validate_project_settings({}),
+                "updated_at": None,
+            })
+        return _with_schema({**dict(row), "data": _loads(row["data"])})
+
     def save_hardware(self, project_id: str, data: dict[str, Any]) -> dict[str, Any]:
         if not self.get_project(project_id):
             raise KeyError(project_id)
+        hardware_stage_summary(data)
         servos = data.get("servos") if isinstance(data.get("servos"), dict) else {}
         raw_model = servos.get("model")
         model = raw_model.strip() if isinstance(raw_model, str) and raw_model.strip() else None
@@ -1762,16 +2228,16 @@ class StudioStore:
             if hardware_changed:
                 if physical_changed:
                     invalidated_tasks.update(
-                        {"controller_read", "servo_read", "assembly", "calibration", "identification", "smoke", "deployment_preflight", "deployment", "report"}
+                        {"controller_read", "servo_read", "assembly", "calibration", "identification", "smoke", "training", "deployment_preflight", "deployment", "report"}
                     )
                 else:
                     if previous_map.get("runtime") != data.get("runtime"):
                         invalidated_tasks.update({"controller_read", "deployment_preflight", "deployment", "report"})
                     if previous_map.get("training") != data.get("training"):
-                        invalidated_tasks.update({"smoke", "deployment_preflight", "deployment", "report"})
+                        invalidated_tasks.update({"smoke", "training", "deployment_preflight", "deployment", "report"})
                     if not invalidated_tasks:
                         invalidated_tasks.update(
-                            {"controller_read", "servo_read", "assembly", "calibration", "identification", "smoke", "deployment_preflight", "deployment", "report"}
+                            {"controller_read", "servo_read", "assembly", "calibration", "identification", "smoke", "training", "deployment_preflight", "deployment", "report"}
                         )
             conn.execute(
                 "INSERT INTO hardware_profiles VALUES (?, ?, ?, ?, ?)",
@@ -1790,6 +2256,165 @@ class StudioStore:
                 )
         self._refresh_task_statuses(project_id)
         return _with_schema(profile)
+
+    def build_training_plan(
+        self,
+        project_id: str,
+        training_dir: Path | str,
+        recipe: str,
+        parameters: dict[str, Any],
+        *,
+        target: dict[str, Any],
+        parent_run_id: str | None = None,
+        checkpoint: Path | str | None = None,
+    ) -> dict[str, Any]:
+        project = self.get_project(project_id)
+        if not project:
+            raise KeyError(project_id)
+        checkout = Path(training_dir).resolve()
+        if not checkout.is_dir():
+            raise ValueError("training checkout missing")
+        config = validate_training_parameters(recipe, parameters)
+        normalized_target = validate_project_settings({"execution_target": target})["execution_target"]
+        with self._connect() as conn:
+            hardware = conn.execute(
+                "SELECT id, data FROM hardware_profiles WHERE project_id = ? AND status = 'confirmed' "
+                "ORDER BY updated_at DESC LIMIT 1",
+                (project_id,),
+            ).fetchone()
+            preflight = conn.execute(
+                "SELECT status FROM tasks WHERE project_id = ? AND id = 'preflight'",
+                (project_id,),
+            ).fetchone()
+            smoke = conn.execute(
+                "SELECT status FROM tasks WHERE project_id = ? AND id = 'smoke'",
+                (project_id,),
+            ).fetchone()
+        if not hardware:
+            raise ValueError("hardware confirmation required")
+        if not preflight or preflight["status"] != "success":
+            raise ValueError("successful preflight required")
+        if not smoke or smoke["status"] != "success":
+            raise ValueError("successful training smoke required")
+        hardware_data = _loads(hardware["data"])
+        servos = hardware_data.get("servos") if isinstance(hardware_data.get("servos"), dict) else {}
+        training_contract = {
+            "task": TRAINING_RECIPES[recipe]["task"],
+            "servo_model": servos.get("model"),
+            "obs_len": 61,
+            "action_len": 14,
+            "control_hz": hardware_data.get("control_hz", 50),
+        }
+        target_kind = normalized_target["kind"]
+        if target_kind == "local":
+            uv = shutil.which("uv")
+            if not uv:
+                raise ValueError("uv executable not found")
+        else:
+            uv = "uv"
+        train_command = [
+            uv,
+            "run",
+            "train",
+            training_contract["task"],
+            "--gpu-ids",
+            config["gpu_ids"],
+            "--env.scene.num-envs",
+            str(config["num_envs"]),
+            "--agent.num-steps-per-env",
+            str(config["steps_per_env"]),
+            "--agent.max-iterations",
+            str(config["max_iterations"]),
+            "--agent.seed",
+            str(config["seed"]),
+            "--agent.logger",
+            "tensorboard",
+            "--agent.upload-model",
+            "False",
+            "--agent.run-name",
+            config["run_name"],
+        ]
+        resume_checkpoint: dict[str, Any] | None = None
+        if (parent_run_id is None) != (checkpoint is None):
+            raise ValueError("resume requires both parent run and checkpoint")
+        if parent_run_id is not None and checkpoint is not None:
+            parent = self.get_run(parent_run_id)
+            if (
+                parent["project_id"] != project_id
+                or parent["kind"] != "training"
+                or parent["status"] not in RUN_TERMINAL_STATUSES
+            ):
+                raise ValueError("resume parent run is invalid")
+            if parent["result"].get("training_contract") != training_contract:
+                raise ValueError("resume training contract does not match")
+            checkpoint_path = Path(checkpoint).resolve()
+            if (
+                checkpoint_path.suffix != ".pt"
+                or not checkpoint_path.is_file()
+                or not checkpoint_path.is_relative_to(checkout)
+            ):
+                raise ValueError("resume checkpoint is invalid")
+            digest, size = _file_sha256(checkpoint_path)
+            parent_outputs = parent["result"].get("training_outputs", {})
+            parent_checkpoints = parent_outputs.get("checkpoints", []) if isinstance(parent_outputs, dict) else []
+            if not any(
+                isinstance(item, dict)
+                and Path(str(item.get("path", ""))).resolve() == checkpoint_path
+                and item.get("sha256") == digest
+                for item in parent_checkpoints
+            ):
+                raise ValueError("resume checkpoint is not verified by parent run")
+            resume_checkpoint = {"path": str(checkpoint_path), "sha256": digest, "size": size}
+            train_command.extend([
+                "--agent.resume",
+                "True",
+                "--agent.load-run",
+                f"^{re.escape(checkpoint_path.parent.name)}$",
+                "--agent.load-checkpoint",
+                f"^{re.escape(checkpoint_path.name)}$",
+            ])
+        if target_kind == "local":
+            command = train_command
+            execution_supported = platform_module.system() in {"Linux", "Darwin"}
+            execution_note = None if execution_supported else "本机训练执行需要 Linux/macOS；Windows 请选择 WSL2。"
+        elif target_kind == "wsl":
+            wsl = shutil.which("wsl")
+            wsl_path = normalized_target.get("path")
+            if not wsl_path:
+                raise ValueError("WSL training path is required")
+            command = [wsl or "wsl", "-d", normalized_target["distro"], "--cd", wsl_path, "--", *train_command]
+            execution_supported = platform_module.system() == "Windows" and bool(wsl)
+            execution_note = None if execution_supported else "WSL2 executable is unavailable on this host."
+        else:
+            command = train_command
+            execution_supported = False
+            execution_note = "远程 GPU 当前仅保存配置；执行需先完成远程状态与 checkpoint 校验。"
+        log_root = checkout / "logs" / "rsl_rl" / "velocity"
+        candidates = list(log_root.rglob("model_*.pt")) + list(log_root.rglob("*.onnx")) if log_root.is_dir() else []
+        output_baseline = {str(path): _file_signature(path) for path in candidates}
+        return {
+            "kind": "training",
+            "recipe": recipe,
+            "uv": uv,
+            "mutates": True,
+            "hardware_profile_id": hardware["id"],
+            "cwd": str(checkout),
+            "training_dir": str(checkout),
+            "command": command,
+            "timeout_s": 604800,
+            "target": normalized_target,
+            "execution_supported": execution_supported,
+            "execution_note": execution_note,
+            "effective_config": config,
+            "training_contract": training_contract,
+            "training_outputs": {"log_root": str(log_root)},
+            "output_baseline": output_baseline,
+            "training_provenance": {
+                "source": capture_git_snapshot(checkout),
+                "parent_run_id": parent_run_id,
+                "checkpoint": resume_checkpoint,
+            },
+        }
 
     def build_training_smoke_plan(
         self, project_id: str, training_dir: Path | str
@@ -2419,19 +3044,21 @@ class StudioStore:
         ).start()
         return {**run, "status": "running", "result": initial}
 
-    def _start_training_run(self, project_id: str) -> dict[str, Any]:
+    def _start_training_run(self, project_id: str, kind: str = "training_smoke") -> dict[str, Any]:
+        if kind not in {"training_smoke", "training"}:
+            raise ValueError("invalid training run kind")
         with _TRAINING_RUN_LOCK:
             with self._connect() as conn:
                 conn.execute("BEGIN IMMEDIATE")
                 active = conn.execute(
-                    "SELECT id FROM runs WHERE kind = 'training_smoke' AND status = 'running' LIMIT 1"
+                    "SELECT id FROM runs WHERE kind IN ('training_smoke', 'training') AND status = 'running' LIMIT 1"
                 ).fetchone()
                 if active:
-                    raise RuntimeError("a training smoke run is already running")
+                    raise RuntimeError("a training run is already running")
                 run = {
                     "id": uuid.uuid4().hex,
                     "project_id": project_id,
-                    "kind": "training_smoke",
+                    "kind": kind,
                     "status": "running",
                     "started_at": _now(),
                     "ended_at": None,
@@ -2441,7 +3068,211 @@ class StudioStore:
                     "INSERT INTO runs VALUES (?, ?, ?, ?, ?, ?, ?)",
                     (run["id"], project_id, run["kind"], run["status"], run["started_at"], None, _json({})),
                 )
+                self._append_run_event(
+                    conn, run["id"], "started", {"status": "running", "kind": kind}
+                )
                 return run
+
+    def start_training(
+        self,
+        project_id: str,
+        training_dir: Path | str,
+        recipe: str,
+        parameters: dict[str, Any],
+        *,
+        target: dict[str, Any],
+        confirm: bool,
+        parent_run_id: str | None = None,
+        checkpoint: Path | str | None = None,
+    ) -> dict[str, Any]:
+        if not confirm:
+            raise PermissionError("explicit confirmation required")
+        plan = self.build_training_plan(
+            project_id,
+            training_dir,
+            recipe,
+            parameters,
+            target=target,
+            parent_run_id=parent_run_id,
+            checkpoint=checkpoint,
+        )
+        if not plan["execution_supported"]:
+            raise ValueError(plan["execution_note"])
+        run = self._start_training_run(project_id, "training")
+        self.set_task_status(project_id, "training", "running")
+        initial = {
+            key: plan[key]
+            for key in (
+                "recipe",
+                "command",
+                "cwd",
+                "training_dir",
+                "hardware_profile_id",
+                "mutates",
+                "target",
+                "effective_config",
+                "training_contract",
+                "training_outputs",
+                "output_baseline",
+                "training_provenance",
+                "execution_supported",
+                "execution_note",
+            )
+        }
+        initial["status"] = "running"
+        self.update_run_result(run["id"], initial)
+        started = time.monotonic()
+        try:
+            process = subprocess.Popen(
+                plan["command"],
+                cwd=plan["cwd"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                shell=False,
+                start_new_session=True,
+            )
+        except OSError as exc:
+            result = evaluate_training_smoke(
+                returncode=None,
+                timed_out=False,
+                stdout="",
+                stderr=str(exc),
+                duration_s=time.monotonic() - started,
+            )
+            result["rule_version"] = RULE_VERSIONS["training"]
+            result.update({key: value for key, value in initial.items() if key != "status"})
+            self.finish_run(run["id"], result["status"], result)
+            self._set_hardware_bound_task_status(
+                project_id,
+                "training",
+                task_status_for_result(result["status"]),
+                plan["hardware_profile_id"],
+            )
+            return {**run, "status": result["status"], "result": result}
+        with _ACTIVE_PROCESS_LOCK:
+            _ACTIVE_PROCESSES[run["id"]] = process
+        threading.Thread(
+            target=self._collect_training,
+            args=(run, process, plan, started),
+            daemon=True,
+        ).start()
+        return {**run, "status": "running", "result": initial}
+
+    def _collect_training(
+        self,
+        run: dict[str, Any],
+        process: subprocess.Popen,
+        plan: dict[str, Any],
+        started: float,
+    ) -> None:
+        timed_out = False
+        stdout: Any = ""
+        stderr: Any = ""
+        try:
+            captured = _collect_process_output(
+                process,
+                plan["timeout_s"],
+                on_log=lambda data: self._record_live_run_event(run["id"], "log", data),
+                on_metrics=lambda data: self._record_live_run_event(run["id"], "metrics", data),
+            )
+            stdout = captured["stdout"]
+            stderr = captured["stderr"]
+            timed_out = captured["timed_out"]
+            result = evaluate_training_smoke(
+                returncode=process.returncode,
+                timed_out=timed_out,
+                stdout=stdout,
+                stderr=stderr,
+                duration_s=time.monotonic() - started,
+            )
+            if captured["metrics"]:
+                result.update({
+                    "metrics": captured["metrics"]["metrics"],
+                    "progress": captured["metrics"]["progress"],
+                    "metric_step": captured["metrics"]["step"],
+                    "metrics_provisional": True,
+                })
+                if "total_timesteps" in captured["metrics"]:
+                    result["total_timesteps"] = captured["metrics"]["total_timesteps"]
+            if captured["stream_errors"]:
+                result["status"] = "failed"
+                result["reasons"].append("output_stream_error")
+                result["stream_errors"] = redact_data(captured["stream_errors"])
+            result["rule_version"] = RULE_VERSIONS["training"]
+            with _ACTIVE_PROCESS_LOCK:
+                cancelled = run["id"] in _CANCELLED_RUNS
+            if cancelled:
+                result["status"] = "interrupted"
+                result["reasons"] = [reason for reason in result["reasons"] if reason != "process_exit"]
+                result["reasons"].append("cancelled")
+            log_root = Path(plan["training_outputs"]["log_root"])
+            baseline = plan["output_baseline"]
+            candidates = list(log_root.rglob("model_*.pt")) + list(log_root.rglob("*.onnx")) if log_root.is_dir() else []
+            fresh = [path for path in sorted(candidates) if _file_signature(path) != baseline.get(str(path))]
+
+            def describe(path: Path) -> dict[str, Any]:
+                digest, size = _file_sha256(path)
+                return {"path": str(path), "sha256": digest, "size": size}
+
+            outputs = {
+                "log_root": str(log_root),
+                "checkpoints": [describe(path) for path in fresh if path.suffix == ".pt"],
+                "onnx": [describe(path) for path in fresh if path.suffix == ".onnx"],
+            }
+            if result["status"] == "passed" and not outputs["checkpoints"]:
+                result["status"] = "insufficient_evidence"
+                result["reasons"].append("training_checkpoint_missing")
+            result.update({
+                "recipe": plan["recipe"],
+                "command": plan["command"],
+                "cwd": plan["cwd"],
+                "training_dir": plan["training_dir"],
+                "hardware_profile_id": plan["hardware_profile_id"],
+                "mutates": True,
+                "target": plan["target"],
+                "effective_config": plan["effective_config"],
+                "training_contract": plan["training_contract"],
+                "training_outputs": outputs,
+                "output_baseline": plan["output_baseline"],
+                "training_provenance": plan["training_provenance"],
+                "execution_supported": plan["execution_supported"],
+                "execution_note": plan["execution_note"],
+            })
+        except Exception as exc:
+            result = {
+                "status": "failed",
+                "returncode": process.poll(),
+                "timed_out": False,
+                "duration_s": time.monotonic() - started,
+                "stdout": _output_text(stdout),
+                "stderr": f"{_output_text(stderr)}\n{exc}".strip(),
+                "reasons": ["collector_error"],
+                "rule_version": RULE_VERSIONS["training"],
+                "recipe": plan["recipe"],
+                "command": plan["command"],
+                "cwd": plan["cwd"],
+                "training_dir": plan["training_dir"],
+                "hardware_profile_id": plan["hardware_profile_id"],
+                "mutates": True,
+                "target": plan["target"],
+                "effective_config": plan["effective_config"],
+                "training_contract": plan["training_contract"],
+                "training_outputs": plan["training_outputs"],
+                "output_baseline": plan["output_baseline"],
+                "training_provenance": plan["training_provenance"],
+            }
+        finally:
+            with _ACTIVE_PROCESS_LOCK:
+                _ACTIVE_PROCESSES.pop(run["id"], None)
+                _CANCELLED_RUNS.discard(run["id"])
+        self.finish_run(run["id"], result["status"], result)
+        self._set_hardware_bound_task_status(
+            run["project_id"],
+            "training",
+            task_status_for_result(result["status"]),
+            plan["hardware_profile_id"],
+        )
 
     def start_training_smoke(
         self, project_id: str, training_dir: Path | str, *, confirm: bool
@@ -2516,12 +3347,15 @@ class StudioStore:
         stdout: Any = ""
         stderr: Any = ""
         try:
-            try:
-                stdout, stderr = process.communicate(timeout=plan["timeout_s"])
-            except subprocess.TimeoutExpired:
-                timed_out = True
-                _stop_process(process, force=True)
-                stdout, stderr = process.communicate()
+            captured = _collect_process_output(
+                process,
+                plan["timeout_s"],
+                on_log=lambda data: self._record_live_run_event(run["id"], "log", data),
+                on_metrics=lambda data: self._record_live_run_event(run["id"], "metrics", data),
+            )
+            stdout = captured["stdout"]
+            stderr = captured["stderr"]
+            timed_out = captured["timed_out"]
             result = evaluate_training_smoke(
                 returncode=process.returncode,
                 timed_out=timed_out,
@@ -2529,6 +3363,19 @@ class StudioStore:
                 stderr=stderr,
                 duration_s=time.monotonic() - started,
             )
+            if captured["metrics"]:
+                result.update({
+                    "metrics": captured["metrics"]["metrics"],
+                    "progress": captured["metrics"]["progress"],
+                    "metric_step": captured["metrics"]["step"],
+                    "metrics_provisional": True,
+                })
+                if "total_timesteps" in captured["metrics"]:
+                    result["total_timesteps"] = captured["metrics"]["total_timesteps"]
+            if captured["stream_errors"]:
+                result["status"] = "failed"
+                result["reasons"].append("output_stream_error")
+                result["stream_errors"] = redact_data(captured["stream_errors"])
             with _ACTIVE_PROCESS_LOCK:
                 cancelled = run["id"] in _CANCELLED_RUNS
             if cancelled:
@@ -2809,6 +3656,8 @@ class StudioStore:
             if process is None:
                 raise RuntimeError("run is not cancellable")
             _CANCELLED_RUNS.add(run_id)
+            with self._connect() as conn:
+                self._append_run_event(conn, run_id, "cancelling", {"status": "cancelling"})
             _stop_process(process)
         return {"id": run_id, "status": "cancelling"}
 
@@ -2983,6 +3832,9 @@ class StudioStore:
                     "INSERT INTO runs VALUES (?, ?, ?, ?, ?, ?, ?)",
                     (run["id"], project_id, run["kind"], run["status"], run["started_at"], None, _json({})),
                 )
+                self._append_run_event(
+                    conn, run["id"], "started", {"status": "running", "kind": kind}
+                )
                 return run
 
     def record_continuous_test(
@@ -3041,7 +3893,95 @@ class StudioStore:
                 "INSERT INTO runs VALUES (?, ?, ?, ?, ?, ?, ?)",
                 (run["id"], project_id, kind, run["status"], run["started_at"], None, _json({})),
             )
+            self._append_run_event(conn, run["id"], "started", {"status": "running", "kind": kind})
         return run
+
+    @staticmethod
+    def _append_run_event(
+        conn: sqlite3.Connection,
+        run_id: str,
+        event_type: str,
+        data: dict[str, Any],
+    ) -> None:
+        sequence = conn.execute(
+            "SELECT COALESCE(MAX(sequence), 0) + 1 FROM run_events WHERE run_id = ?",
+            (run_id,),
+        ).fetchone()[0]
+        conn.execute(
+            "INSERT INTO run_events VALUES (?, ?, ?, ?, ?)",
+            (run_id, sequence, _now(), event_type, _json(data)),
+        )
+
+    def _record_live_run_event(
+        self, run_id: str, event_type: str, data: dict[str, Any]
+    ) -> None:
+        with self._connect() as conn:
+            row = conn.execute("SELECT status FROM runs WHERE id = ?", (run_id,)).fetchone()
+            if not row:
+                raise KeyError(run_id)
+            if row["status"] == "running":
+                self._append_run_event(conn, run_id, event_type, redact_data(data))
+
+    def list_run_events(self, run_id: str, after_sequence: int = 0) -> list[dict[str, Any]]:
+        if isinstance(after_sequence, bool) or not isinstance(after_sequence, int) or after_sequence < 0:
+            raise ValueError("after sequence must be a non-negative integer")
+        with self._connect() as conn:
+            if not conn.execute("SELECT 1 FROM runs WHERE id = ?", (run_id,)).fetchone():
+                raise KeyError(run_id)
+            rows = conn.execute(
+                "SELECT run_id, sequence, timestamp, type, data FROM run_events "
+                "WHERE run_id = ? AND sequence > ? ORDER BY sequence",
+                (run_id, after_sequence),
+            ).fetchall()
+        return [
+            _with_schema({**dict(row), "data": _loads(row["data"])})
+            for row in rows
+        ]
+
+    def compare_runs(self, project_id: str, left_id: str, right_id: str) -> dict[str, Any]:
+        if left_id == right_id:
+            raise ValueError("runs to compare must be different")
+        left = self.get_run(left_id)
+        right = self.get_run(right_id)
+        if left["project_id"] != project_id or right["project_id"] != project_id:
+            raise KeyError("run")
+        if left["status"] == "running" or right["status"] == "running":
+            raise ValueError("running records cannot be compared")
+
+        def mapping(result: dict[str, Any], key: str) -> dict[str, Any]:
+            value = result.get(key, {})
+            return value if isinstance(value, dict) else {}
+
+        left_config = mapping(left["result"], "effective_config")
+        right_config = mapping(right["result"], "effective_config")
+        config_changes = [
+            {"field": field, "before": left_config.get(field), "after": right_config.get(field)}
+            for field in sorted(set(left_config) | set(right_config))
+            if left_config.get(field) != right_config.get(field)
+        ]
+        left_metrics = mapping(left["result"], "metrics")
+        right_metrics = mapping(right["result"], "metrics")
+        metric_changes = []
+        for field in sorted(set(left_metrics) | set(right_metrics)):
+            before = left_metrics.get(field)
+            after = right_metrics.get(field)
+            if before == after:
+                continue
+            delta = (
+                float(after) - float(before)
+                if not isinstance(before, bool)
+                and not isinstance(after, bool)
+                and isinstance(before, (int, float))
+                and isinstance(after, (int, float))
+                else None
+            )
+            metric_changes.append({"field": field, "before": before, "after": after, "delta": delta})
+        return _with_schema({
+            "left": {"id": left_id, "kind": left["kind"], "status": left["status"]},
+            "right": {"id": right_id, "kind": right["kind"], "status": right["status"]},
+            "config_changes": config_changes,
+            "metric_changes": metric_changes,
+        })
 
     def update_run_result(self, run_id: str, result: dict[str, Any]) -> None:
         with self._connect() as conn:
@@ -3061,6 +4001,13 @@ class StudioStore:
             updated = conn.execute(
                 "UPDATE runs SET result = ? WHERE id = ?", (_json(result), run_id)
             ).rowcount
+            if updated:
+                event_data = {
+                    key: result[key]
+                    for key in ("status", "progress", "metrics", "message", "reasons")
+                    if key in result
+                }
+                self._append_run_event(conn, run_id, "updated", event_data)
         if not updated:
             raise KeyError(run_id)
 
@@ -3089,6 +4036,10 @@ class StudioStore:
                 "UPDATE runs SET status = ?, ended_at = ?, result = ? WHERE id = ?",
                 (status, _now(), _json(result), run_id),
             )
+            event_data = {"status": status}
+            if result.get("reasons") is not None:
+                event_data["reasons"] = result["reasons"]
+            self._append_run_event(conn, run_id, "finished", event_data)
 
     def register_artifact(
         self,
@@ -3566,6 +4517,73 @@ class StudioStore:
             project_id, "deployment", task_status_for_result(result["status"]), plan["hardware_profile_id"]
         )
         return {**run, "status": result["status"], "result": result}
+
+    def record_hardware_acceptance(self, project_id: str, data: dict[str, Any]) -> dict[str, Any]:
+        if not self.get_project(project_id):
+            raise KeyError(project_id)
+        normalized, status, reasons = validate_hardware_acceptance(data)
+        self._refresh_task_statuses(project_id)
+        with self._connect() as conn:
+            hardware = conn.execute(
+                "SELECT id, status, data FROM hardware_profiles WHERE project_id = ? ORDER BY updated_at DESC LIMIT 1",
+                (project_id,),
+            ).fetchone()
+            profiles = {
+                row["id"]: _loads(row["data"])
+                for row in conn.execute(
+                    "SELECT id, data FROM hardware_profiles WHERE project_id = ?", (project_id,)
+                ).fetchall()
+            }
+            deployment = conn.execute(
+                "SELECT id, status, result FROM runs WHERE project_id = ? AND kind = 'deployment' ORDER BY started_at DESC, rowid DESC LIMIT 1",
+                (project_id,),
+            ).fetchone()
+            deployment_task = conn.execute(
+                "SELECT status FROM tasks WHERE project_id = ? AND id = 'deployment'", (project_id,)
+            ).fetchone()
+            acceptance_rows = conn.execute(
+                "SELECT status, result FROM runs WHERE project_id = ? AND kind = 'hardware_acceptance' ORDER BY started_at DESC, rowid DESC",
+                (project_id,),
+            ).fetchall()
+        if not hardware or hardware["status"] != "confirmed":
+            raise ValueError("confirmed hardware required before hardware acceptance")
+        if not deployment or deployment["status"] != "passed" or not deployment_task or deployment_task["status"] != "success":
+            raise ValueError("latest successful deployment required before hardware acceptance")
+        deployment_result = _loads(deployment["result"])
+        if not hardware_records_match(
+            deployment_result.get("hardware_profile_id"), hardware["id"], _loads(hardware["data"]), profiles
+        ):
+            raise ValueError("deployment hardware evidence is stale")
+
+        latest_stage_status: dict[str, str] = {}
+        for row in acceptance_rows:
+            result = _loads(row["result"])
+            stage = result.get("stage")
+            if result.get("deployment_run_id") == deployment["id"] and stage in ACCEPTANCE_STAGES and stage not in latest_stage_status:
+                latest_stage_status[stage] = row["status"]
+        stage_index = ACCEPTANCE_STAGES.index(normalized["stage"])
+        missing = [stage for stage in ACCEPTANCE_STAGES[:stage_index] if latest_stage_status.get(stage) != "passed"]
+        if missing:
+            raise ValueError(f"hardware acceptance stages must be completed in order; missing: {', '.join(missing)}")
+        run = self.start_run(project_id, "hardware_acceptance")
+        result = {
+            **normalized,
+            "status": status,
+            "rule_version": RULE_VERSIONS["hardware_acceptance"],
+            "reasons": reasons,
+            "hardware_profile_id": hardware["id"],
+            "deployment_run_id": deployment["id"],
+            "hardware_action": False,
+        }
+        self.finish_run(run["id"], status, result)
+        latest_stage_status[normalized["stage"]] = status
+        task_status = (
+            "success" if all(latest_stage_status.get(stage) == "passed" for stage in ACCEPTANCE_STAGES)
+            else "failed" if any(value == "failed" for value in latest_stage_status.values())
+            else "ready"
+        )
+        self.set_task_status(project_id, "acceptance", task_status)
+        return {**run, "status": status, "result": result}
 
     def create_experiment(self, project_id: str, data: dict[str, Any]) -> dict[str, Any]:
         if not self.get_project(project_id):
@@ -4549,16 +5567,23 @@ class StudioStore:
             sources = conn.execute(
                 "SELECT * FROM sources WHERE project_id = ? ORDER BY kind", (project_id,)
             ).fetchall()
+            settings = conn.execute(
+                "SELECT project_id, data, updated_at FROM project_settings WHERE project_id = ?",
+                (project_id,),
+            ).fetchone()
         if not project:
             raise KeyError(project_id)
-        hardware_history = [
-            _with_schema({
+        hardware_history = []
+        for row in hardware_rows:
+            data = _loads(row["data"])
+            stages = hardware_stage_summary(data)
+            hardware_history.append(_with_schema({
                 **dict(row),
-                "data": _loads(row["data"]),
-                "completeness": hardware_completeness(_loads(row["data"])),
-            })
-            for row in hardware_rows
-        ]
+                "data": data,
+                "completeness": hardware_completeness(data),
+                "stage_summary": stages,
+                "capabilities": stages["capabilities"],
+            }))
         current_hardware_id = hardware_history[0]["id"] if hardware_history else None
         current_hardware_data = hardware_history[0]["data"] if hardware_history else None
         hardware_profiles = {item["id"]: item["data"] for item in hardware_history}
@@ -4587,6 +5612,16 @@ class StudioStore:
         latest_deployment_run = next(
             (run for run in runs if run["kind"] == "deployment_preflight"), None
         )
+        latest_deployment = next((run for run in runs if run["kind"] == "deployment"), None)
+        acceptance_stage_status: dict[str, str] = {}
+        if latest_deployment and latest_deployment["status"] == "passed":
+            for run in runs:
+                if run["kind"] != "hardware_acceptance":
+                    continue
+                result = _loads(run["result"])
+                stage = result.get("stage")
+                if result.get("deployment_run_id") == latest_deployment["id"] and stage in ACCEPTANCE_STAGES and stage not in acceptance_stage_status:
+                    acceptance_stage_status[stage] = run["status"]
 
         def evidence_reasons(task_id: str) -> list[str]:
             if task_id == "assembly":
@@ -4606,6 +5641,13 @@ class StudioStore:
                         else "deployment_preflight_run_required"
                     )
                 return reasons
+            if task_id == "acceptance":
+                if not latest_deployment or latest_deployment["status"] != "passed":
+                    return ["successful_deployment_required"]
+                next_stage = next(
+                    (stage for stage in ACCEPTANCE_STAGES if acceptance_stage_status.get(stage) != "passed"), None
+                )
+                return [f"next_acceptance_stage:{next_stage}"] if next_stage else []
             return []
 
         report_runs = [self._run_dict(run) for run in runs]
@@ -4704,6 +5746,9 @@ class StudioStore:
             ],
             "issues": report_issues,
             "sources": report_sources,
+            "settings": _with_schema({**dict(settings), "data": _loads(settings["data"])})
+            if settings
+            else self.get_project_settings(project_id),
         }
 
     def project_report_markdown(self, project_id: str) -> str:
@@ -4728,6 +5773,12 @@ class StudioStore:
             lines[6:6] = [
                 f"- 硬件档案完整性：`{completeness.get('status', 'unknown')}`",
                 f"- 缺失字段：{'；'.join(completeness.get('missing_fields', [])) or '无'}",
+                "",
+            ]
+        if hardware and isinstance(hardware.get("stage_summary"), dict):
+            lines[6:6] = [
+                f"- 当前可调试能力：{'；'.join(hardware.get('capabilities', [])) or '无'}",
+                f"- 待推进部件：{'；'.join(hardware['stage_summary'].get('next_components', [])) or '无'}",
                 "",
             ]
         lines.extend(
@@ -4808,6 +5859,22 @@ class StudioStore:
                     lines.append(
                         f"  - 策略证据：ONNX {len(onnx)} 个 · 合同：`{contract.get('path', 'missing')}`"
                     )
+        full_training_runs = [run for run in report["runs"] if run["kind"] == "training"]
+        if full_training_runs:
+            lines.extend(["", "## 模型训练与续训", ""])
+            for run in full_training_runs:
+                result = run["result"]
+                provenance = result.get("training_provenance") if isinstance(result.get("training_provenance"), dict) else {}
+                outputs = result.get("training_outputs") if isinstance(result.get("training_outputs"), dict) else {}
+                checkpoints = outputs.get("checkpoints") if isinstance(outputs.get("checkpoints"), list) else []
+                lines.append(
+                    f"- 状态：`{run['status']}` · 配方：`{result.get('recipe', 'unknown')}` · 父运行：`{provenance.get('parent_run_id') or 'none'}`"
+                )
+                for checkpoint in checkpoints:
+                    if isinstance(checkpoint, dict):
+                        lines.append(
+                            f"  - checkpoint：`{checkpoint.get('path', 'missing')}` · SHA-256：`{checkpoint.get('sha256', 'unknown')}`"
+                        )
         deployment_runs = [run for run in report["runs"] if run["kind"] == "deployment_preflight"]
         if deployment_runs:
             lines.extend(["", "## 部署前兼容性", ""])
@@ -4817,6 +5884,17 @@ class StudioStore:
                 lines.append(
                     f"- 状态：`{run['status']}` · 原因：{', '.join(result.get('reasons', [])) or 'none'} · 策略：`{policy.get('name', 'unknown')}`"
                 )
+        acceptance_runs = [run for run in report["runs"] if run["kind"] == "hardware_acceptance"]
+        if acceptance_runs:
+            lines.extend(["", "## 逐级实机验收", ""])
+            for run in acceptance_runs:
+                result = run["result"]
+                lines.append(
+                    f"- `{result.get('stage', 'unknown')}` → `{run['status']}` · 操作者：`{result.get('operator', 'unknown')}` · 部署：`{result.get('deployment_run_id', 'unknown')}`"
+                )
+                for check in result.get("checks", []):
+                    evidence = "；".join(check.get("evidence", [])) or "无"
+                    lines.append(f"  - {check.get('title', check.get('id', '未命名'))}：`{check.get('status', 'unknown')}` · 证据：{evidence}")
         if report["calibrations"]:
             lines.extend(["", "## 标定记录", ""])
             for calibration in report["calibrations"]:

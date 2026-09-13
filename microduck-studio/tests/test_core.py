@@ -1,5 +1,6 @@
 import json
 import hashlib
+import queue
 import shutil
 import sqlite3
 import subprocess
@@ -9,6 +10,8 @@ import zipfile
 from pathlib import Path
 
 import pytest
+
+import microduck_studio.core as core_module
 
 from microduck_studio.core import (
     StudioStore,
@@ -26,6 +29,31 @@ from microduck_studio.core import (
 )
 
 
+def test_training_metric_block_reports_finite_provisional_values():
+    block = """
+                       Learning iteration 9/10000
+                       Computation: 11186 steps/s (collection: 2.160s, learning 0.037s)
+            Mean value_function loss: 0.0199
+                         Mean reward: -1.22
+                 Mean episode length: 66.08
+                     Total timesteps: 122880
+    """
+
+    assert core_module.parse_training_metric_block(block) == {
+        "step": 9,
+        "total_steps": 10000,
+        "progress": 0.001,
+        "provisional": True,
+        "metrics": {
+            "reward": -1.22,
+            "loss": 0.0199,
+            "episode_length": 66.08,
+            "throughput": 11186.0,
+        },
+        "total_timesteps": 122880,
+    }
+
+
 def _complete_deployment_evidence(store: StudioStore, project_id: str) -> None:
     store.save_assembly(
         project_id,
@@ -40,6 +68,41 @@ def _complete_deployment_evidence(store: StudioStore, project_id: str) -> None:
         },
     )
     store.set_task_status(project_id, "servo_read", "success")
+
+
+def _deploy_for_acceptance(
+    store: StudioStore, project_id: str, root: Path, monkeypatch: pytest.MonkeyPatch
+) -> dict:
+    manifest = root / "manifest.json"
+    policy = root / "policy.onnx"
+    manifest.write_text(
+        json.dumps({"obs_len": 61, "action_len": 14, "action_filter": False, "robot": {"servos": "HL-2915", "control_hz": 50}}),
+        encoding="utf-8",
+    )
+    policy.write_bytes(b"fake-onnx")
+    store.save_hardware(project_id, {"servos": {"model": "HL-2915", "candidates": ["HL-2915"]}, "control_hz": 50})
+    store.set_task_status(project_id, "preflight", "success")
+    store.set_task_status(project_id, "smoke", "success")
+    _complete_deployment_evidence(store, project_id)
+    store.deployment_preflight(
+        project_id,
+        policy,
+        manifest,
+        {"obs_len": 61, "action_dim": 14, "control_hz": 50, "action_filter": False, "servo_model": "HL-2915"},
+    )
+    monkeypatch.setattr("microduck_studio.core.shutil.which", lambda name: f"/usr/bin/{name}")
+
+    def fake_run(command, **kwargs):
+        if command[-4:] == ["robotctl", "policy", "list", "--json"]:
+            return subprocess.CompletedProcess(command, 0, stdout=json.dumps({"policies": {"slots": []}}), stderr="")
+        if "sha256sum" in command:
+            return subprocess.CompletedProcess(command, 0, stdout=f"{hashlib.sha256(b'fake-onnx').hexdigest()}  remote.onnx\n", stderr="")
+        if command[-3:] == ["robotctl", "health", "--json"]:
+            return subprocess.CompletedProcess(command, 0, stdout=json.dumps({"robot": {"healthy": True}, "software": {"warnings": [], "services": []}}), stderr="")
+        return subprocess.CompletedProcess(command, 0, stdout="{}", stderr="")
+
+    monkeypatch.setattr("microduck_studio.core.subprocess.run", fake_run)
+    return store.execute_deployment(project_id, policy, manifest, "duck.local", "rock", 22, confirm=True)
 
 
 def test_serial_port_listing_is_read_only_and_never_claims_servo_identity():
@@ -60,7 +123,7 @@ def test_frontend_uses_separate_bench_and_training_run_slots():
 
     assert "const activeRuns = {bench: null, training: null};" in html
     assert html.count("pollRun(run, 'bench')") == 2
-    assert html.count("pollRun(run, 'training')") == 1
+    assert html.count("pollRun(run, 'training')") == 2
     assert "activeRuns.bench" in html
     assert "activeRuns.training" in html
     assert "activeRunId" not in html
@@ -98,7 +161,7 @@ def test_frontend_hl2915_examples_do_not_claim_old_voltage_or_passed_data():
 def test_frontend_resumes_persisted_long_running_jobs_from_report():
     html = (Path(__file__).parents[1] / "web" / "index.html").read_text(encoding="utf-8")
 
-    assert "run.kind === 'training_smoke'" in html
+    assert "['training_smoke','training'].includes(run.kind)" in html
     assert "['hl2915_read_only_probe','hl2915_bam_record'].includes(run.kind)" in html
     assert "if (slot && !activeRuns[slot]) pollRun(run, slot);" in html
 
@@ -116,7 +179,9 @@ def test_frontend_hydrates_hardware_form_for_selected_project():
 def test_frontend_keeps_async_state_scoped_to_selected_project():
     html = (Path(__file__).parents[1] / "web" / "index.html").read_text(encoding="utf-8")
 
-    assert "const resetActiveRuns = () => { activeRuns.bench = null; activeRuns.training = null; };" in html
+    assert "activeRuns.bench = null;" in html
+    assert "activeRuns.training = null;" in html
+    assert "for (const runId of Object.keys(timelineMetricSeries)) delete timelineMetricSeries[runId];" in html
     assert html.count("resetActiveRuns();") >= 2
     assert "const requestedProjectId = projectId;" in html
     assert "if (projectId !== requestedProjectId) return;" in html
@@ -233,6 +298,28 @@ def test_frontend_exposes_structured_evidence_search():
     assert "&status=${encodeURIComponent(recordStatus)}" in html
     assert 'id="record-detail-id"' in html
     assert "/evidence/${encodeURIComponent(evidenceId)}" in html
+
+
+def test_frontend_exposes_records_only_hardware_acceptance():
+    html = (Path(__file__).parents[1] / "web" / "index.html").read_text(encoding="utf-8")
+
+    assert 'id="acceptance-data"' in html
+    assert 'id="acceptance-save"' in html
+    assert "只保存人工验收证据，不会触发机器人运动" in html
+    assert "/acceptances" in html
+
+
+def test_frontend_exposes_staged_hardware_training_resume_and_timeline():
+    html = (Path(__file__).parents[1] / "web" / "index.html").read_text(encoding="utf-8")
+
+    assert 'id="hardware-components"' in html
+    assert 'id="training-recipe"' in html
+    assert 'id="training-parent-run"' in html
+    assert 'id="training-checkpoint"' in html
+    assert 'id="run-timeline"' in html
+    assert 'id="run-compare"' in html
+    assert "@media(max-width:700px)" in html.replace(" ", "")
+    assert 'class="dangerous-start"' in html
 
 
 def test_frontend_report_prefills_first_evidence_detail_id():
@@ -382,6 +469,102 @@ def test_hardware_conflict_stays_unresolved(tmp_path: Path):
     assert malformed_candidates["status"] == "needs_confirmation"
 
 
+def test_partial_hardware_exposes_only_available_debug_capabilities(tmp_path: Path):
+    store = StudioStore(tmp_path / "studio.db")
+    project = store.create_project("duck", tmp_path)
+
+    store.save_hardware(
+        project["id"],
+        {
+            "servos": {"model": "HL-2915", "candidates": ["HL-2915"], "count": 2},
+            "components": {
+                "controller": {"state": "planned"},
+                "servo_bench": {"state": "installed", "model": "HL-2915"},
+                "imu": {"state": "owned", "model": "BMI270"},
+            },
+        },
+    )
+
+    hardware = store.project_report(project["id"])["hardware"]
+
+    assert hardware["capabilities"] == ["servo_bench_debug"]
+    assert hardware["stage_summary"]["next_components"] == ["controller", "imu"]
+
+
+def test_hardware_rejects_unknown_component_state(tmp_path: Path):
+    store = StudioStore(tmp_path / "studio.db")
+    project = store.create_project("duck", tmp_path)
+
+    with pytest.raises(ValueError, match="component state"):
+        store.save_hardware(
+            project["id"],
+            {
+                "servos": {"model": "HL-2915", "candidates": ["HL-2915"]},
+                "components": {"camera": {"state": "maybe"}},
+            },
+        )
+
+
+def test_project_settings_validate_and_persist_dashboard_preferences(tmp_path: Path):
+    store = StudioStore(tmp_path / "studio.db")
+    project = store.create_project("duck", tmp_path)
+
+    saved = store.save_project_settings(
+        project["id"],
+        {
+            "visible_metrics": ["reward", "temperature_c"],
+            "alert_thresholds": {"temperature_c": 65.0},
+            "execution_target": {"kind": "wsl", "distro": "Ubuntu"},
+        },
+    )
+
+    reopened = StudioStore(tmp_path / "studio.db")
+    assert reopened.get_project_settings(project["id"])["data"] == saved["data"]
+    with pytest.raises(ValueError, match="visible metric"):
+        store.save_project_settings(project["id"], {"visible_metrics": ["unknown"]})
+
+
+def test_project_settings_api_round_trips_preferences(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    import microduck_studio.app as app_module
+
+    store = StudioStore(tmp_path / "studio.db")
+    project = store.create_project("duck", tmp_path)
+    monkeypatch.setattr(app_module, "store", store)
+    body = app_module.ProjectSettingsIn(
+        data={"visible_metrics": ["reward"], "execution_target": {"kind": "local"}}
+    )
+
+    saved = app_module.save_project_settings(project["id"], body)
+
+    assert saved["data"]["visible_metrics"] == ["reward"]
+    assert app_module.get_project_settings(project["id"])["data"] == saved["data"]
+
+
+def test_hardware_api_reports_invalid_stage_as_bad_request(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    import microduck_studio.app as app_module
+
+    store = StudioStore(tmp_path / "studio.db")
+    project = store.create_project("duck", tmp_path)
+    monkeypatch.setattr(app_module, "store", store)
+
+    with pytest.raises(app_module.HTTPException) as exc:
+        app_module.hardware(
+            project["id"],
+            app_module.HardwareIn(
+                data={
+                    "servos": {"model": "HL-2915", "candidates": ["HL-2915"]},
+                    "components": {"camera": {"state": "maybe"}},
+                }
+            ),
+        )
+
+    assert exc.value.status_code == 400
+
+
 def test_hardware_profile_reports_completeness_without_changing_route_status(tmp_path: Path):
     store = StudioStore(tmp_path / "studio.db")
     project = store.create_project("档案显示", tmp_path)
@@ -457,6 +640,94 @@ def test_start_run_rejects_unknown_project(tmp_path: Path):
 
     with pytest.raises(KeyError):
         store.start_run("missing-project", "preflight")
+
+
+def test_run_timeline_records_start_result_and_finish_in_order(tmp_path: Path):
+    store = StudioStore(tmp_path / "studio.db")
+    project = store.create_project("duck", tmp_path)
+
+    run = store.start_run(project["id"], "preflight")
+    store.update_run_result(run["id"], {"status": "running", "progress": 0.5})
+    store.finish_run(run["id"], "passed", {"status": "passed"})
+
+    events = store.list_run_events(run["id"])
+
+    assert [item["type"] for item in events] == ["started", "updated", "finished"]
+    assert [item["sequence"] for item in events] == [1, 2, 3]
+    assert events[1]["data"] == {"progress": 0.5, "status": "running"}
+
+
+def test_run_comparison_reports_config_and_metric_differences(tmp_path: Path):
+    store = StudioStore(tmp_path / "studio.db")
+    project = store.create_project("duck", tmp_path)
+    left = store.start_run(project["id"], "training")
+    right = store.start_run(project["id"], "training")
+    store.finish_run(
+        left["id"],
+        "passed",
+        {"effective_config": {"seed": 1}, "metrics": {"reward": 2.0}},
+    )
+    store.finish_run(
+        right["id"],
+        "passed",
+        {"effective_config": {"seed": 2}, "metrics": {"reward": 3.5}},
+    )
+
+    comparison = store.compare_runs(project["id"], left["id"], right["id"])
+
+    assert comparison["config_changes"] == [{"field": "seed", "before": 1, "after": 2}]
+    assert comparison["metric_changes"] == [
+        {"field": "reward", "before": 2.0, "after": 3.5, "delta": 1.5}
+    ]
+
+
+def test_run_timeline_and_comparison_api_expose_structured_data(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    import microduck_studio.app as app_module
+
+    store = StudioStore(tmp_path / "studio.db")
+    project = store.create_project("duck", tmp_path)
+    left = store.start_run(project["id"], "training")
+    right = store.start_run(project["id"], "training")
+    store.finish_run(left["id"], "passed", {"metrics": {"reward": 1.0}})
+    store.finish_run(right["id"], "passed", {"metrics": {"reward": 2.0}})
+    monkeypatch.setattr(app_module, "store", store)
+
+    events = app_module.run_events(left["id"], after=0)
+    compared = app_module.compare_project_runs(
+        project["id"], app_module.RunCompareIn(left_id=left["id"], right_id=right["id"])
+    )
+
+    assert events["events"][-1]["type"] == "finished"
+    assert compared["metric_changes"][0]["delta"] == 1.0
+
+
+def test_markdown_report_includes_staged_hardware_and_full_training(tmp_path: Path):
+    store = StudioStore(tmp_path / "studio.db")
+    project = store.create_project("duck", tmp_path)
+    store.save_hardware(
+        project["id"],
+        {
+            "servos": {"model": "HL-2915", "candidates": ["HL-2915"]},
+            "components": {"servo_bench": {"state": "verified", "model": "HL-2915"}},
+        },
+    )
+    run = store.start_run(project["id"], "training")
+    store.finish_run(
+        run["id"],
+        "passed",
+        {
+            "recipe": "walk",
+            "training_outputs": {"checkpoints": [{"path": "model_20.pt", "sha256": "abc"}]},
+        },
+    )
+
+    markdown = store.project_report_markdown(project["id"])
+
+    assert "servo_bench_debug" in markdown
+    assert "## 模型训练与续训" in markdown
+    assert "model_20.pt" in markdown
 
 
 def test_next_task_exposes_evidence_and_failure_contract(tmp_path: Path):
@@ -1389,6 +1660,242 @@ def test_deployment_health_failure_restores_previous_policy(
     assert "health_gate" in result["result"]["reasons"]
     assert result["result"]["stages"]["rollback"]["returncode"] == 0
     assert any(command[-3:] == ["walk", "/opt/old.onnx", "--json"] for command in calls)
+
+
+def test_first_hardware_acceptance_stage_records_evidence_and_advances_task(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    store = StudioStore(tmp_path / "studio.db")
+    project = store.create_project("逐级验收", tmp_path)
+    deployment = _deploy_for_acceptance(store, project["id"], tmp_path, monkeypatch)
+
+    saved = store.record_hardware_acceptance(
+        project["id"],
+        {
+            "stage": "lifted_enable",
+            "operator": "abel",
+            "checks": [
+                {
+                    "id": "estop",
+                    "title": "实体急停可用且机器人已架空",
+                    "status": "passed",
+                    "evidence": ["photo://lifted-estop"],
+                }
+            ],
+        },
+    )
+
+    assert saved["status"] == "passed"
+    assert saved["result"]["deployment_run_id"] == deployment["id"]
+    assert saved["result"]["hardware_action"] is False
+    task = next(item for item in store.project_report(project["id"])["tasks"] if item["id"] == "acceptance")
+    assert task["status"] == "ready"
+    assert task["card"]["stages"][1] == "supported_stand"
+    assert task["evidence_reasons"] == ["next_acceptance_stage:supported_stand"]
+
+
+def test_hardware_acceptance_rejects_skipped_stage(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    store = StudioStore(tmp_path / "studio.db")
+    project = store.create_project("禁止跳级", tmp_path)
+    _deploy_for_acceptance(store, project["id"], tmp_path, monkeypatch)
+
+    with pytest.raises(ValueError, match="in order"):
+        store.record_hardware_acceptance(
+            project["id"],
+            {
+                "stage": "supported_stand",
+                "operator": "abel",
+                "checks": [
+                    {
+                        "id": "support",
+                        "title": "保护支撑持续有效",
+                        "status": "passed",
+                        "evidence": ["video://supported-stand"],
+                    }
+                ],
+            },
+        )
+
+
+def test_hardware_acceptance_rejects_pass_without_evidence(tmp_path: Path):
+    store = StudioStore(tmp_path / "studio.db")
+    project = store.create_project("证据门", tmp_path)
+
+    with pytest.raises(ValueError, match="requires evidence"):
+        store.record_hardware_acceptance(
+            project["id"],
+            {
+                "stage": "lifted_enable",
+                "operator": "abel",
+                "checks": [
+                    {
+                        "id": "estop",
+                        "title": "实体急停可用",
+                        "status": "passed",
+                        "evidence": [],
+                    }
+                ],
+            },
+        )
+
+
+def test_all_hardware_acceptance_stages_complete_task(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    store = StudioStore(tmp_path / "studio.db")
+    project = store.create_project("完成验收", tmp_path)
+    _deploy_for_acceptance(store, project["id"], tmp_path, monkeypatch)
+
+    for stage in ["lifted_enable", "supported_stand", "free_stand", "supported_step", "free_walk"]:
+        saved = store.record_hardware_acceptance(
+            project["id"],
+            {
+                "stage": stage,
+                "operator": "abel",
+                "checks": [
+                    {
+                        "id": f"{stage}-check",
+                        "title": f"{stage} 人工核验",
+                        "status": "passed",
+                        "evidence": [f"video://{stage}"],
+                    }
+                ],
+            },
+        )
+
+    task = next(item for item in store.project_report(project["id"])["tasks"] if item["id"] == "acceptance")
+    assert saved["result"]["stage"] == "free_walk"
+    assert task["status"] == "success"
+
+
+def test_failed_hardware_acceptance_stage_requires_passing_retry(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    store = StudioStore(tmp_path / "studio.db")
+    project = store.create_project("失败复测", tmp_path)
+    _deploy_for_acceptance(store, project["id"], tmp_path, monkeypatch)
+    record = {
+        "stage": "lifted_enable",
+        "operator": "abel",
+        "checks": [
+            {
+                "id": "estop",
+                "title": "实体急停验证",
+                "status": "failed",
+                "evidence": ["video://estop-failure"],
+            }
+        ],
+    }
+
+    failed = store.record_hardware_acceptance(project["id"], record)
+    failed_task = next(item for item in store.project_report(project["id"])["tasks"] if item["id"] == "acceptance")
+    record["checks"][0].update({"status": "passed", "evidence": ["video://estop-retry"]})
+    passed = store.record_hardware_acceptance(project["id"], record)
+    retried_task = next(item for item in store.project_report(project["id"])["tasks"] if item["id"] == "acceptance")
+
+    assert failed["status"] == "failed"
+    assert failed_task["status"] == "failed"
+    assert passed["status"] == "passed"
+    assert retried_task["status"] == "ready"
+
+
+def test_new_deployment_invalidates_completed_hardware_acceptance(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    store = StudioStore(tmp_path / "studio.db")
+    project = store.create_project("重新部署", tmp_path)
+    first_deployment = _deploy_for_acceptance(store, project["id"], tmp_path, monkeypatch)
+    for stage in ["lifted_enable", "supported_stand", "free_stand", "supported_step", "free_walk"]:
+        store.record_hardware_acceptance(
+            project["id"],
+            {
+                "stage": stage,
+                "operator": "abel",
+                "checks": [{"id": stage, "title": stage, "status": "passed", "evidence": [f"video://{stage}"]}],
+            },
+        )
+
+    second_deployment = _deploy_for_acceptance(store, project["id"], tmp_path, monkeypatch)
+    task = next(item for item in store.project_report(project["id"])["tasks"] if item["id"] == "acceptance")
+
+    assert second_deployment["id"] != first_deployment["id"]
+    assert task["status"] == "ready"
+
+
+def test_hardware_acceptance_api_records_stage(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    import importlib
+
+    app_module = importlib.import_module("microduck_studio.app")
+    store = StudioStore(tmp_path / "studio.db")
+    project = store.create_project("验收接口", tmp_path)
+    _deploy_for_acceptance(store, project["id"], tmp_path, monkeypatch)
+    monkeypatch.setattr(app_module, "store", store)
+    endpoint = next(
+        route.endpoint
+        for route in app_module.app.routes
+        if getattr(route, "path", None) == "/api/projects/{project_id}/acceptances"
+        and "POST" in getattr(route, "methods", set())
+    )
+
+    response = endpoint(
+        project["id"],
+        app_module.HardwareAcceptanceIn(
+            data={
+                "stage": "lifted_enable",
+                "operator": "abel",
+                "checks": [{"id": "estop", "title": "急停", "status": "passed", "evidence": ["photo://estop"]}],
+            }
+        ),
+    )
+
+    assert response["status"] == "passed"
+    assert response["result"]["stage"] == "lifted_enable"
+
+
+def test_hardware_acceptance_markdown_keeps_stage_operator_and_deployment(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    store = StudioStore(tmp_path / "studio.db")
+    project = store.create_project("验收报告", tmp_path)
+    deployment = _deploy_for_acceptance(store, project["id"], tmp_path, monkeypatch)
+    store.record_hardware_acceptance(
+        project["id"],
+        {
+            "stage": "lifted_enable",
+            "operator": "abel",
+            "checks": [{"id": "estop", "title": "急停", "status": "passed", "evidence": ["photo://estop"]}],
+        },
+    )
+
+    markdown = store.project_report_markdown(project["id"])
+
+    assert "## 逐级实机验收" in markdown
+    assert "`lifted_enable`" in markdown
+    assert "操作者：`abel`" in markdown
+    assert f"部署：`{deployment['id']}`" in markdown
+
+
+def test_hardware_acceptance_requires_latest_successful_deployment(tmp_path: Path):
+    store = StudioStore(tmp_path / "studio.db")
+    project = store.create_project("部署门", tmp_path)
+    store.save_hardware(
+        project["id"],
+        {"servos": {"model": "HL-2915", "candidates": ["HL-2915"]}, "control_hz": 50},
+    )
+
+    with pytest.raises(ValueError, match="latest successful deployment"):
+        store.record_hardware_acceptance(
+            project["id"],
+            {
+                "stage": "lifted_enable",
+                "operator": "abel",
+                "checks": [{"id": "estop", "title": "急停", "status": "passed", "evidence": ["photo://estop"]}],
+            },
+        )
 
 
 def test_report_round_trip_keeps_run_evidence(tmp_path: Path):
@@ -2645,6 +3152,7 @@ def test_reopening_store_interrupts_incomplete_runs(tmp_path: Path):
     assert saved["result"]["status"] == "interrupted"
     assert "service_restarted" in saved["result"]["reasons"]
     assert task["status"] == "interrupted"
+    assert reopened.list_run_events(run["id"])[-1]["data"]["status"] == "interrupted"
 
 
 def test_terminal_run_cannot_be_overwritten_by_late_worker(tmp_path: Path):
@@ -3498,6 +4006,423 @@ def test_controller_execution_persists_health_evidence(
     assert saved["result"]["category"] == "healthy"
 
 
+def test_training_plan_uses_allowlisted_recipe_and_records_effective_config(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    store = StudioStore(tmp_path / "studio.db")
+    project = store.create_project("duck", tmp_path)
+    store.save_hardware(
+        project["id"],
+        {
+            "servos": {"model": "HL-2915", "candidates": ["HL-2915"]},
+            "control_hz": 50,
+        },
+    )
+    store.set_task_status(project["id"], "preflight", "success")
+    store.set_task_status(project["id"], "smoke", "success")
+    checkout = tmp_path / "microduck_rl"
+    checkout.mkdir()
+    monkeypatch.setattr("microduck_studio.core.platform_module.system", lambda: "Linux")
+    monkeypatch.setattr("microduck_studio.core.shutil.which", lambda name: f"/usr/bin/{name}")
+
+    plan = store.build_training_plan(
+        project["id"],
+        checkout,
+        "walk",
+        {"num_envs": 64, "max_iterations": 200, "gpu_ids": "[0]", "seed": 7},
+        target={"kind": "local"},
+    )
+
+    assert plan["recipe"] == "walk"
+    assert plan["effective_config"]["seed"] == 7
+    assert plan["command"][:3] == [plan["uv"], "run", "train"]
+    assert plan["command"][plan["command"].index("--agent.max-iterations") + 1] == "200"
+
+
+def test_resume_requires_explicit_matching_parent_and_checkpoint(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    store = StudioStore(tmp_path / "studio.db")
+    project = store.create_project("duck", tmp_path)
+    store.save_hardware(
+        project["id"],
+        {
+            "servos": {"model": "HL-2915", "candidates": ["HL-2915"]},
+            "control_hz": 50,
+        },
+    )
+    store.set_task_status(project["id"], "preflight", "success")
+    store.set_task_status(project["id"], "smoke", "success")
+    checkout = tmp_path / "microduck_rl"
+    checkpoint = checkout / "logs" / "rsl_rl" / "velocity" / "run-a" / "model_100.pt"
+    checkpoint.parent.mkdir(parents=True)
+    checkpoint.write_bytes(b"checkpoint")
+    parent = store.start_run(project["id"], "training")
+    contract = {
+        "task": "Mjlab-Velocity-Flat-MicroDuck",
+        "servo_model": "HL-2915",
+        "obs_len": 61,
+        "action_len": 14,
+        "control_hz": 50,
+    }
+    store.finish_run(
+        parent["id"],
+        "passed",
+        {
+            "training_contract": contract,
+            "training_outputs": {
+                "checkpoints": [
+                    {
+                        "path": str(checkpoint.resolve()),
+                        "sha256": hashlib.sha256(b"checkpoint").hexdigest(),
+                    }
+                ]
+            },
+        },
+    )
+    monkeypatch.setattr("microduck_studio.core.platform_module.system", lambda: "Linux")
+    monkeypatch.setattr("microduck_studio.core.shutil.which", lambda name: f"/usr/bin/{name}")
+
+    plan = store.build_training_plan(
+        project["id"],
+        checkout,
+        "walk",
+        {"num_envs": 64, "max_iterations": 50, "gpu_ids": "[0]", "seed": 7},
+        target={"kind": "local"},
+        parent_run_id=parent["id"],
+        checkpoint=checkpoint,
+    )
+
+    assert plan["training_provenance"]["parent_run_id"] == parent["id"]
+    assert plan["training_provenance"]["checkpoint"]["sha256"] == hashlib.sha256(b"checkpoint").hexdigest()
+    assert plan["command"][-6:] == [
+        "--agent.resume",
+        "True",
+        "--agent.load-run",
+        r"^run\-a$",
+        "--agent.load-checkpoint",
+        r"^model_100\.pt$",
+    ]
+
+
+def test_resume_rejects_checkpoint_not_verified_by_parent(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    store = StudioStore(tmp_path / "studio.db")
+    project = store.create_project("duck", tmp_path)
+    store.save_hardware(
+        project["id"],
+        {"servos": {"model": "HL-2915", "candidates": ["HL-2915"]}},
+    )
+    store.set_task_status(project["id"], "preflight", "success")
+    store.set_task_status(project["id"], "smoke", "success")
+    checkout = tmp_path / "microduck_rl"
+    checkpoint = checkout / "logs" / "rsl_rl" / "velocity" / "run-a" / "model_100.pt"
+    checkpoint.parent.mkdir(parents=True)
+    checkpoint.write_bytes(b"checkpoint")
+    parent = store.start_run(project["id"], "training")
+    store.finish_run(
+        parent["id"],
+        "passed",
+        {
+            "training_contract": {
+                "task": "Mjlab-Velocity-Flat-MicroDuck",
+                "servo_model": "HL-2915",
+                "obs_len": 61,
+                "action_len": 14,
+                "control_hz": 50,
+            },
+            "training_outputs": {
+                "checkpoints": [{"path": str(checkpoint.resolve()), "sha256": "wrong"}]
+            },
+        },
+    )
+    monkeypatch.setattr("microduck_studio.core.platform_module.system", lambda: "Linux")
+    monkeypatch.setattr("microduck_studio.core.shutil.which", lambda name: f"/usr/bin/{name}")
+
+    with pytest.raises(ValueError, match="not verified"):
+        store.build_training_plan(
+            project["id"],
+            checkout,
+            "walk",
+            {},
+            target={"kind": "local"},
+            parent_run_id=parent["id"],
+            checkpoint=checkpoint,
+        )
+
+
+def test_training_plan_wraps_fixed_command_for_wsl_target(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    store = StudioStore(tmp_path / "studio.db")
+    project = store.create_project("duck", tmp_path)
+    store.save_hardware(
+        project["id"],
+        {"servos": {"model": "HL-2915", "candidates": ["HL-2915"]}},
+    )
+    store.set_task_status(project["id"], "preflight", "success")
+    store.set_task_status(project["id"], "smoke", "success")
+    checkout = tmp_path / "microduck_rl"
+    checkout.mkdir()
+    monkeypatch.setattr("microduck_studio.core.platform_module.system", lambda: "Windows")
+    monkeypatch.setattr(
+        "microduck_studio.core.shutil.which",
+        lambda name: "C:/Windows/System32/wsl.exe" if name == "wsl" else None,
+    )
+
+    plan = store.build_training_plan(
+        project["id"],
+        checkout,
+        "walk",
+        {"num_envs": 64, "max_iterations": 20, "gpu_ids": "[0]", "seed": 7},
+        target={"kind": "wsl", "distro": "Ubuntu", "path": "/home/duck/microduck_rl"},
+    )
+
+    assert plan["execution_supported"] is True
+    assert plan["command"][:8] == [
+        "C:/Windows/System32/wsl.exe",
+        "-d",
+        "Ubuntu",
+        "--cd",
+        "/home/duck/microduck_rl",
+        "--",
+        "uv",
+        "run",
+    ]
+
+
+def test_full_training_requires_successful_smoke(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    store = StudioStore(tmp_path / "studio.db")
+    project = store.create_project("duck", tmp_path)
+    store.save_hardware(
+        project["id"],
+        {"servos": {"model": "HL-2915", "candidates": ["HL-2915"]}},
+    )
+    store.set_task_status(project["id"], "preflight", "success")
+    checkout = tmp_path / "microduck_rl"
+    checkout.mkdir()
+    monkeypatch.setattr("microduck_studio.core.platform_module.system", lambda: "Linux")
+    monkeypatch.setattr("microduck_studio.core.shutil.which", lambda name: f"/usr/bin/{name}")
+
+    with pytest.raises(ValueError, match="successful training smoke"):
+        store.build_training_plan(
+            project["id"],
+            checkout,
+            "walk",
+            {},
+            target={"kind": "local"},
+        )
+
+
+def test_training_run_persists_new_checkpoint_with_hash(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    store = StudioStore(tmp_path / "studio.db")
+    project = store.create_project("duck", tmp_path)
+    store.save_hardware(
+        project["id"],
+        {"servos": {"model": "HL-2915", "candidates": ["HL-2915"]}},
+    )
+    store.set_task_status(project["id"], "preflight", "success")
+    store.set_task_status(project["id"], "smoke", "success")
+    checkout = tmp_path / "microduck_rl"
+    checkout.mkdir()
+    checkpoint = checkout / "logs" / "rsl_rl" / "velocity" / "run-a" / "model_20.pt"
+    monkeypatch.setattr("microduck_studio.core.platform_module.system", lambda: "Linux")
+    monkeypatch.setattr("microduck_studio.core.shutil.which", lambda name: f"/usr/bin/{name}")
+    monkeypatch.setattr(
+        "microduck_studio.core.capture_git_snapshot",
+        lambda path: {"available": False, "commit": None, "branch": None, "dirty": None},
+    )
+
+    class FakeProcess:
+        returncode = 0
+
+        def communicate(self, timeout=None):
+            checkpoint.parent.mkdir(parents=True)
+            checkpoint.write_bytes(b"checkpoint-20")
+            return "training finished", ""
+
+        def poll(self):
+            return self.returncode
+
+    monkeypatch.setattr("microduck_studio.core.subprocess.Popen", lambda *args, **kwargs: FakeProcess())
+
+    run = store.start_training(
+        project["id"],
+        checkout,
+        "walk",
+        {"num_envs": 64, "max_iterations": 20, "gpu_ids": "[0]", "seed": 7},
+        target={"kind": "local"},
+        confirm=True,
+    )
+    for _ in range(100):
+        saved = store.get_run(run["id"])
+        if saved["status"] != "running":
+            break
+        time.sleep(0.01)
+
+    assert saved["status"] == "passed"
+    assert saved["result"]["training_outputs"]["checkpoints"] == [
+        {
+            "path": str(checkpoint.resolve()),
+            "sha256": hashlib.sha256(b"checkpoint-20").hexdigest(),
+            "size": len(b"checkpoint-20"),
+        }
+    ]
+    assert store.list_run_events(run["id"])[0]["type"] == "started"
+
+
+def test_training_run_streams_redacted_logs_and_provisional_metrics_before_finish(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    store = StudioStore(tmp_path / "studio.db")
+    project = store.create_project("duck", tmp_path)
+    store.save_hardware(
+        project["id"],
+        {"servos": {"model": "HL-2915", "candidates": ["HL-2915"]}},
+    )
+    store.set_task_status(project["id"], "preflight", "success")
+    store.set_task_status(project["id"], "smoke", "success")
+    checkout = tmp_path / "microduck_rl"
+    checkout.mkdir()
+    checkpoint = checkout / "logs" / "rsl_rl" / "velocity" / "run-a" / "model_20.pt"
+    monkeypatch.setattr("microduck_studio.core.platform_module.system", lambda: "Linux")
+    monkeypatch.setattr("microduck_studio.core.shutil.which", lambda name: f"/usr/bin/{name}")
+    monkeypatch.setattr(
+        "microduck_studio.core.capture_git_snapshot",
+        lambda path: {"available": False, "commit": None, "branch": None, "dirty": None},
+    )
+
+    class BlockingStream:
+        def __init__(self):
+            self.lines = queue.Queue()
+            self.text = ""
+
+        def feed(self, text):
+            self.text += text
+            for line in text.splitlines(keepends=True):
+                self.lines.put(line)
+
+        def readline(self):
+            line = self.lines.get()
+            return "" if line is None else line
+
+        def close(self):
+            self.lines.put(None)
+
+    class FakeProcess:
+        def __init__(self):
+            self.stdout = BlockingStream()
+            self.stderr = BlockingStream()
+            self.returncode = None
+            self.done = threading.Event()
+
+        def communicate(self, timeout=None):
+            self.done.wait(timeout)
+            return self.stdout.text, self.stderr.text
+
+        def poll(self):
+            return self.returncode
+
+        def finish(self, returncode=0):
+            self.returncode = returncode
+            self.stdout.close()
+            self.stderr.close()
+            self.done.set()
+
+        def terminate(self):
+            self.finish(-15)
+
+        kill = terminate
+
+    process = FakeProcess()
+    monkeypatch.setattr("microduck_studio.core.subprocess.Popen", lambda *args, **kwargs: process)
+    run = store.start_training(
+        project["id"],
+        checkout,
+        "walk",
+        {"num_envs": 64, "max_iterations": 20, "gpu_ids": "[0]", "seed": 7},
+        target={"kind": "local"},
+        confirm=True,
+    )
+    process.stderr.feed("x" * 9000 + "\n")
+    process.stdout.feed(
+        "Learning iteration 9/20\n"
+        "Computation: 11186 steps/s (collection: 2.160s, learning 0.037s)\n"
+        "Mean value_function loss: 0.0199\n"
+        "Mean reward: -1.22\n"
+        "Mean episode length: 66.08\n"
+        "TOKEN=secret-value\n"
+        "ETA: 00:00:04\n"
+    )
+    try:
+        deadline = time.monotonic() + 2
+        events = []
+        while time.monotonic() < deadline:
+            events = store.list_run_events(run["id"])
+            if any(event["type"] == "metrics" for event in events):
+                break
+            time.sleep(0.01)
+
+        assert store.get_run(run["id"])["status"] == "running"
+        log_text = "".join(
+            event["data"]["text"] for event in events if event["type"] == "log"
+        )
+        assert "secret-value" not in log_text
+        assert "TOKEN=<redacted>" in log_text
+        log_events = [event["data"] for event in events if event["type"] == "log"]
+        assert any(event["truncated"] for event in log_events)
+        assert max(len(event["text"]) for event in log_events) == 8192
+        metric_event = next(event for event in events if event["type"] == "metrics")
+        assert metric_event["data"]["metrics"] == {
+            "reward": -1.22,
+            "loss": 0.0199,
+            "episode_length": 66.08,
+            "throughput": 11186.0,
+        }
+        assert metric_event["data"]["provisional"] is True
+    finally:
+        checkpoint.parent.mkdir(parents=True, exist_ok=True)
+        checkpoint.write_bytes(b"checkpoint-20")
+        process.finish()
+
+
+def test_training_recipe_and_plan_api_use_store_contract(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    import microduck_studio.app as app_module
+
+    store = StudioStore(tmp_path / "studio.db")
+    project = store.create_project("duck", tmp_path)
+    store.save_hardware(
+        project["id"],
+        {"servos": {"model": "HL-2915", "candidates": ["HL-2915"]}},
+    )
+    store.set_task_status(project["id"], "preflight", "success")
+    store.set_task_status(project["id"], "smoke", "success")
+    checkout = tmp_path / "microduck_rl"
+    checkout.mkdir()
+    monkeypatch.setattr(app_module, "store", store)
+    monkeypatch.setattr("microduck_studio.core.platform_module.system", lambda: "Linux")
+    monkeypatch.setattr("microduck_studio.core.shutil.which", lambda name: f"/usr/bin/{name}")
+
+    recipes = app_module.list_training_recipes()
+    plan = app_module.training_plan(
+        project["id"],
+        app_module.TrainingIn(
+            training_dir=str(checkout),
+            recipe="walk",
+            parameters={"max_iterations": 10},
+            target={"kind": "local"},
+        ),
+    )
+
+    assert recipes["recipes"][0]["id"] == "walk"
+    assert plan["effective_config"]["max_iterations"] == 10
+
+
 def test_training_smoke_plan_is_fixed_and_requires_ready_inputs(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     script = tmp_path / "tools" / "microduck_learning"
     script.mkdir(parents=True)
@@ -3671,6 +4596,7 @@ def test_training_smoke_can_be_cancelled_and_persists_interrupted(
     assert saved["status"] == "interrupted"
     assert "cancelled" in saved["result"]["reasons"]
     assert saved["result"]["training_provenance"] == run["result"]["training_provenance"]
+    assert "cancelling" in [event["type"] for event in store.list_run_events(run["id"])]
 
 
 def test_training_smoke_success_without_fresh_outputs_is_insufficient_evidence(

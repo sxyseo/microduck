@@ -7,7 +7,14 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import FileResponse, PlainTextResponse
 from pydantic import BaseModel, Field
 
-from .core import StudioStore, evaluate_compatibility, list_serial_ports, preflight, task_status_for_result
+from .core import (
+    StudioStore,
+    evaluate_compatibility,
+    list_serial_ports,
+    preflight,
+    task_status_for_result,
+    training_recipes,
+)
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -23,6 +30,10 @@ class ProjectIn(BaseModel):
 
 
 class HardwareIn(BaseModel):
+    data: dict
+
+
+class ProjectSettingsIn(BaseModel):
     data: dict
 
 
@@ -71,8 +82,26 @@ class TrainingSmokeExecuteIn(TrainingSmokeIn):
     confirm: bool = False
 
 
+class TrainingIn(BaseModel):
+    training_dir: str = Field(min_length=1)
+    recipe: str = Field(min_length=1)
+    parameters: dict = Field(default_factory=dict)
+    target: dict
+    parent_run_id: str | None = None
+    checkpoint: str | None = None
+
+
+class TrainingExecuteIn(TrainingIn):
+    confirm: bool = False
+
+
 class RunRetryIn(BaseModel):
     confirm: bool = False
+
+
+class RunCompareIn(BaseModel):
+    left_id: str = Field(min_length=1)
+    right_id: str = Field(min_length=1)
 
 
 class TensorboardIn(BaseModel):
@@ -117,6 +146,10 @@ class DeploymentPlanIn(BaseModel):
 
 class DeploymentExecuteIn(DeploymentPlanIn):
     confirm: bool = False
+
+
+class HardwareAcceptanceIn(BaseModel):
+    data: dict
 
 
 class CompatibilityIn(BaseModel):
@@ -312,7 +345,28 @@ def support_bundle(project_id: str, body: SupportBundleIn):
 def hardware(project_id: str, body: HardwareIn):
     if not store.get_project(project_id):
         raise HTTPException(status_code=404, detail="project not found")
-    return store.save_hardware(project_id, body.data)
+    try:
+        return store.save_hardware(project_id, body.data)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.get("/api/projects/{project_id}/settings")
+def get_project_settings(project_id: str):
+    try:
+        return store.get_project_settings(project_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="project not found") from exc
+
+
+@app.put("/api/projects/{project_id}/settings")
+def save_project_settings(project_id: str, body: ProjectSettingsIn):
+    try:
+        return store.save_project_settings(project_id, body.data)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="project not found") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @app.post("/api/projects/{project_id}/preflight")
@@ -405,6 +459,50 @@ def training_smoke_plan(project_id: str, body: TrainingSmokeIn):
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
+@app.get("/api/training/recipes")
+def list_training_recipes():
+    return {"recipes": training_recipes()}
+
+
+@app.post("/api/projects/{project_id}/training/plan")
+def training_plan(project_id: str, body: TrainingIn):
+    try:
+        return store.build_training_plan(
+            project_id,
+            body.training_dir,
+            body.recipe,
+            body.parameters,
+            target=body.target,
+            parent_run_id=body.parent_run_id,
+            checkpoint=body.checkpoint,
+        )
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="project or parent run not found") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/api/projects/{project_id}/training/run")
+def run_training(project_id: str, body: TrainingExecuteIn):
+    try:
+        return store.start_training(
+            project_id,
+            body.training_dir,
+            body.recipe,
+            body.parameters,
+            target=body.target,
+            parent_run_id=body.parent_run_id,
+            checkpoint=body.checkpoint,
+            confirm=body.confirm,
+        )
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="project or parent run not found") from exc
+    except (PermissionError, RuntimeError) as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
 @app.post("/api/projects/{project_id}/training/smoke")
 def run_training_smoke(project_id: str, body: TrainingSmokeExecuteIn):
     if not store.get_project(project_id):
@@ -455,6 +553,26 @@ def run_status(run_id: str):
         return store.get_run(run_id)
     except KeyError as exc:
         raise HTTPException(status_code=404, detail="run not found") from exc
+
+
+@app.get("/api/runs/{run_id}/events")
+def run_events(run_id: str, after: int = Query(default=0, ge=0)):
+    try:
+        return {"events": store.list_run_events(run_id, after)}
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="run not found") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/api/projects/{project_id}/runs/compare")
+def compare_project_runs(project_id: str, body: RunCompareIn):
+    try:
+        return store.compare_runs(project_id, body.left_id, body.right_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="run not found") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @app.post("/api/runs/{run_id}/cancel")
@@ -566,6 +684,16 @@ def deployment_execute(project_id: str, body: DeploymentExecuteIn):
         raise HTTPException(status_code=404, detail="project not found") from exc
     except PermissionError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/api/projects/{project_id}/acceptances")
+def save_hardware_acceptance(project_id: str, body: HardwareAcceptanceIn):
+    try:
+        return store.record_hardware_acceptance(project_id, body.data)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="project not found") from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
