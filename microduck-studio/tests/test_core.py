@@ -1,5 +1,6 @@
 import json
 import hashlib
+import queue
 import shutil
 import sqlite3
 import subprocess
@@ -9,6 +10,8 @@ import zipfile
 from pathlib import Path
 
 import pytest
+
+import microduck_studio.core as core_module
 
 from microduck_studio.core import (
     StudioStore,
@@ -24,6 +27,31 @@ from microduck_studio.core import (
     preflight,
     task_status_for_result,
 )
+
+
+def test_training_metric_block_reports_finite_provisional_values():
+    block = """
+                       Learning iteration 9/10000
+                       Computation: 11186 steps/s (collection: 2.160s, learning 0.037s)
+            Mean value_function loss: 0.0199
+                         Mean reward: -1.22
+                 Mean episode length: 66.08
+                     Total timesteps: 122880
+    """
+
+    assert core_module.parse_training_metric_block(block) == {
+        "step": 9,
+        "total_steps": 10000,
+        "progress": 0.001,
+        "provisional": True,
+        "metrics": {
+            "reward": -1.22,
+            "loss": 0.0199,
+            "episode_length": 66.08,
+            "throughput": 11186.0,
+        },
+        "total_timesteps": 122880,
+    }
 
 
 def _complete_deployment_evidence(store: StudioStore, project_id: str) -> None:
@@ -151,7 +179,9 @@ def test_frontend_hydrates_hardware_form_for_selected_project():
 def test_frontend_keeps_async_state_scoped_to_selected_project():
     html = (Path(__file__).parents[1] / "web" / "index.html").read_text(encoding="utf-8")
 
-    assert "const resetActiveRuns = () => { activeRuns.bench = null; activeRuns.training = null; };" in html
+    assert "activeRuns.bench = null;" in html
+    assert "activeRuns.training = null;" in html
+    assert "for (const runId of Object.keys(timelineMetricSeries)) delete timelineMetricSeries[runId];" in html
     assert html.count("resetActiveRuns();") >= 2
     assert "const requestedProjectId = projectId;" in html
     assert "if (projectId !== requestedProjectId) return;" in html
@@ -4242,6 +4272,121 @@ def test_training_run_persists_new_checkpoint_with_hash(
         }
     ]
     assert store.list_run_events(run["id"])[0]["type"] == "started"
+
+
+def test_training_run_streams_redacted_logs_and_provisional_metrics_before_finish(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    store = StudioStore(tmp_path / "studio.db")
+    project = store.create_project("duck", tmp_path)
+    store.save_hardware(
+        project["id"],
+        {"servos": {"model": "HL-2915", "candidates": ["HL-2915"]}},
+    )
+    store.set_task_status(project["id"], "preflight", "success")
+    store.set_task_status(project["id"], "smoke", "success")
+    checkout = tmp_path / "microduck_rl"
+    checkout.mkdir()
+    checkpoint = checkout / "logs" / "rsl_rl" / "velocity" / "run-a" / "model_20.pt"
+    monkeypatch.setattr("microduck_studio.core.platform_module.system", lambda: "Linux")
+    monkeypatch.setattr("microduck_studio.core.shutil.which", lambda name: f"/usr/bin/{name}")
+    monkeypatch.setattr(
+        "microduck_studio.core.capture_git_snapshot",
+        lambda path: {"available": False, "commit": None, "branch": None, "dirty": None},
+    )
+
+    class BlockingStream:
+        def __init__(self):
+            self.lines = queue.Queue()
+            self.text = ""
+
+        def feed(self, text):
+            self.text += text
+            for line in text.splitlines(keepends=True):
+                self.lines.put(line)
+
+        def readline(self):
+            line = self.lines.get()
+            return "" if line is None else line
+
+        def close(self):
+            self.lines.put(None)
+
+    class FakeProcess:
+        def __init__(self):
+            self.stdout = BlockingStream()
+            self.stderr = BlockingStream()
+            self.returncode = None
+            self.done = threading.Event()
+
+        def communicate(self, timeout=None):
+            self.done.wait(timeout)
+            return self.stdout.text, self.stderr.text
+
+        def poll(self):
+            return self.returncode
+
+        def finish(self, returncode=0):
+            self.returncode = returncode
+            self.stdout.close()
+            self.stderr.close()
+            self.done.set()
+
+        def terminate(self):
+            self.finish(-15)
+
+        kill = terminate
+
+    process = FakeProcess()
+    monkeypatch.setattr("microduck_studio.core.subprocess.Popen", lambda *args, **kwargs: process)
+    run = store.start_training(
+        project["id"],
+        checkout,
+        "walk",
+        {"num_envs": 64, "max_iterations": 20, "gpu_ids": "[0]", "seed": 7},
+        target={"kind": "local"},
+        confirm=True,
+    )
+    process.stderr.feed("x" * 9000 + "\n")
+    process.stdout.feed(
+        "Learning iteration 9/20\n"
+        "Computation: 11186 steps/s (collection: 2.160s, learning 0.037s)\n"
+        "Mean value_function loss: 0.0199\n"
+        "Mean reward: -1.22\n"
+        "Mean episode length: 66.08\n"
+        "TOKEN=secret-value\n"
+        "ETA: 00:00:04\n"
+    )
+    try:
+        deadline = time.monotonic() + 2
+        events = []
+        while time.monotonic() < deadline:
+            events = store.list_run_events(run["id"])
+            if any(event["type"] == "metrics" for event in events):
+                break
+            time.sleep(0.01)
+
+        assert store.get_run(run["id"])["status"] == "running"
+        log_text = "".join(
+            event["data"]["text"] for event in events if event["type"] == "log"
+        )
+        assert "secret-value" not in log_text
+        assert "TOKEN=<redacted>" in log_text
+        log_events = [event["data"] for event in events if event["type"] == "log"]
+        assert any(event["truncated"] for event in log_events)
+        assert max(len(event["text"]) for event in log_events) == 8192
+        metric_event = next(event for event in events if event["type"] == "metrics")
+        assert metric_event["data"]["metrics"] == {
+            "reward": -1.22,
+            "loss": 0.0199,
+            "episode_length": 66.08,
+            "throughput": 11186.0,
+        }
+        assert metric_event["data"]["provisional"] is True
+    finally:
+        checkpoint.parent.mkdir(parents=True, exist_ok=True)
+        checkpoint.write_bytes(b"checkpoint-20")
+        process.finish()
 
 
 def test_training_recipe_and_plan_api_use_store_contract(

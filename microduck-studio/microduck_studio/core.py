@@ -6,6 +6,7 @@ import hashlib
 import math
 import os
 import platform as platform_module
+import queue
 import re
 import signal
 import shutil
@@ -106,6 +107,47 @@ TRAINING_RECIPES = {
         },
     },
 }
+
+_TRAINING_ITERATION = re.compile(r"Learning iteration\s+(?P<step>\d+)\s*/\s*(?P<total>\d+)")
+_TRAINING_METRICS = {
+    "reward": re.compile(r"Mean reward:\s*(?P<value>[-+\w.]+)"),
+    "loss": re.compile(r"Mean value_function loss:\s*(?P<value>[-+\w.]+)"),
+    "episode_length": re.compile(r"Mean episode length:\s*(?P<value>[-+\w.]+)"),
+    "throughput": re.compile(r"Computation:\s*(?P<value>[-+\w.]+)\s+steps/s"),
+}
+_TRAINING_TIMESTEPS = re.compile(r"Total timesteps:\s*(?P<value>\d+)")
+_RUN_LOG_EVENT_LIMIT = 8192
+
+
+def parse_training_metric_block(text: str) -> dict[str, Any] | None:
+    iteration = _TRAINING_ITERATION.search(text)
+    if not iteration:
+        return None
+    step = int(iteration.group("step"))
+    total = int(iteration.group("total"))
+    metrics: dict[str, float] = {}
+    for name, pattern in _TRAINING_METRICS.items():
+        match = pattern.search(text)
+        if match:
+            try:
+                value = float(match.group("value"))
+            except ValueError:
+                continue
+            if math.isfinite(value):
+                metrics[name] = value
+    if not metrics:
+        return None
+    result: dict[str, Any] = {
+        "step": step,
+        "total_steps": total,
+        "progress": min(1.0, (step + 1) / total) if total else 0.0,
+        "provisional": True,
+        "metrics": metrics,
+    }
+    timesteps = _TRAINING_TIMESTEPS.search(text)
+    if timesteps:
+        result["total_timesteps"] = int(timesteps.group("value"))
+    return result
 
 
 def _now() -> str:
@@ -501,7 +543,7 @@ _PRIVATE_KEY_BLOCK = re.compile(
 _BEARER_TOKEN = re.compile(r"(?i)(authorization\s*:\s*bearer\s+)[^\s]+")
 _GITHUB_TOKEN = re.compile(r"\b(?:gh[pousr]_[A-Za-z0-9_]{6,}|github_pat_[A-Za-z0-9_]{6,})\b")
 _SECRET_ENV = re.compile(
-    r"(?im)^(\s*[A-Za-z_][A-Za-z0-9_]*(?:TOKEN|PASSWORD|PASSPHRASE|PSK|PIN|SECRET|PRIVATE_KEY)\s*=\s*).+$"
+    r"(?im)^(\s*(?:[A-Za-z_][A-Za-z0-9_]*)?(?:TOKEN|PASSWORD|PASSPHRASE|PSK|PIN|SECRET|PRIVATE_KEY)\s*=\s*).+$"
 )
 
 
@@ -654,6 +696,137 @@ def redact_data(value: Any) -> Any:
     if isinstance(value, str):
         return redact_text(value)
     return value
+
+
+def _collect_process_output(
+    process: subprocess.Popen,
+    timeout_s: float,
+    *,
+    on_log: Any = None,
+    on_metrics: Any = None,
+) -> dict[str, Any]:
+    streams = {"stdout": getattr(process, "stdout", None), "stderr": getattr(process, "stderr", None)}
+    if any(not callable(getattr(stream, "readline", None)) for stream in streams.values()):
+        timed_out = False
+        try:
+            stdout, stderr = process.communicate(timeout=timeout_s)
+        except subprocess.TimeoutExpired:
+            timed_out = True
+            _stop_process(process, force=True)
+            stdout, stderr = process.communicate()
+        metric = parse_training_metric_block(_output_text(stdout))
+        if metric and on_metrics:
+            on_metrics(metric)
+        return {
+            "stdout": _output_text(stdout),
+            "stderr": _output_text(stderr),
+            "timed_out": timed_out,
+            "metrics": metric,
+            "stream_errors": [],
+        }
+
+    messages: queue.Queue[tuple[str, str, Any]] = queue.Queue()
+    output = {"stdout": [], "stderr": []}
+    buffers = {"stdout": [], "stderr": []}
+    metric_lines: list[str] = []
+    latest_metric = None
+    stream_errors: list[str] = []
+
+    def read_stream(name: str, stream: Any) -> None:
+        try:
+            while True:
+                line = stream.readline()
+                if line == "":
+                    break
+                messages.put(("line", name, _output_text(line)))
+        except Exception as exc:
+            messages.put(("error", name, str(exc)))
+        finally:
+            messages.put(("done", name, None))
+
+    def record_event(callback: Any, data: dict[str, Any]) -> None:
+        if not callback:
+            return
+        try:
+            callback(data)
+        except Exception as exc:
+            stream_errors.append(str(exc))
+
+    def flush_logs() -> None:
+        for name, lines in buffers.items():
+            if not lines:
+                continue
+            text = redact_text("".join(lines))
+            lines.clear()
+            record_event(on_log, {
+                "stream": name,
+                "text": text[:_RUN_LOG_EVENT_LIMIT],
+                "truncated": len(text) > _RUN_LOG_EVENT_LIMIT,
+            })
+
+    def flush_metrics() -> None:
+        nonlocal latest_metric
+        if not metric_lines:
+            return
+        metric = parse_training_metric_block("".join(metric_lines))
+        metric_lines.clear()
+        if metric:
+            latest_metric = metric
+            record_event(on_metrics, metric)
+
+    for name, stream in streams.items():
+        threading.Thread(target=read_stream, args=(name, stream), daemon=True).start()
+
+    open_streams = len(streams)
+    timed_out = False
+    timeout_at = time.monotonic() + timeout_s
+    force_deadline = None
+    next_flush = time.monotonic() + 0.25
+    while open_streams or process.poll() is None:
+        now = time.monotonic()
+        if not timed_out and now >= timeout_at:
+            timed_out = True
+            _stop_process(process, force=True)
+            force_deadline = now + 5
+        if force_deadline is not None and now >= force_deadline:
+            break
+        try:
+            kind, stream_name, value = messages.get(timeout=0.1)
+        except queue.Empty:
+            if time.monotonic() >= next_flush:
+                flush_logs()
+                next_flush = time.monotonic() + 0.25
+            continue
+        if kind == "done":
+            open_streams -= 1
+            continue
+        if kind == "error":
+            stream_errors.append(f"{stream_name}: {value}")
+            continue
+        output[stream_name].append(value)
+        buffers[stream_name].append(value)
+        if stream_name == "stdout":
+            if _TRAINING_ITERATION.search(value):
+                flush_metrics()
+                metric_lines.append(value)
+            elif metric_lines:
+                metric_lines.append(value)
+                if re.match(r"\s*ETA:", value):
+                    flush_logs()
+                    flush_metrics()
+                    next_flush = time.monotonic() + 0.25
+        if sum(len(item) for item in buffers[stream_name]) >= _RUN_LOG_EVENT_LIMIT:
+            flush_logs()
+            next_flush = time.monotonic() + 0.25
+    flush_logs()
+    flush_metrics()
+    return {
+        "stdout": "".join(output["stdout"]),
+        "stderr": "".join(output["stderr"]),
+        "timed_out": timed_out,
+        "metrics": latest_metric,
+        "stream_errors": stream_errors,
+    }
 
 
 def evaluate_probe_process(
@@ -2997,12 +3170,15 @@ class StudioStore:
         stdout: Any = ""
         stderr: Any = ""
         try:
-            try:
-                stdout, stderr = process.communicate(timeout=plan["timeout_s"])
-            except subprocess.TimeoutExpired:
-                timed_out = True
-                _stop_process(process, force=True)
-                stdout, stderr = process.communicate()
+            captured = _collect_process_output(
+                process,
+                plan["timeout_s"],
+                on_log=lambda data: self._record_live_run_event(run["id"], "log", data),
+                on_metrics=lambda data: self._record_live_run_event(run["id"], "metrics", data),
+            )
+            stdout = captured["stdout"]
+            stderr = captured["stderr"]
+            timed_out = captured["timed_out"]
             result = evaluate_training_smoke(
                 returncode=process.returncode,
                 timed_out=timed_out,
@@ -3010,6 +3186,19 @@ class StudioStore:
                 stderr=stderr,
                 duration_s=time.monotonic() - started,
             )
+            if captured["metrics"]:
+                result.update({
+                    "metrics": captured["metrics"]["metrics"],
+                    "progress": captured["metrics"]["progress"],
+                    "metric_step": captured["metrics"]["step"],
+                    "metrics_provisional": True,
+                })
+                if "total_timesteps" in captured["metrics"]:
+                    result["total_timesteps"] = captured["metrics"]["total_timesteps"]
+            if captured["stream_errors"]:
+                result["status"] = "failed"
+                result["reasons"].append("output_stream_error")
+                result["stream_errors"] = redact_data(captured["stream_errors"])
             result["rule_version"] = RULE_VERSIONS["training"]
             with _ACTIVE_PROCESS_LOCK:
                 cancelled = run["id"] in _CANCELLED_RUNS
@@ -3158,12 +3347,15 @@ class StudioStore:
         stdout: Any = ""
         stderr: Any = ""
         try:
-            try:
-                stdout, stderr = process.communicate(timeout=plan["timeout_s"])
-            except subprocess.TimeoutExpired:
-                timed_out = True
-                _stop_process(process, force=True)
-                stdout, stderr = process.communicate()
+            captured = _collect_process_output(
+                process,
+                plan["timeout_s"],
+                on_log=lambda data: self._record_live_run_event(run["id"], "log", data),
+                on_metrics=lambda data: self._record_live_run_event(run["id"], "metrics", data),
+            )
+            stdout = captured["stdout"]
+            stderr = captured["stderr"]
+            timed_out = captured["timed_out"]
             result = evaluate_training_smoke(
                 returncode=process.returncode,
                 timed_out=timed_out,
@@ -3171,6 +3363,19 @@ class StudioStore:
                 stderr=stderr,
                 duration_s=time.monotonic() - started,
             )
+            if captured["metrics"]:
+                result.update({
+                    "metrics": captured["metrics"]["metrics"],
+                    "progress": captured["metrics"]["progress"],
+                    "metric_step": captured["metrics"]["step"],
+                    "metrics_provisional": True,
+                })
+                if "total_timesteps" in captured["metrics"]:
+                    result["total_timesteps"] = captured["metrics"]["total_timesteps"]
+            if captured["stream_errors"]:
+                result["status"] = "failed"
+                result["reasons"].append("output_stream_error")
+                result["stream_errors"] = redact_data(captured["stream_errors"])
             with _ACTIVE_PROCESS_LOCK:
                 cancelled = run["id"] in _CANCELLED_RUNS
             if cancelled:
@@ -3706,6 +3911,16 @@ class StudioStore:
             "INSERT INTO run_events VALUES (?, ?, ?, ?, ?)",
             (run_id, sequence, _now(), event_type, _json(data)),
         )
+
+    def _record_live_run_event(
+        self, run_id: str, event_type: str, data: dict[str, Any]
+    ) -> None:
+        with self._connect() as conn:
+            row = conn.execute("SELECT status FROM runs WHERE id = ?", (run_id,)).fetchone()
+            if not row:
+                raise KeyError(run_id)
+            if row["status"] == "running":
+                self._append_run_event(conn, run_id, event_type, redact_data(data))
 
     def list_run_events(self, run_id: str, after_sequence: int = 0) -> list[dict[str, Any]]:
         if isinstance(after_sequence, bool) or not isinstance(after_sequence, int) or after_sequence < 0:

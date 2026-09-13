@@ -121,6 +121,9 @@
       <label>时间线运行 ID<input id="run-timeline-id" placeholder="运行开始后自动填入"></label>
       <button id="run-timeline">刷新运行时间线</button>
       <div id="run-timeline-body" class="status">尚未选择运行</div>
+      <label>运行中指标<select id="run-live-metric"><option value="">等待指标</option></select></label>
+      <svg id="run-live-chart" class="metric-chart" viewBox="0 0 300 100" role="img" aria-label="运行中指标趋势"></svg>
+      <p id="run-live-caption" class="muted">运行中数据仅用于观察趋势，训练结束后以 TensorBoard 为准。</p>
       <label>左侧运行 ID<input id="run-left-id"></label>
       <label>右侧运行 ID<input id="run-right-id"></label>
       <button id="run-compare">比较运行</button>
@@ -247,10 +250,63 @@
     let projectId = localStorage.getItem('microduckStudioProjectId');
     const activeRuns = {bench: null, training: null};
     const timelineSequences = {};
-    const resetActiveRuns = () => { activeRuns.bench = null; activeRuns.training = null; };
+    const timelineMetricSeries = {};
+    let visibleMetrics = ['reward','episode_length','temperature_c','latency_ms'];
+    const resetActiveRuns = () => {
+      activeRuns.bench = null;
+      activeRuns.training = null;
+      for (const runId of Object.keys(timelineMetricSeries)) delete timelineMetricSeries[runId];
+    };
     const $ = (id) => document.getElementById(id);
     const show = (id, value) => $(id).textContent = typeof value === 'string' ? value : JSON.stringify(value, null, 2);
     const refreshReport = () => { if (projectId) $('report').click(); };
+    const renderLiveMetric = (runId) => {
+      const chart = $('run-live-chart'), select = $('run-live-metric');
+      chart.replaceChildren();
+      const series = timelineMetricSeries[runId] || {};
+      const available = visibleMetrics.filter(name => series[name]?.length);
+      const selected = available.includes(select.value) ? select.value : (available[0] || '');
+      select.replaceChildren();
+      if (!available.length) {
+        const option = document.createElement('option'); option.value = ''; option.textContent = '等待指标'; select.appendChild(option);
+        show('run-live-caption', '当前尚无可显示指标。运行中数据仅用于观察趋势，训练结束后以 TensorBoard 为准。');
+        return;
+      }
+      for (const name of available) {
+        const option = document.createElement('option'); option.value = name; option.textContent = name; select.appendChild(option);
+      }
+      select.value = selected;
+      const points = series[selected], values = points.map(point => point.value);
+      const low = Math.min(...values), high = Math.max(...values), span = high - low || 1;
+      const firstStep = points[0].step, stepSpan = points[points.length - 1].step - firstStep || 1;
+      const coordinates = points.map(point => `${10 + (point.step - firstStep) * 280 / stepSpan},${90 - (point.value - low) * 80 / span}`).join(' ');
+      const line = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+      line.setAttribute('points', coordinates); line.setAttribute('fill', 'none'); line.setAttribute('stroke', '#17633a'); line.setAttribute('stroke-width', '3');
+      chart.appendChild(line);
+      const latest = points[points.length - 1];
+      show('run-live-caption', `${selected}：${latest.value}（迭代 ${latest.step}，范围 ${low} 到 ${high}）\n运行中估算，训练结束后以 TensorBoard 为准。`);
+    };
+    const collectTimelineMetrics = (runId, events, reset = false) => {
+      if (reset || !timelineMetricSeries[runId]) timelineMetricSeries[runId] = {};
+      const series = timelineMetricSeries[runId];
+      for (const event of events) {
+        if (event.type !== 'metrics' || !event.data?.metrics) continue;
+        const step = Number(event.data.step);
+        if (!Number.isFinite(step)) continue;
+        for (const [name, raw] of Object.entries(event.data.metrics)) {
+          const value = Number(raw);
+          if (!Number.isFinite(value)) continue;
+          // ponytail: 500 visible points keeps mobile redraw cheap; add server-side downsampling for longer history.
+          series[name] = [...(series[name] || []), {step, value}].slice(-500);
+        }
+      }
+      renderLiveMetric(runId);
+    };
+    const formatTimelineEvent = event => {
+      if (event.type === 'log') return `${event.sequence}. ${event.timestamp} [${event.data.stream}]\n${event.data.text}${event.data.truncated ? '\n[本段日志已截断]' : ''}`;
+      if (event.type === 'metrics') return `${event.sequence}. ${event.timestamp} [运行中指标]\n${JSON.stringify(event.data)}`;
+      return `${event.sequence}. ${event.timestamp} [${event.type}]\n${JSON.stringify(event.data)}`;
+    };
     const loadRunTimeline = async (runId, append = false) => {
       if (!runId) return show('run-timeline-body', '请填写运行 ID');
       const after = append ? (timelineSequences[runId] || 0) : 0;
@@ -259,23 +315,28 @@
       if (!res.ok) return show('run-timeline-body', data);
       const events = data.events || [];
       if (events.length) timelineSequences[runId] = events[events.length - 1].sequence;
-      const text = events.map(event => `${event.sequence}. ${event.timestamp} · ${event.type}\n${JSON.stringify(event.data)}`).join('\n');
+      collectTimelineMetrics(runId, events, !append);
+      const text = events.map(formatTimelineEvent).join('\n');
       if (!append) show('run-timeline-body', text || '暂无事件');
-      else if (text) $('run-timeline-body').textContent += `\n${text}`;
+      else if (text) {
+        const combined = `${$('run-timeline-body').textContent}\n${text}`;
+        // ponytail: cap rendered text only; SQLite keeps the complete event history.
+        $('run-timeline-body').textContent = combined.length > 100000 ? `[较早事件已省略]\n${combined.slice(-100000)}` : combined;
+      }
     };
     const pollRun = async (run, slot) => {
       const runId = run.id;
       activeRuns[slot] = runId;
       $('run-timeline-id').value = runId;
       timelineSequences[runId] = 0;
-      loadRunTimeline(runId);
+      await loadRunTimeline(runId);
       show('status', run);
       try {
         while (activeRuns[slot] === runId && ['running','cancelling'].includes(run.status)) {
           await new Promise(resolve => setTimeout(resolve, 500));
           const res = await fetch(`/api/runs/${runId}`); run = await res.json();
           if (!res.ok) throw new Error(run.detail || `HTTP ${res.status}`);
-          loadRunTimeline(runId, true);
+          await loadRunTimeline(runId, true);
           if (activeRuns[slot] === run.id && projectId === run.project_id) show('status', run);
         }
       } catch (error) {
@@ -303,7 +364,8 @@
     };
     const hydrateSettings = (settings) => {
       const data = settings?.data || {};
-      $('settings-metrics').value = (data.visible_metrics || []).join(',');
+      visibleMetrics = data.visible_metrics || [];
+      $('settings-metrics').value = visibleMetrics.join(',');
       $('settings-thresholds').value = JSON.stringify(data.alert_thresholds || {}, null, 2);
       const target = data.execution_target || {kind:'local'};
       $('settings-target').value = target.kind || 'local';
@@ -475,6 +537,7 @@
       show('status', await res.json());
     };
     $('run-timeline').onclick = () => loadRunTimeline($('run-timeline-id').value.trim());
+    $('run-live-metric').onchange = () => renderLiveMetric($('run-timeline-id').value.trim());
     const renderRunComparison = (data) => {
       const changes = data.metric_changes || [];
       const lines = [
