@@ -29,7 +29,8 @@ robotctl health
 
 Hardware and software in one report. Exits non-zero when the robot is unhealthy or unreachable, so
 it can gate a script — a hot motor or a pinned component is reported, not judged, and does not
-affect the exit code. `--json` for a support bundle.
+affect the exit code. `--json` for a support bundle; `--check` checks the update source first, so
+the line about it says whether it answers now.
 
 ### Watching the loop
 
@@ -87,7 +88,8 @@ short ray for its heading, screen-up is the heading it booted with. There is no 
 this is relative motion and it drifts; it answers "did it walk in a circle" and not "where is it".
 
 `q` quits; `↑`/`↓` scroll the joint list on a window too short for all of it; `u` switches the
-angles between degrees and radians; `t` opens the [ToF matrix](#the-tof-sensor-tofd); `d` toggles
+angles between degrees and radians; `t` opens the [ToF matrix](#the-tof-sensor-tofd); `c` opens
+[the camera](#the-camera-mediad); `d` toggles
 the robot view and `[` / `]` orbit it; `p` opens the pad's raw input stream — every evdev report
 from the gamepad, with the gaps between them, which is the only place a stalled radio is visible
 ([pair a gamepad](pair-a-gamepad.md#when-it-drops-while-you-are-driving)). A pad with an inertial
@@ -457,6 +459,9 @@ corrupt each other's replies:
 sudo systemctl stop robotd && sudo /opt/robot/daemon/current/bin/robotd init && sudo systemctl start robotd
 ```
 
+`reboot-motors` is also reachable over Bluetooth, as `duckctl reboot-motors`
+([`duckctl.md`](duckctl.md)) — `relax` is not.
+
 **Replacing a motor** needs no configuration tool. Fit the new servo straight from the box (ID 1,
 57 600 baud), power the servos, and `robotd` — or `robotd init` — finds the one joint that no longer
 answers, flashes the new servo as that joint, sets its registers and reboots it. The journal says
@@ -794,6 +799,41 @@ session without touching the file, and `--imu-hz` trades rate for cost linearly.
 None of this touches depth: the ToF ranges either way, so the grid above works on
 a duck whose IMU has never been switched on.
 
+### The camera (`mediad`)
+
+A frame from the head camera, in the terminal. `robotctl monitor`, then **`c`**:
+
+```
+camera 1280×720 · mount 90° · answered in 41 ms                    0.5 s ago
+```
+
+The picture is drawn two pixels per character cell, the right way up whatever the mount angle is.
+It is small — after this robot's quarter turn the picture is portrait, about 16 pixels across —
+and that is enough for what a number cannot say: where the head is really pointing, whether the
+room is lit well enough to detect anything in, whether the lens is smeared or a thumb is over it.
+
+**Nothing is fetched while the block is shut.** A frame is 1.84 MiB that `mediad` copies off the
+capture branch only because somebody asked for it, so a monitor left running with the block closed
+costs the camera nothing. Open, it asks twice a second, and `answered in 41 ms` is the camera's own
+liveness: the request waits for the *next* capture, so a healthy 30 fps camera answers in about a
+frame period and a stopped one takes the timeout and fails. Closing the block forgets the picture,
+so reopening shows a fresh frame rather than the room as it was ten minutes ago.
+
+| the block says | what it means |
+| --- | --- |
+| `asking mediad for a frame…` | the first request is still in flight |
+| `no picture: connection refused` | `mediad` is not running |
+| `no picture: no frame arrived within the capture timeout` | `mediad` is up; the camera is not producing |
+
+For a full-size picture rather than a thumbnail:
+
+```
+robotctl frame --output /tmp/frame.uyvy
+```
+
+One raw UYVY frame, with the geometry and the mount angle printed to stderr. The console `mediad`
+serves on `:8080` has the same frame as a PNG at `GET /frame`, already turned upright.
+
 ### Wifi (`configd`)
 
 ```
@@ -1124,9 +1164,11 @@ sudo cat /var/lib/robot/updater/runs/000042.jsonl
 
 ### Tab completion
 
-`install.sh` sets this up in `/etc/bash_completion.d/`, as a loader that asks the binary for its own
-completions — so they follow the installed release instead of going stale when an update adds a
-command. For a shell it did not cover, or for a build you are running straight out of `target/`:
+`install.sh` sets this up in `/usr/share/bash-completion/completions/`, as a loader that asks the
+binary for its own completions — so they follow the installed release instead of going stale when
+an update adds a command. It sits there rather than in `/etc/bash_completion.d/` so that it is read
+the first time you type `robotctl<TAB>` rather than at every login; an update moves the older
+copy. For a shell it did not cover, or for a build you are running straight out of `target/`:
 
 ```
 eval "$(robotctl completions bash)"

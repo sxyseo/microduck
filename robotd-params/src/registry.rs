@@ -122,6 +122,14 @@ pub const REGISTRY: &[Entry] = &[
         Kind::IntegerList,
         "HL-2915 directions, 1 or -1",
     ),
+    // Not a feature switch, though it is a `Bool`: the front page is "what does this robot
+    // do", and this is "what does this robot's firmware understand". It belongs beside the
+    // serial port, with the other thing you set once per board and then forget.
+    entry(
+        "bus.fast_sync_read",
+        Kind::Bool,
+        "Read the bus with fast sync read — needs XL330 firmware v46+",
+    ),
     // ── [control] ────────────────────────────────────────────────────────────
     entry("control.hz", Kind::Integer, "Control loop rate"),
     entry(
@@ -133,6 +141,11 @@ pub const REGISTRY: &[Entry] = &[
         "control.head_alpha",
         Kind::Float,
         "EMA smoothing on head targets, 1.0 = pass-through",
+    ),
+    entry(
+        "control.publish_velocity_and_load",
+        Kind::Bool,
+        "Put measured joint velocity and load on the state stream",
     ),
     // ── [update_gate] ────────────────────────────────────────────────────────
     entry(

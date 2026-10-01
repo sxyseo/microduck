@@ -40,8 +40,11 @@ use clap::{Args, CommandFactory, Parser, Subcommand};
 use duck_ipc_proto as proto;
 use robotd_params::Slot;
 
+mod camera;
+mod cells;
 mod configure;
 mod duck;
+mod frame;
 mod imu_view;
 mod monitor;
 mod path_map;
@@ -107,6 +110,10 @@ struct Cli {
     #[arg(long, global = true, default_value = proto::socket::TOF)]
     tof_socket: PathBuf,
 
+    /// Local camera snapshot socket.
+    #[arg(long, global = true, default_value = proto::socket::MEDIA)]
+    media_socket: PathBuf,
+
     #[command(subcommand)]
     namespace: Namespace,
 }
@@ -115,6 +122,11 @@ struct Cli {
 /// `robotctl motors` later is additive rather than a restructure.
 #[derive(Subcommand, Debug)]
 enum Namespace {
+    /// Save one fresh raw UYVY frame; geometry is printed to stderr.
+    Frame {
+        #[arg(long, default_value = "frame.uyvy")]
+        output: PathBuf,
+    },
     /// Wifi. Served by `configd`, which drives NetworkManager.
     #[command(subcommand_required = true, arg_required_else_help = true)]
     Net {
@@ -322,6 +334,11 @@ enum Namespace {
         /// Machine-readable output, for scripts and support bundles.
         #[arg(long)]
         json: bool,
+        /// Check each update source now, before reporting, rather than reporting the last
+        /// scheduled check. Waits on the network, which is why it is not the default: the login
+        /// banner runs `robotctl health`.
+        #[arg(long)]
+        check: bool,
     },
 
     /// What is running on this robot, and what is installed. The first thing to ask for
@@ -341,7 +358,7 @@ enum Namespace {
     /// loader that sources this at shell start rather than a snapshot of it: the snapshot
     /// would go stale the first time an update adds a subcommand.
     ///
-    ///   robotctl completions bash > /etc/bash_completion.d/robotctl
+    ///   robotctl completions bash > /usr/share/bash-completion/completions/robotctl
     Completions {
         /// bash, zsh, fish, elvish or powershell.
         shell: clap_complete::Shell,
@@ -1453,6 +1470,144 @@ struct ComponentReport {
     /// The last update attempt, as one line. `None` on a robot that has never updated.
     #[serde(skip_serializing_if = "Option::is_none")]
     last_attempt: Option<String>,
+    /// When the update source last answered, unix seconds — the same number, in the same unit,
+    /// that `robotctl update status --json` carries. A rendered "9 days ago" is what a person
+    /// wants and what a script cannot use: it cannot recompute the age, cannot apply the
+    /// threshold, and the phrase is wrong the moment it is stored.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    last_checked: Option<i64>,
+    /// The last check, answered or not, as `update status --json` carries it — the error is the
+    /// one thing here that says why the source has gone quiet.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    last_check_attempt: Option<proto::CheckAttempt>,
+    /// What that means, decided once where the clock and the daemon's version are both known.
+    /// The line and the warning both read it rather than re-deriving it from the timestamp.
+    #[serde(skip)]
+    source: SourceCheck,
+}
+
+impl ComponentReport {
+    /// Why the last check of the source got no answer. `None` when it got one, and when there has
+    /// been none or this `updaterd` does not say.
+    fn check_failure(&self) -> Option<&str> {
+        self.last_check_attempt.as_ref()?.error.as_deref()
+    }
+}
+
+/// What the record says about a component's update source.
+///
+/// A timestamp and an `Option` cannot carry this: absent means "this `updaterd` cannot say" and
+/// "it has never answered" both, and those want opposite treatment — the first is silence, the
+/// second is the loudest case there is. Deciding it once, here, is also what keeps a clock that
+/// has moved backwards from reading as a fresh check.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+enum SourceCheck {
+    /// An `updaterd` older than [`proto::API_LAST_CHECKED`], which does not carry the field.
+    /// Nothing is shown and nothing is warned: this robot is not being asked the question.
+    #[default]
+    Unsupported,
+    /// A daemon that would say, with nothing to say. The source has not answered once since this
+    /// board started recording — a robot blocked since it was provisioned, and the exact shape of
+    /// #282: no error anywhere, and an installed release that looks current.
+    ///
+    /// From an `updaterd` that records attempts, only when there has been one and it failed.
+    Never,
+    /// No check has run since this board started recording: an `updaterd` that has just started,
+    /// which is every board for the minute after an update. Said, not warned: until the first
+    /// check there is nothing to know, and warning then is a false alarm on every upgrade.
+    NotYet,
+    /// Checks are answered, but when is not written down: the clock was before the preflight
+    /// floor, which a `local_dir` source on a board with no RTC gets past. Not a quiet source.
+    Unrecorded,
+    /// It answered, this many seconds ago.
+    Answered(i64),
+    /// Recorded ahead of this clock, so the age is unknown. A board that checked with a fast
+    /// clock and then had it corrected backwards sits here — and clamping that to "0 days ago"
+    /// would pin it at fresh forever, because only a successful check overwrites the record and
+    /// by hypothesis there are none.
+    Ahead,
+}
+
+impl SourceCheck {
+    /// Read a component's status, with the API version of the `updaterd` that answered.
+    ///
+    /// Below [`proto::API_CHECK_ATTEMPT`] there is no attempt to read, and nothing recorded is
+    /// still "never": that daemon cannot tell a board that has just started from one that cannot
+    /// reach its source, and the second is the one that matters.
+    fn read(
+        last_checked: Option<i64>,
+        attempt: Option<&proto::CheckAttempt>,
+        api_version: Option<u32>,
+        now: i64,
+    ) -> Self {
+        let Some(api) = api_version.filter(|v| *v >= proto::API_LAST_CHECKED) else {
+            return Self::Unsupported;
+        };
+        if let Some(at) = last_checked {
+            return Self::at(at, now);
+        }
+        if api < proto::API_CHECK_ATTEMPT {
+            return Self::Never;
+        }
+        match attempt {
+            None => Self::NotYet,
+            Some(proto::CheckAttempt { error: Some(_), .. }) => Self::Never,
+            Some(proto::CheckAttempt { error: None, .. }) => Self::Unrecorded,
+        }
+    }
+
+    /// A recorded time this daemon did send, against this machine's clock.
+    fn at(at: i64, now: i64) -> Self {
+        if at > now {
+            Self::Ahead
+        } else {
+            Self::Answered(now - at)
+        }
+    }
+
+    /// The whole `health` line, in the unit a person would pick — whole, because "never" and "9
+    /// hours ago" do not finish the same sentence. `None` for a daemon that cannot say.
+    fn line(self) -> Option<String> {
+        match self {
+            Self::Unsupported => None,
+            Self::Never => Some("source has never answered on this robot".to_owned()),
+            Self::NotYet => {
+                Some("source not checked yet (`robotctl update check` checks it now)".to_owned())
+            }
+            Self::Unrecorded => {
+                Some("source answers, but when is not recorded: this clock was not set".to_owned())
+            }
+            Self::Ahead => Some(
+                "source last answered at a time this clock has not reached (not synced yet?)"
+                    .to_owned(),
+            ),
+            Self::Answered(age) => Some(format!("source last answered {}", describe_age(age))),
+        }
+    }
+
+    /// Whether this is worth saying without being asked, and the phrase for how long it has been.
+    fn quiet(self) -> Option<String> {
+        if !self.past_threshold() {
+            return None;
+        }
+        match self {
+            Self::Unsupported | Self::NotYet | Self::Unrecorded => None,
+            Self::Never => Some("has not answered once on this robot".to_owned()),
+            Self::Ahead => Some(
+                "last answered at a time this clock has not reached, so how long ago is not known"
+                    .to_owned(),
+            ),
+            Self::Answered(age) => Some(format!("has not answered in {} days", age / 86_400)),
+        }
+    }
+
+    fn past_threshold(self) -> bool {
+        match self {
+            Self::Unsupported | Self::NotYet | Self::Unrecorded => false,
+            Self::Never | Self::Ahead => true,
+            Self::Answered(age) => age / 86_400 >= QUIET_SOURCE_DAYS,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
@@ -1489,6 +1644,18 @@ struct HealthReport {
     /// GStreamer stack runs no `mediad`, and the units block is where that is reported.
     #[serde(skip_serializing_if = "Option::is_none")]
     camera: Option<proto::CameraStats>,
+    /// What `mediad`'s relay last published about the rendezvous service. `None` for the camera's
+    /// reasons, plus `--no-remote`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    remote: Option<proto::RemoteStatus>,
+    /// Who `updaterd` says this robot is signed in as — the account on disk, which is not always
+    /// the one the service listed it under. `None` when `updaterd` could not be asked, which the
+    /// software block already reports.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    account: Option<proto::AccountStatusResult>,
+    /// This machine's clock when `remote` was read, so rendering stays pure.
+    #[serde(skip)]
+    read_at: i64,
 }
 
 impl HealthReport {
@@ -1518,13 +1685,31 @@ fn run_health(
     robot_socket: &Path,
     config_socket: &Path,
     json: bool,
+    check: bool,
 ) -> Result<(), Failure> {
+    let not_checked = if check {
+        check_sources(socket)
+    } else {
+        Vec::new()
+    };
     let mut report = HealthReport {
         robot: None,
         robot_error: None,
         software: collect_version_report(socket, robot_socket, config_socket),
         camera: proto::read_camera_stats(),
+        remote: proto::read_remote_status(),
+        account: Client::connect(socket)
+            .ok()
+            .and_then(|mut client| client.call(&proto::Call::AccountStatus).ok())
+            .and_then(|response| response.result_as::<proto::AccountStatusResult>().ok()),
+        read_at: unix_now(),
     };
+    // Here rather than in `collect_version_report`, which `robotctl version` shares: `version`
+    // prints a component's name, release and revision and not the line this warning points at,
+    // so a robot that had gone quiet warned there about something nothing on screen said.
+    let quiet = quiet_source_warnings(&report.software.components);
+    report.software.warnings.extend(quiet);
+    report.software.warnings.extend(not_checked);
 
     match Client::connect_to("robotd", robot_socket) {
         Err(failure) => report.robot_error = Some(failure.message),
@@ -1664,8 +1849,30 @@ fn render_health(report: &HealthReport) -> String {
             // Its own line, next to the motors rather than merged with them: hot servos and a
             // hot board are different faults with different fixes, and a reader scanning for
             // "what is too hot here" needs to see which.
-            if let Some(cpu) = health.cpu_temp_c {
-                let _ = writeln!(out, "  {:<9} {cpu:.0} °C", "cpu");
+            //
+            // The clock joins the temperature on that line rather than taking one of its own,
+            // because it is the *consequence* of it: 95 °C on its own reads as a warm robot,
+            // and "95 °C, held at 408 of 1800 MHz" is why the duck is walking badly. Silent
+            // while nothing is holding the clock down — an unthrottled board is every healthy
+            // robot, and a clause it always wore is a clause nobody would read on the one that
+            // is not.
+            let temp = health.cpu_temp_c.map(|c| format!("{c:.0} °C"));
+            let clock = health
+                .cpu_throttle
+                .filter(proto::CpuThrottle::throttled)
+                .map(|t| {
+                    format!(
+                        "throttled to {} of {} MHz (level {} of {})",
+                        t.khz / 1000,
+                        t.max_khz / 1000,
+                        t.level,
+                        t.max_level
+                    )
+                });
+            // Either half on its own, because either can be the one the kernel does not offer.
+            let cpu: Vec<String> = [temp, clock].into_iter().flatten().collect();
+            if !cpu.is_empty() {
+                let _ = writeln!(out, "  {:<9} {}", "cpu", cpu.join(" · "));
             }
         }
         (None, Some(why)) => {
@@ -1706,6 +1913,10 @@ fn render_health(report: &HealthReport) -> String {
         );
     }
 
+    if let Some(line) = central_line(report) {
+        out.push_str(&line);
+    }
+
     let _ = writeln!(out, "\nsoftware");
     for service in &report.software.services {
         match &service.error {
@@ -1740,6 +1951,12 @@ fn render_health(report: &HealthReport) -> String {
         );
         if let Some(attempt) = &component.last_attempt {
             let _ = writeln!(out, "  {:<9} last update {attempt}", "");
+        }
+        if let Some(line) = component.source.line() {
+            let _ = writeln!(out, "  {:<9} {line}", "");
+        }
+        if let Some(why) = component.check_failure() {
+            let _ = writeln!(out, "  {:<9} last check failed: {why}", "");
         }
     }
 
@@ -1801,6 +2018,8 @@ fn collect_version_report(
 
     // updaterd: running build, then what it says is installed.
     let mut updaterd_running: Option<semver::Version> = None;
+    // Which of the two silences an absent `last_checked` is — see [`SourceCheck`].
+    let mut updaterd_api: Option<u32> = None;
     match Client::connect(socket) {
         Err(failure) => report
             .services
@@ -1810,6 +2029,7 @@ fn collect_version_report(
             match hello {
                 Ok(hello) => {
                     updaterd_running = hello.daemon_version.clone();
+                    updaterd_api = Some(hello.api_version);
                     report.services.push(ServiceReport {
                         name: "updaterd",
                         version: hello.daemon_version.map(|v| v.to_string()),
@@ -1821,7 +2041,7 @@ fn collect_version_report(
                     .services
                     .push(ServiceReport::failed("updaterd", failure.message)),
             }
-            report.components = installed_components(&mut client);
+            report.components = installed_components(&mut client, updaterd_api);
         }
     }
 
@@ -1892,13 +2112,14 @@ fn collect_version_report(
 /// `listInstalled` knows the revision it was built from. Revision matters for support —
 /// once branch installs land, several builds share a version — so it is worth the extra
 /// round trip in a diagnostic command.
-fn installed_components(client: &mut Client) -> Vec<ComponentReport> {
+fn installed_components(client: &mut Client, api_version: Option<u32>) -> Vec<ComponentReport> {
     let Ok(response) = client.call(&proto::Call::Status) else {
         return Vec::new();
     };
     let Ok(statuses) = response.result_as::<Vec<proto::ComponentStatus>>() else {
         return Vec::new();
     };
+    let now = unix_now();
 
     statuses
         .into_iter()
@@ -1921,6 +2142,14 @@ fn installed_components(client: &mut Client) -> Vec<ComponentReport> {
                 revision,
                 pinned: status.pinned.map(|v| v.to_string()),
                 last_attempt: status.last_attempt.as_ref().map(describe_attempt),
+                last_checked: status.last_checked,
+                source: SourceCheck::read(
+                    status.last_checked,
+                    status.last_check_attempt.as_ref(),
+                    api_version,
+                    now,
+                ),
+                last_check_attempt: status.last_check_attempt,
             }
         })
         .collect()
@@ -1943,6 +2172,172 @@ fn describe_attempt(entry: &proto::LogEntry) -> String {
         proto::Outcome::RolledBack { reason } => format!("{target}: ROLLED BACK — {reason}"),
         proto::Outcome::Aborted { reason } => format!("{target}: refused — {reason}"),
     }
+}
+
+/// Seconds since the epoch, by this machine's clock.
+fn unix_now() -> i64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs() as i64)
+        .unwrap_or(0)
+}
+
+/// How long ago, in the unit a person would pick. Takes an age rather than a timestamp: a clock
+/// ahead of the record is not a duration, and [`SourceCheck`] has already sorted that out.
+fn describe_age(age: i64) -> String {
+    if age < 60 {
+        return "just now".to_owned();
+    }
+    let (count, unit) = if age < 3_600 {
+        (age / 60, "minute")
+    } else if age < 86_400 {
+        (age / 3_600, "hour")
+    } else {
+        (age / 86_400, "day")
+    };
+    let plural = if count == 1 { "" } else { "s" };
+    format!("{count} {unit}{plural} ago")
+}
+
+/// Past this, a registration whose heartbeat has not moved is called stale. The relay posts every
+/// ten seconds and the service evicts after thirty, so a minute is a relay that has stopped.
+const STALE_HEARTBEAT_SECONDS: i64 = 60;
+
+/// The `central` line: whether the rendezvous service lists this robot, and under which account.
+///
+/// Two sources, because the question has two halves that can disagree: `updaterd` knows the account
+/// on disk, and only the service knows whose robot list this robot is in. `None` when neither said
+/// anything — a robot with no `mediad` and no `updaterd` has other lines to worry about.
+fn central_line(report: &HealthReport) -> Option<String> {
+    let signed_in = report
+        .account
+        .as_ref()
+        .map(|status| status.account.as_ref().map(|a| a.username.as_str()));
+    let since = |at: i64| describe_age((report.read_at - at).max(0));
+    let signed_out = "not signed in: reachable on its own network only · `robotctl account login`";
+    let body = match (&report.remote, signed_in) {
+        (None, None) => return None,
+        (None, Some(None)) => signed_out.to_owned(),
+        (None, Some(Some(name))) => {
+            format!("signed in as {name}, connection not reported (is mediad running?)")
+        }
+        (Some(status), signed_in) => {
+            let signed_in = signed_in.flatten();
+            match &status.link {
+                proto::RemoteLink::SignedOut => signed_out.to_owned(),
+                proto::RemoteLink::Connecting => format!(
+                    "connecting{}, {}",
+                    signed_in.map(|n| format!(" as {n}")).unwrap_or_default(),
+                    since(status.since)
+                ),
+                proto::RemoteLink::Registered {
+                    account,
+                    last_heartbeat,
+                    ..
+                } => {
+                    let listed = account.as_deref().unwrap_or("an account it did not name");
+                    let beat = (report.read_at - last_heartbeat).max(0);
+                    let mut line = format!(
+                        "registered as {listed} {} · last heartbeat {beat} s ago",
+                        since(status.since)
+                    );
+                    if beat > STALE_HEARTBEAT_SECONDS {
+                        line.push_str(" — stale, mediad's relay may be stuck");
+                    }
+                    // The case this line was written for is the account being the wrong one, and
+                    // that is a person's mistake the robot cannot see. This one it can.
+                    if let (Some(listed), Some(on_disk)) = (account.as_deref(), signed_in)
+                        && listed != on_disk
+                    {
+                        line.push_str(&format!(
+                            "\n  {:<9} ! signed in as {on_disk}, but listed under {listed}",
+                            ""
+                        ));
+                    }
+                    line
+                }
+                proto::RemoteLink::Refused => format!(
+                    "the service refused the token{} {} · `robotctl account login`",
+                    signed_in.map(|n| format!(" for {n}")).unwrap_or_default(),
+                    since(status.since)
+                ),
+                proto::RemoteLink::Retrying { reason } => format!(
+                    "not connected, retrying (first failed {}): {}",
+                    since(status.since),
+                    reason.lines().next().unwrap_or("no reason given")
+                ),
+            }
+        }
+    };
+    Some(format!("central   {body}\n"))
+}
+
+/// `health --check`: have `updaterd` check every component's source now, so the report that
+/// follows says whether it answers rather than how the last scheduled check went.
+///
+/// The outcome is not read here. `updaterd` records it — the answer, or the failure and why — and
+/// the report reads that record like any other, so a check run here and one run by the timer
+/// print the same way. What only this can say is that a check did not run: an update in progress
+/// holds the engine, and without a line saying so the report would be read as fresh.
+///
+/// An `updaterd` that cannot be reached is left to the report, which already says so.
+fn check_sources(socket: &Path) -> Vec<String> {
+    let Ok(mut client) = Client::connect(socket) else {
+        return Vec::new();
+    };
+    let statuses = client
+        .call(&proto::Call::Status)
+        .ok()
+        .and_then(|r| r.result_as::<Vec<proto::ComponentStatus>>().ok())
+        .unwrap_or_default();
+    statuses
+        .into_iter()
+        .filter_map(|status| {
+            let response = client
+                .call(&proto::Call::Check(proto::ComponentParams {
+                    component: status.component.clone(),
+                }))
+                .ok()?;
+            let error = response.error?;
+            (error.code == proto::code::BUSY).then(|| {
+                format!(
+                    "the {} update source was not checked: an update is in progress. What is \
+                     shown is the last check before it.",
+                    status.component
+                )
+            })
+        })
+        .collect()
+}
+
+/// Past this, a quiet update source is said without being asked. A week is twenty-eight missed
+/// checks at the shipped six-hour interval, which is not a flaky link.
+const QUIET_SOURCE_DAYS: i64 = 7;
+
+/// A source that has not answered in a week, beside the pin and the last update. "Updates stopped
+/// arriving" is otherwise a symptom with nothing pointing at it, because a robot that cannot reach
+/// its source still reads as up to date.
+fn quiet_source_warnings(components: &[ComponentReport]) -> Vec<String> {
+    components
+        .iter()
+        .filter_map(|component| {
+            let how_long = component.source.quiet()?;
+            // The reason, when this `updaterd` records one; the journal is where it was before.
+            let why = match component.check_failure() {
+                Some(why) => format!(
+                    "The last check failed: {why}\n  \
+                     `robotctl update check` tries again now."
+                ),
+                None => "`journalctl -u updaterd` has each attempt and why.".to_owned(),
+            };
+            Some(format!(
+                "the {} update source {how_long}.\n  \
+                 A robot that cannot reach it still reads as up to date, because the only thing\n  \
+                 that fails is the check. {why}",
+                component.name
+            ))
+        })
+        .collect()
 }
 
 /// Disagreements worth telling a human about.
@@ -2621,6 +3016,12 @@ fn run_system(socket: &Path, command: SystemCommand) -> Result<(), Failure> {
         SystemCommand::Info { .. } => {
             let info: proto::SystemInfoResult = decode(&result)?;
             println!("name    {}", info.name);
+            // First, and only when true. Everything below this line reads the same for a duck in
+            // MuJoCo as for one on the desk — which is the point of the simulator, and is also how
+            // somebody ends up debugging the wrong robot.
+            if info.simulated {
+                println!("body    MuJoCo (this is a simulated duck)");
+            }
             println!(
                 "serial  {}",
                 // A board with no readable SoC serial, not a board nobody provisioned: the
@@ -3606,14 +4007,24 @@ fn run_policy_search(updater_socket: &Path, query: &str, json: bool) -> Result<(
         return Ok(());
     }
 
+    // The id column is still padded, because the origin and the like count line up under each
+    // other and a reader compares them down the column. The description does not join that table:
+    // it is a sentence of whatever length somebody wrote, and padding it would either truncate the
+    // one useful thing on the line or push the counts off the terminal.
     let width = found.models.iter().map(|m| m.id.len()).max().unwrap_or(20);
     for hit in &found.models {
         let likes = hit.likes.unwrap_or(0);
         println!("{:width$}  {:9}  {likes} likes", hit.id, hit.origin);
+        // `details`, so this and `duckctl` print a hit the same way. See `PolicySearchHit`.
+        for line in hit.details() {
+            println!("{line}");
+        }
     }
     println!(
         "\n`sudo robotctl policy load <slot> <repo>` tries one. Anything not marked official is \
-         somebody else's."
+         somebody else's. A repo with nothing written under it published no manifest, which says \
+         nothing about the policy in it — `policy fetch` reads the same field and refuses the \
+         shapes this robot cannot run."
     );
     Ok(())
 }
@@ -4513,8 +4924,15 @@ fn resolve_from_dir(dir: &std::path::Path) -> Result<String, Failure> {
 
 fn run(cli: Cli) -> Result<(), Failure> {
     let command = match cli.namespace {
-        Namespace::Health { json } => {
-            return run_health(&cli.socket, &cli.robot_socket, &cli.config_socket, json);
+        Namespace::Frame { output } => return frame::run(&cli.media_socket, &output),
+        Namespace::Health { json, check } => {
+            return run_health(
+                &cli.socket,
+                &cli.robot_socket,
+                &cli.config_socket,
+                json,
+                check,
+            );
         }
         Namespace::Version { json } => {
             return run_version(&cli.socket, &cli.robot_socket, &cli.config_socket, json);
@@ -4524,6 +4942,7 @@ fn run(cli: Cli) -> Result<(), Failure> {
                 &cli.robot_socket,
                 &cli.pad_socket,
                 &cli.tof_socket,
+                &cli.media_socket,
                 hz,
                 json,
             );
@@ -4677,6 +5096,28 @@ fn watch(client: &mut Client) -> Result<(), Failure> {
 
 /// Human-readable rendering. `status --json` and anything unrecognised print raw
 /// JSON, so scripts always have a machine-readable path.
+/// The health verdict on one `robotctl update status` line.
+///
+/// Pure, because the case that matters is the one a robot on a desk produces and a working robot
+/// never does. A board with its servo supply off answers `healthy: Some(false)` with `degraded`
+/// set, and this line used to print `UNHEALTHY` for it -- which reads as "the release is broken"
+/// about a release the health gate had just deliberately committed. `robotctl health` has drawn
+/// the distinction since it existed (see `render_health`); this listing did not, and that is how
+/// a rollback got attributed to the wrong cause.
+///
+/// `UNHEALTHY` stays shouted, because now it only prints when something really is.
+fn component_verdict(status: &proto::ComponentStatus) -> String {
+    let reason = status.reason.as_deref().unwrap_or("no reason given");
+    match (status.healthy, status.degraded) {
+        (None, _) => "no probe".to_owned(),
+        (Some(true), _) => "healthy".to_owned(),
+        // Same word and same shape as `robotctl health`, for the same reason: this release is
+        // fine, this board cannot move.
+        (Some(false), true) => format!("degraded: {reason}"),
+        (Some(false), false) => format!("UNHEALTHY: {reason}"),
+    }
+}
+
 fn print_result(command: &UpdateCommand, result: serde_json::Value) {
     let json = |value: &serde_json::Value| {
         println!(
@@ -4699,17 +5140,33 @@ fn print_result(command: &UpdateCommand, result: serde_json::Value) {
                             Some(version) => version.to_string(),
                             None => "none".to_owned(),
                         };
-                        let healthy = match status.healthy {
-                            Some(true) => "healthy",
-                            Some(false) => "UNHEALTHY",
-                            None => "no probe",
-                        };
-                        println!("{}: {installed} ({healthy})", status.component);
+                        println!(
+                            "{}: {installed} ({})",
+                            status.component,
+                            component_verdict(&status)
+                        );
                         if let Some(pinned) = &status.pinned {
                             println!("  pinned to {pinned}");
                         }
                         if let Some(last) = &status.last_attempt {
                             println!("  last attempt: {}", compact(last));
+                        }
+                        // No `hello` on this path, so an absent value stays silent rather than
+                        // claiming a source that has never answered: `robotctl health` is where
+                        // the two silences are told apart.
+                        if let Some(line) = status
+                            .last_checked
+                            .map(|at| SourceCheck::at(at, unix_now()))
+                            .and_then(SourceCheck::line)
+                        {
+                            println!("  {line}");
+                        }
+                        if let Some(why) = status
+                            .last_check_attempt
+                            .as_ref()
+                            .and_then(|attempt| attempt.error.as_deref())
+                        {
+                            println!("  last check failed: {why}");
                         }
                     }
                 }
@@ -4838,13 +5295,18 @@ mod tests {
         }
     }
 
+    /// The three fields these tests are about, and `..Default::default()` for the rest.
+    ///
+    /// **Spelling every field is what broke the build.** This helper cares about the slots and
+    /// whether the policy is driving; it listed the others because they existed, so adding
+    /// `homed` and `sitting` to the wire — a change no part of `robotctl` reads — failed to
+    /// compile a `robotctl` test. A helper that names only what it asserts on does not.
     fn policies_of(slots: Vec<proto::PolicySlot>) -> proto::PoliciesResult {
         proto::PoliciesResult {
             mode: "walk".into(),
             enabled: true,
             slots,
-            skills: Vec::new(),
-            change_error: None,
+            ..Default::default()
         }
     }
 
@@ -5684,7 +6146,145 @@ mod tests {
             robot_error: robot_error.map(str::to_owned),
             software: report(vec![service("robotd", "0.2.0")], Some("0.2.0")),
             camera: None,
+            remote: None,
+            account: None,
+            read_at: 1_000_000,
         }
+    }
+
+    /// `updaterd` saying the robot is signed in as `name`, or signed in to nothing.
+    fn signed_in_as(name: Option<&str>) -> proto::AccountStatusResult {
+        proto::AccountStatusResult {
+            account: name.map(|username| proto::Account {
+                username: username.to_owned(),
+                token_expires_in: 30 * 86_400,
+                refreshable: true,
+            }),
+            ..Default::default()
+        }
+    }
+
+    /// What `mediad` published, `ago` seconds before the report was read.
+    fn remote(link: proto::RemoteLink, ago: i64) -> proto::RemoteStatus {
+        proto::RemoteStatus {
+            service: "https://pollen-robotics-reachy-mini-central.hf.space".to_owned(),
+            since: 1_000_000 - ago,
+            link,
+        }
+    }
+
+    fn registered(account: &str, heartbeat_ago: i64) -> proto::RemoteLink {
+        proto::RemoteLink::Registered {
+            account: Some(account.to_owned()),
+            peer_id: "87a14833".to_owned(),
+            last_heartbeat: 1_000_000 - heartbeat_ago,
+        }
+    }
+
+    /// The line this exists for: registered, under which account, and still alive.
+    #[test]
+    fn health_says_which_account_the_central_lists_the_robot_under() {
+        let mut report = health_report(None, None);
+        report.remote = Some(remote(registered("cduss", 4), 11 * 60));
+        report.account = Some(signed_in_as(Some("cduss")));
+        let out = render_health(&report);
+
+        assert!(
+            out.contains("central   registered as cduss 11 minutes ago · last heartbeat 4 s ago\n"),
+            "{out}"
+        );
+        assert!(
+            !out.contains('!'),
+            "matching accounts are not a warning: {out}"
+        );
+    }
+
+    /// The account on disk and the account the service resolved it to disagree — say both.
+    #[test]
+    fn health_flags_a_robot_listed_under_another_account() {
+        let mut report = health_report(None, None);
+        report.remote = Some(remote(registered("cduss", 4), 60));
+        report.account = Some(signed_in_as(Some("pierre")));
+        let out = render_health(&report);
+
+        assert!(
+            out.contains("! signed in as pierre, but listed under cduss"),
+            "{out}"
+        );
+    }
+
+    /// A heartbeat that has stopped moving is a relay that has stopped, whatever the state says.
+    #[test]
+    fn health_calls_a_heartbeat_that_stopped_moving_stale() {
+        let mut report = health_report(None, None);
+        report.remote = Some(remote(registered("cduss", 300), 3_600));
+        let out = render_health(&report);
+
+        assert!(out.contains("last heartbeat 300 s ago — stale"), "{out}");
+    }
+
+    #[test]
+    fn health_says_why_the_robot_is_not_in_the_list() {
+        let mut report = health_report(None, None);
+        report.account = Some(signed_in_as(Some("cduss")));
+
+        report.remote = Some(remote(proto::RemoteLink::Refused, 120));
+        let out = render_health(&report);
+        assert!(
+            out.contains(
+                "central   the service refused the token for cduss 2 minutes ago · `robotctl account login`"
+            ),
+            "{out}"
+        );
+
+        report.remote = Some(remote(
+            proto::RemoteLink::Retrying {
+                reason: "GET https://x/events: HTTP 503".to_owned(),
+            },
+            300,
+        ));
+        let out = render_health(&report);
+        assert!(
+            out.contains(
+                "central   not connected, retrying (first failed 5 minutes ago): GET https://x/events: HTTP 503"
+            ),
+            "{out}"
+        );
+
+        report.remote = Some(remote(proto::RemoteLink::SignedOut, 300));
+        report.account = Some(signed_in_as(None));
+        let out = render_health(&report);
+        assert!(out.contains("central   not signed in"), "{out}");
+    }
+
+    /// Nothing from `mediad` — stopped, `--no-remote`, or older than this — falls back to the
+    /// account alone, and to no line at all when there is not even that.
+    #[test]
+    fn health_without_a_published_status_falls_back_to_the_account() {
+        let mut report = health_report(None, None);
+        assert!(!render_health(&report).contains("central"));
+
+        report.account = Some(signed_in_as(Some("cduss")));
+        let out = render_health(&report);
+        assert!(
+            out.contains("central   signed in as cduss, connection not reported"),
+            "{out}"
+        );
+    }
+
+    /// The published file is what `mediad` writes and this reads; the tagged, flattened shape is
+    /// the one easy to get wrong between the two.
+    #[test]
+    fn remote_status_round_trips_as_mediad_writes_it() {
+        let status = remote(registered("cduss", 4), 60);
+        let json = serde_json::to_value(&status).unwrap();
+        assert_eq!(json["state"], "registered");
+        assert_eq!(json["account"], "cduss");
+        assert_eq!(json["peerId"], "87a14833");
+        assert_eq!(
+            serde_json::from_value::<proto::RemoteStatus>(json).unwrap(),
+            status
+        );
     }
 
     fn camera_stats(fps: f64, dropped: u64, consumers: u32) -> proto::CameraStats {
@@ -5785,12 +6385,84 @@ mod tests {
         assert!(out.contains("48 °C max (left_knee)"), "{out}");
         // Board and servos on separate lines: they fail differently.
         assert!(out.contains("cpu       52 °C"), "{out}");
+        // Nothing holding the clock down, so the line says nothing about the clock.
+        assert!(!out.contains("throttled"), "{out}");
         assert!(out.contains("bus       ok"), "{out}");
         assert!(out.contains("imu       ready"), "{out}");
         // And the software half, in the same answer — the whole point of one command.
         assert!(out.contains("software"), "{out}");
         assert!(out.contains("robotd    0.2.0"), "{out}");
         assert!(out.contains("daemon    0.2.0 installed"), "{out}");
+    }
+
+    /// The case the clock reading exists for: the temperature alone reads as a warm robot,
+    /// and the board is in fact running at under a quarter of its clock. Taken from a real
+    /// Radxa Zero 3 — 95.5 °C, `cpufreq-cpu0` at the bottom of its table.
+    #[test]
+    fn health_says_what_a_hot_board_is_costing() {
+        let out = render_health(&health_report(
+            Some(proto::HealthResult {
+                healthy: true,
+                cpu_temp_c: Some(95.5),
+                cpu_throttle: Some(proto::CpuThrottle {
+                    level: 6,
+                    max_level: 6,
+                    khz: 408_000,
+                    max_khz: 1_800_000,
+                }),
+                ..Default::default()
+            }),
+            None,
+        ));
+
+        assert!(
+            out.contains("cpu       96 °C · throttled to 408 of 1800 MHz (level 6 of 6)"),
+            "{out}"
+        );
+        // Reported, never judged: the verdict is `robotd`'s and a hot board does not change it.
+        assert!(out.contains("robot     healthy"), "{out}");
+    }
+
+    /// A ceiling lowered with the governor still at zero is somebody's `cpufreq` policy, not
+    /// heat. Worth printing — a robot mysteriously short of CPU is the same symptom — and the
+    /// level is what says the thermal governor had nothing to do with it.
+    #[test]
+    fn health_reports_a_ceiling_nothing_thermal_lowered() {
+        let out = render_health(&health_report(
+            Some(proto::HealthResult {
+                healthy: true,
+                cpu_temp_c: Some(41.0),
+                cpu_throttle: Some(proto::CpuThrottle {
+                    level: 0,
+                    max_level: 6,
+                    khz: 1_104_000,
+                    max_khz: 1_800_000,
+                }),
+                ..Default::default()
+            }),
+            None,
+        ));
+
+        assert!(
+            out.contains("cpu       41 °C · throttled to 1104 of 1800 MHz (level 0 of 6)"),
+            "{out}"
+        );
+    }
+
+    /// An older `robotd` sends no clock reading at all. The line must be exactly what it was
+    /// before the field existed, rather than gaining an empty clause or a zeroed one.
+    #[test]
+    fn health_from_a_robotd_without_the_clock_reading_is_unchanged() {
+        let out = render_health(&health_report(
+            Some(proto::HealthResult {
+                healthy: true,
+                cpu_temp_c: Some(52.0),
+                ..Default::default()
+            }),
+            None,
+        ));
+
+        assert!(out.contains("cpu       52 °C\n"), "{out}");
     }
 
     /// A stopped `robotd` must still produce the software half.
@@ -5999,6 +6671,78 @@ mod tests {
         );
     }
 
+    fn component(
+        healthy: Option<bool>,
+        degraded: bool,
+        reason: Option<&str>,
+    ) -> proto::ComponentStatus {
+        proto::ComponentStatus {
+            component: proto::ComponentId::new("daemon"),
+            installed: Some(semver::Version::new(0, 14, 1)),
+            phase: proto::Phase::Idle,
+            healthy,
+            degraded,
+            reason: reason.map(str::to_owned),
+            pinned: None,
+            last_attempt: None,
+            last_checked: None,
+            last_check_attempt: None,
+        }
+    }
+
+    /// The case this was written for. A bench board with its servo supply off is the
+    /// configuration the update system is tested on, the gate commits releases onto it on
+    /// purpose, and reading `UNHEALTHY` there is what sent a rollback investigation at the
+    /// policy set for an afternoon.
+    #[test]
+    fn status_does_not_shout_unhealthy_at_a_degraded_board() {
+        let out = component_verdict(&component(
+            Some(false),
+            true,
+            Some("no robot on the motor bus after 4 attempts"),
+        ));
+
+        assert_eq!(out, "degraded: no robot on the motor bus after 4 attempts");
+    }
+
+    /// And the word still gets shouted where it belongs, with what the robot actually said --
+    /// which in this case is the line that should have been read in the first place.
+    #[test]
+    fn status_shouts_unhealthy_with_the_robots_own_reason() {
+        let out = component_verdict(&component(
+            Some(false),
+            false,
+            Some("policy unavailable: reading /opt/robot/policies/current/velstand.onnx"),
+        ));
+
+        assert!(out.starts_with("UNHEALTHY: policy unavailable"), "{out}");
+    }
+
+    /// A component with no probe configured is not a component that failed one.
+    #[test]
+    fn status_says_no_probe_rather_than_guessing() {
+        assert_eq!(component_verdict(&component(None, false, None)), "no probe");
+    }
+
+    /// An older `updaterd` sends neither field. It meant the strict verdict and nothing about a
+    /// reason, and that is what it must still read as -- serde's defaults, with nothing invented
+    /// to fill the gap.
+    #[test]
+    fn a_status_from_an_older_updaterd_still_reads_as_unhealthy() {
+        let status: proto::ComponentStatus = serde_json::from_value(serde_json::json!({
+            "component": "daemon",
+            "installed": "0.14.1",
+            "phase": "idle",
+            "healthy": false,
+            "pinned": null,
+            "last_attempt": null,
+        }))
+        .expect("the two new fields must not be required");
+
+        assert!(!status.degraded);
+        assert_eq!(component_verdict(&status), "UNHEALTHY: no reason given");
+    }
+
     /// A pinned component and a rollback are both things nobody thinks to ask about, and both
     /// explain "updates stopped working" — so they appear without being asked for.
     #[test]
@@ -6064,6 +6808,188 @@ mod tests {
         assert_eq!(describe_attempt(&first), "0.2.0: applied");
     }
 
+    /// When the source last answered, in the unit a person would pick.
+    #[test]
+    fn a_check_is_described_by_how_long_ago_it_was() {
+        assert_eq!(describe_age(5), "just now");
+        assert_eq!(describe_age(60), "1 minute ago");
+        assert_eq!(describe_age(3 * 3_600), "3 hours ago");
+        assert_eq!(describe_age(47 * 86_400), "47 days ago");
+    }
+
+    /// A week of silence is a warning without being asked for, and the line is in `health` either
+    /// way. A source that answered this morning, or an `updaterd` too old to say, warns nothing.
+    #[test]
+    fn a_quiet_update_source_is_said_without_being_asked() {
+        let mut report = health_report(Some(proto::HealthResult::default()), None);
+        report.software.components[0].source = SourceCheck::Answered(9 * 86_400);
+
+        let out = render_health(&report);
+        assert!(out.contains("source last answered 9 days ago"), "{out}");
+        let warnings = quiet_source_warnings(&report.software.components);
+        assert_eq!(warnings.len(), 1, "{warnings:?}");
+        assert!(
+            warnings[0].contains("has not answered in 9 days"),
+            "{warnings:?}"
+        );
+
+        report.software.components[0].source = SourceCheck::Answered(3 * 3_600);
+        assert!(quiet_source_warnings(&report.software.components).is_empty());
+        report.software.components[0].source = SourceCheck::Unsupported;
+        assert!(quiet_source_warnings(&report.software.components).is_empty());
+        assert!(!render_health(&report).contains("source"), "{out}");
+    }
+
+    /// The case the whole report exists for: a robot that has never once reached its source —
+    /// blocked since it was provisioned — and so has nothing recorded. Reading that as "no
+    /// answer yet, say nothing" printed exactly what a healthy robot prints, which is #282
+    /// with the fix installed.
+    #[test]
+    fn a_source_that_never_answered_is_the_loudest_case_not_the_quietest() {
+        let mut report = health_report(Some(proto::HealthResult::default()), None);
+        report.software.components[0].source = SourceCheck::Never;
+
+        let out = render_health(&report);
+        assert!(out.contains("source has never answered"), "{out}");
+        let warnings = quiet_source_warnings(&report.software.components);
+        assert_eq!(warnings.len(), 1, "{warnings:?}");
+        assert!(
+            warnings[0].contains("has not answered once"),
+            "{warnings:?}"
+        );
+    }
+
+    /// Which is only distinguishable from an `updaterd` that cannot say with the API version in
+    /// hand. Both send no timestamp.
+    #[test]
+    fn an_absent_timestamp_is_read_against_the_daemons_api_version() {
+        let now = 1_800_000_000;
+        let v35 = Some(proto::API_LAST_CHECKED);
+        assert_eq!(
+            SourceCheck::read(None, None, None, now),
+            SourceCheck::Unsupported
+        );
+        assert_eq!(
+            SourceCheck::read(None, None, Some(proto::API_LAST_CHECKED - 1), now),
+            SourceCheck::Unsupported
+        );
+        assert_eq!(SourceCheck::read(None, None, v35, now), SourceCheck::Never);
+        assert_eq!(
+            SourceCheck::read(Some(now - 600), None, v35, now),
+            SourceCheck::Answered(600)
+        );
+    }
+
+    /// From an `updaterd` that records attempts, nothing recorded is three things, and only one of
+    /// them is the source not answering.
+    #[test]
+    fn an_absent_timestamp_is_read_against_the_last_attempt() {
+        let now = 1_800_000_000;
+        let v37 = Some(proto::API_CHECK_ATTEMPT);
+        let failed = proto::CheckAttempt {
+            at: now - 60,
+            error: Some("network error: dns error".into()),
+        };
+        let answered = proto::CheckAttempt {
+            at: 86_400,
+            error: None,
+        };
+        assert_eq!(SourceCheck::read(None, None, v37, now), SourceCheck::NotYet);
+        assert_eq!(
+            SourceCheck::read(None, Some(&failed), v37, now),
+            SourceCheck::Never
+        );
+        assert_eq!(
+            SourceCheck::read(None, Some(&answered), v37, now),
+            SourceCheck::Unrecorded
+        );
+        assert_eq!(
+            SourceCheck::read(Some(now - 600), Some(&failed), v37, now),
+            SourceCheck::Answered(600),
+            "a failure after an answer does not unmake the answer"
+        );
+    }
+
+    /// The minute after `updaterd` starts, before its first check. That warned "has not answered
+    /// once" on every board just updated to the release that brought the record in, which is
+    /// the one moment someone is looking.
+    #[test]
+    fn a_source_not_checked_yet_is_said_and_not_warned() {
+        let mut report = health_report(Some(proto::HealthResult::default()), None);
+        report.software.components[0].source = SourceCheck::NotYet;
+
+        let out = render_health(&report);
+        assert!(out.contains("source not checked yet"), "{out}");
+        assert!(out.contains("robotctl update check"), "{out}");
+        assert!(quiet_source_warnings(&report.software.components).is_empty());
+    }
+
+    /// A source that keeps failing says why, in the warning and beside the line, rather than
+    /// pointing at the journal.
+    #[test]
+    fn a_failing_source_says_why() {
+        let why = "network error: GET https://x/manifest.json: error sending request: dns error";
+        let mut report = health_report(Some(proto::HealthResult::default()), None);
+        report.software.components[0].source = SourceCheck::Never;
+        report.software.components[0].last_check_attempt = Some(proto::CheckAttempt {
+            at: 1_800_000_000,
+            error: Some(why.into()),
+        });
+
+        let out = render_health(&report);
+        assert!(out.contains(&format!("last check failed: {why}")), "{out}");
+        let warnings = quiet_source_warnings(&report.software.components);
+        assert_eq!(warnings.len(), 1, "{warnings:?}");
+        assert!(warnings[0].contains(why), "{warnings:?}");
+        assert!(
+            warnings[0].contains("robotctl update check"),
+            "{warnings:?}"
+        );
+        assert!(!warnings[0].contains("journalctl"), "{warnings:?}");
+
+        // Answered this morning, failing since: said, and under the week it is not a warning.
+        report.software.components[0].source = SourceCheck::Answered(3 * 3_600);
+        let out = render_health(&report);
+        assert!(out.contains("source last answered 3 hours ago"), "{out}");
+        assert!(out.contains("last check failed"), "{out}");
+        assert!(quiet_source_warnings(&report.software.components).is_empty());
+    }
+
+    /// A clock corrected backwards after a check must not read as a fresh one. Clamping the age
+    /// at zero pinned it there for good: only a successful check overwrites the record, and this
+    /// is the robot that is not getting one.
+    #[test]
+    fn a_record_ahead_of_this_clock_warns_rather_than_reading_as_fresh() {
+        let now = 1_800_000_000;
+        let ahead = SourceCheck::read(
+            Some(now + 3 * 86_400),
+            None,
+            Some(proto::API_LAST_CHECKED),
+            now,
+        );
+        assert_eq!(ahead, SourceCheck::Ahead);
+        assert!(ahead.line().unwrap().contains("not synced"));
+        assert!(ahead.quiet().unwrap().contains("not known"));
+    }
+
+    /// `health --json` carries the timestamp, not the sentence: a script has to be able to
+    /// recompute the age and apply its own threshold, and `update status --json` already
+    /// answers in unix seconds.
+    #[test]
+    fn health_json_carries_the_timestamp_rather_than_the_words() {
+        let mut report = health_report(Some(proto::HealthResult::default()), None);
+        report.software.components[0].last_checked = Some(1_800_000_000);
+        report.software.components[0].source = SourceCheck::Answered(9 * 86_400);
+
+        let json = serde_json::to_value(&report).unwrap();
+        let component = &json["software"]["components"][0];
+        assert_eq!(
+            component["last_checked"],
+            serde_json::json!(1_800_000_000i64)
+        );
+        assert!(component.get("source").is_none(), "{component}");
+    }
+
     // ── version reporting ────────────────────────────────────────────────────
 
     fn report(services: Vec<ServiceReport>, daemon_installed: Option<&str>) -> VersionReport {
@@ -6078,6 +7004,9 @@ mod tests {
                 revision: None,
                 pinned: None,
                 last_attempt: None,
+                last_checked: None,
+                last_check_attempt: None,
+                source: SourceCheck::Unsupported,
             }],
             warnings: Vec::new(),
         }

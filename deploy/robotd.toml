@@ -27,6 +27,17 @@ port = "/dev/ttyS2"
 # passed the HL-2915 bring-up gates.
 backend = "dynamixel"
 
+# Read the bus with fast sync read (protocol 2.0 instruction 0x8A) instead of a plain sync
+# read. The 16 devices append their answers to one status packet rather than each sending
+# its own, so the bus turns around once per tick instead of 16 times.
+#
+# Turn it OFF for a board whose firmware predates the instruction: XL330 needs v46 or newer,
+# and the imu_to_dxl board has to implement it too. There is no half-working version of
+# getting this wrong — a device that does not implement 0x8A does not answer, so every read
+# fails and the journal fills with `bus read failed`. That is the symptom to match against
+# this line. Needs a robotd restart.
+# fast_sync_read = true
+
 # Every value below that is commented out shows the built-in default. LEAVE IT COMMENTED
 # unless this robot genuinely needs a different value: install.sh copies this file to
 # /etc/robot/robotd.toml once and never overwrites it, so an uncommented value is frozen on
@@ -48,6 +59,16 @@ hz = 50
 # head targets and the body pose.
 # cmd_alpha = 0.2
 # head_alpha = 0.2
+
+# Whether the state stream carries measured joint velocity and load — `velocities` and
+# `currents_ma` on `robot.state`. The servos report both in the same twelve-byte read as
+# position, so the bus cost is zero; what it costs is frame size, about 10-12%, or +15 to
+# +19 KB/s at 50 Hz to a subscriber taking every tick.
+#
+# Turn it off and both blocks are absent from the frame — which is exactly what a daemon
+# predating them sends, and is not the same as reporting zero. Nothing in this daemon reads
+# them back, so off costs the robot nothing but the information.
+# publish_velocity_and_load = true
 
 [update_gate]
 # What decides `healthy`, and therefore what the update system rolls back on.
@@ -121,8 +142,9 @@ mode = "walk"
 # "observation width is 51, expected 61".)
 #
 # Walk-mode defaults, spelled out, all under /opt/robot/policies/current/:
-# walk        = "alpha_walking.onnx"     the velstand gait
-# stand       = "alpha_stand.onnx"       standing + body pose
+# walk        = "velstand.onnx"          walks on a twist, stands still at zero command
+# stand       = "none"                   velstand stands on its own; "alpha_stand.onnx" is
+#                                        the old standing + body-pose network, still in the set
 # sitstand    = "alpha_sitstand.onnx"    sit <-> stand, posture flag
 # ground_pick = "alpha_ground_pick.onnx" A-button pick
 # kick_left   = "ball_kick_left.onnx"
@@ -175,8 +197,8 @@ mode = "walk"
 
 # Scale actions with battery voltage: effective scale = action_scale * (nominal / measured
 # EMA, clamped 6.0..9.5 V). The servos' effective kP tracks their supply, so this holds the
-# robot's response steady as the pack sags. Off by default, as in the prototype.
-# voltage_adapt = false
+# robot's response steady as the pack sags. On by default.
+# voltage_adapt = true
 # nominal_voltage = 7.4
 
 [safety]
@@ -216,11 +238,11 @@ mode = "walk"
 # selects the standing network, and that is the stand-up.
 #
 # The only thing the daemon does about a fall. With it off, a fall changes nothing: the
-# policy keeps driving and the humans stay in charge, which is the prototype's behaviour
-# and the default here. ON by default since it was validated on a robot: the whole point is
-# that the fleet lands soft, and a mode every board has to opt into individually is a mode
-# most boards do not have. Set it to false on a robot that needs the old behaviour.
-# limp_fall = true
+# policy keeps driving and the humans stay in charge, which is the prototype's behaviour.
+# OFF by default: the hand-back at the end is to the standing network, and the default
+# configuration (velstand as `walk`, `stand` unset) loads none. Set it to true on a robot
+# that runs a standing policy.
+# limp_fall = false
 
 # When a fall counts as started. This is the whole feature, and both ways of getting it
 # wrong are real: too early and the robot limps out of leans it would have walked off —
