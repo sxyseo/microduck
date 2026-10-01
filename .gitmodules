@@ -25,3 +25,6 @@
 [submodule "microduck-studio/microduck-color-studio"]
 	path = microduck-studio/microduck-color-studio
 	url = https://github.com/sxyseo/microduck-color-studio.git
+[submodule "tools/FT_SCServo_Debug_Qt"]
+	path = tools/FT_SCServo_Debug_Qt
+	url = https://github.com/CarolinePascal/FT_SCServo_Debug_Qt.git
