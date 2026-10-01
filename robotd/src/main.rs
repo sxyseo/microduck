@@ -1222,6 +1222,13 @@ impl RobotIo for BusIo {
         Self::set_torque(self, on)
     }
 
+    fn reboot(&mut self, id: u8) -> duck_control::io::Result<()> {
+        match self {
+            Self::Dynamixel(io) => RobotIo::reboot(io, id),
+            Self::Hl2915(io) => RobotIo::reboot(io, id),
+        }
+    }
+
     fn slow_sensors(&mut self) -> duck_control::io::Result<duck_control::SlowSensors> {
         match self {
             Self::Dynamixel(io) => io.slow_sensors(),
@@ -3487,6 +3494,19 @@ async fn claim_socket(socket_path: &Path) -> std::io::Result<(std::fs::File, Uni
     use std::os::unix::fs::{FileTypeExt, PermissionsExt};
 
     let lock = claim_lock(socket_path)?;
+    // macOS follows a dangling symlink here and binds at its target. Reject any
+    // pre-existing non-socket before bind, not only after EADDRINUSE (as on Linux).
+    match std::fs::symlink_metadata(socket_path) {
+        Ok(metadata) if !metadata.file_type().is_socket() => {
+            return Err(std::io::Error::new(
+                ErrorKind::AddrInUse,
+                "socket path is occupied by a non-socket",
+            ));
+        }
+        Ok(_) => {}
+        Err(e) if e.kind() == ErrorKind::NotFound => {}
+        Err(e) => return Err(e),
+    }
     let listener = match UnixListener::bind(socket_path) {
         Ok(listener) => listener,
         Err(e) if e.kind() == ErrorKind::AddrInUse => {
