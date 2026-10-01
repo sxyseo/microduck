@@ -1,0 +1,163 @@
+{
+  "schema_version": 1,
+  "servos": [
+    {
+      "id": "xl330-m288",
+      "kind": "servo",
+      "name": "XL330-M288-T",
+      "dimensions_mm": [
+        20,
+        34,
+        26
+      ],
+      "voltage_range_v": [
+        3.7,
+        6
+      ],
+      "mass_g": 18,
+      "protocol": "dynamixel2_ttl",
+      "bam_family": "xl330",
+      "source": "https://emanual.robotis.com/docs/en/dxl/x/xl330-m288/",
+      "note": "原版参考外形。厂家推荐 5 V；上游训练的超压域不作为接线依据。",
+      "qualification": "catalog_only"
+    },
+    {
+      "id": "hl2915",
+      "kind": "servo",
+      "name": "HL-2915-C001",
+      "dimensions_mm": [
+        34,
+        20,
+        23
+      ],
+      "voltage_range_v": [
+        9,
+        14
+      ],
+      "mass_g": 27.8,
+      "protocol": "feetech_ttl",
+      "bam_family": null,
+      "source": "https://www.feetechrc.com/585239",
+      "note": "尺寸按厂家声明顺序。工作电压来自本地已核对规格书；需要改件与此型号专用 BAM，不能套用 XL330 / STS3215 参数。",
+      "qualification": "catalog_only"
+    },
+    {
+      "id": "sts3215",
+      "kind": "servo",
+      "name": "STS3215（具体电压版本待核实）",
+      "dimensions_mm": null,
+      "voltage_range_v": null,
+      "mass_g": null,
+      "protocol": "feetech_ttl",
+      "bam_family": "sts3215",
+      "source": "https://www.feetechrc.com/",
+      "note": "BAM 软件支持该执行器类；不同电压版本不能混用，请补充具体 SKU 规格与实测文件。",
+      "qualification": "catalog_only"
+    },
+    {
+      "id": "hl1910",
+      "kind": "servo",
+      "name": "HL-1910（旧物料候选）",
+      "dimensions_mm": null,
+      "voltage_range_v": null,
+      "mass_g": null,
+      "protocol": "feetech_ttl",
+      "bam_family": null,
+      "source": "microduck-replica/docs/物料清单-进度快照.md",
+      "note": "历史型号冲突保留待确认，不能直接采用 HL-2915 参数。",
+      "qualification": "catalog_only"
+    }
+  ],
+  "powers": [
+    {
+      "id": "regulated-5",
+      "name": "稳压 5 V 舵机支路",
+      "servo_range_v": [
+        5,
+        5
+      ],
+      "controller_v": 5,
+      "input": "按电源输入规格",
+      "note": "输出电流、线径、保险与端子额定值需按峰值负载核验。"
+    },
+    {
+      "id": "bench-12",
+      "name": "台架 12 V 限流电源 + 独立 5 V 主控",
+      "servo_range_v": [
+        12,
+        12
+      ],
+      "controller_v": 5,
+      "input": "台架电源",
+      "note": "用于已核对 12 V 工作窗的独立单舵机。"
+    },
+    {
+      "id": "3s-buck",
+      "name": "3S 电池舵机母线 + 5 V 降压支路",
+      "servo_range_v": [
+        9.9,
+        12.6
+      ],
+      "controller_v": 5,
+      "input": "3S 电池（本方案低压截止 9.9 V）",
+      "note": "电池保护、充电器、降压输入范围、连续/峰值电流及急停均需单独验收。"
+    },
+    {
+      "id": "2s-buck",
+      "name": "2S 电池母线 + 5 V 降压支路",
+      "servo_range_v": [
+        6.6,
+        8.4
+      ],
+      "controller_v": 5,
+      "input": "2S 电池（本方案低压截止 6.6 V）",
+      "note": "不得直接接入 XL330 的 3.7–6 V 工作窗；不能用于要求 9 V 起的 HL-2915。"
+    }
+  ],
+  "controllers": [
+    {
+      "id": "radxa-zero3w",
+      "name": "Radxa Zero 3W",
+      "input_v": 5,
+      "camera_interface": "22-pin CSI / USB",
+      "source": "https://docs.radxa.com/zero/zero3/getting-started/preparation"
+    },
+    {
+      "id": "rpi-zero2w",
+      "name": "Raspberry Pi Zero 2 W",
+      "input_v": 5,
+      "camera_interface": "22-pin CSI / USB",
+      "source": "https://www.raspberrypi.com/products/raspberry-pi-zero-2-w/"
+    }
+  ],
+  "cameras": [
+    {
+      "id": "none",
+      "name": "暂不安装摄像头",
+      "interface": "无",
+      "note": "独立支线，不阻塞基础站立与行走。",
+      "source": ""
+    },
+    {
+      "id": "imx219",
+      "name": "IMX219 / Camera V2",
+      "interface": "MIPI CSI",
+      "note": "核对 22-pin 转接排线、接点方向与当前系统 overlay；可出图才算已验证。",
+      "source": "https://docs.radxa.com/en/zero/zero3/accessories/camera"
+    },
+    {
+      "id": "ov5647",
+      "name": "OV5647 / Camera V1.3",
+      "interface": "MIPI CSI",
+      "note": "选择对应 overlay，断电插拔排线；镜头座与头壳需另行试装。",
+      "source": "https://docs.radxa.com/en/zero/zero3/accessories/camera"
+    },
+    {
+      "id": "usb-uvc",
+      "name": "USB UVC 摄像头（具体型号待登记）",
+      "interface": "USB",
+      "note": "核对 USB 角色、接口空间、功耗与 v4l2 出图；头部质量变化应更新惯量。",
+      "source": ""
+    }
+  ]
+}

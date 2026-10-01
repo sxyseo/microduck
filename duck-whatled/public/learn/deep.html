@@ -124,7 +124,7 @@
   <main class="doc-card doc-body">
 <h1 id="深读-microduck-代码-结构-电路-舵机-解读系列">深读 Microduck · 代码 / 结构 / 电路 / 舵机 解读系列</h1>
 <blockquote>
-<p>一个 200 篇的深度解读系列:逐文件、逐模块地读这个复刻项目里<strong>真实存在的</strong>代码与资源。<br />
+<p>一个 203 篇的深度解读系列:逐文件、逐模块地读这个复刻项目里<strong>真实存在的</strong>代码与资源。<br />
 与《什么鸭公开课》(30 课,教学习方法)不同,这个系列是"拆开讲":每篇文章盯住一个真实的<br />
 源文件、一块板子或一个部件,讲它是什么、为什么这样设计、你能从中学到什么可迁移的知识。</p>
 <p>每篇固定结构:<strong>解读对象</strong>(真实文件路径 + 规模)→ 逐段解读(引用真实的函数名、常量、参数)<br />
@@ -138,7 +138,7 @@
 <li><strong>只想查资料</strong>:第 169–180 篇是 8 个舵机型号的参数案例库,第 178 篇有横向对比总表,第 200 篇是全项目知识图谱。</li>
 </ul>
 <p>每篇文章的数字和代码引用都能在仓库里找到出处;发现讲得不清楚的地方,欢迎去<a href="https://github.com/fanhao375/microduck-replica">复刻仓库</a>提 issue。</p>
-<h2 id="内容版图-200-篇在讲什么">内容版图 · 200 篇在讲什么</h2>
+<h2 id="内容版图-203-篇在讲什么">内容版图 · 203 篇在讲什么</h2>
 <p><strong>拆代码 · 80 篇</strong>——机器人的软件是怎么写出来的:</p>
 <ul>
 <li><strong>第一辑 01–12 运动控制核心</strong>:总线调度、61 维观测拼装、ONNX 策略加载、安全层、摔倒检测、姿态解算(<a href="/learn/deep-01">解读 01</a> 起)</li>
@@ -152,12 +152,14 @@
 <li><strong>第五辑 41–50 电路</strong>:电控架构、官方开源 HAT、imu_to_dxl 自绘板、电源树、打样全流程(<a href="/learn/deep-41">解读 41</a> 起)</li>
 <li><strong>第六辑 51–60 舵机与执行器</strong>:尺寸链、协议寄存器、BAM 建模、单摆辨识、辨识进仿真与验证(<a href="/learn/deep-51">解读 51</a> 起)</li>
 </ul>
-<p><strong>换舵机与电压 · 46 篇</strong>——"换成别的舵机怎么改?电压不一样怎么改?"的完整答案:</p>
+<p><strong>换舵机与电压 · 49 篇</strong>——"换成别的舵机怎么改?电压不一样怎么改?"的完整答案:</p>
 <ul>
 <li><strong>第七辑 61–72 HL-2915-C001 换装全流程</strong>:七阶段路线,从单舵机台架六课、协议寄存器、ID 校准,到软件适配、辨识重训、整机部署(<a href="/learn/deep-61">解读 61</a> 起)</li>
 <li><strong>第八辑 73–84 通用换舵机方法论</strong>:决策树、选型六维、机械/电气/协议适配、五个参数落点、混装策略与总检查清单(<a href="/learn/deep-73">解读 73</a> 起)</li>
 <li><strong>第九辑 85–94 电压专项</strong>:三代舵机电压窗对照、电池节数的数学、代码里的 vin_range、过压保护、LDO/buck/UBEC、换电压改造清单(<a href="/learn/deep-85">解读 85</a> 起)</li>
 <li><strong>第十五辑 169–180 型号案例库</strong>:xl330/xl320/STS3215/ST3025/MX-64/MX-106/eRob80 逐个参数精读 + 两篇端到端换装推演(<a href="/learn/deep-169">解读 169</a> 起)</li>
+<li><strong>第十七辑 201–202 换舵机实战案例精读(外部)</strong>:另一台机器 XL330→HD-1910 的完整适配与训练,方法论、结果收紧与不能照搬清单(<a href="/learn/deep-201">解读 201</a> 起)</li>
+<li><strong>第十八辑 203 台架实操</strong>:URT2 + 三件套软件第一次点亮 HL-2915,接线/六课/写操作红线/故障速查(<a href="/learn/deep-203">解读 203</a>)</li>
 </ul>
 <p><strong>小白基础课 · 46 篇</strong>——零基础也能看懂上面所有内容:</p>
 <ul>
@@ -1435,6 +1437,45 @@
 <td>200</td>
 <td><a href="/learn/deep-200">第 200 篇:整个项目的知识图谱</a></td>
 <td>全系列收束</td>
+</tr>
+</tbody>
+</table>
+<h2 id="第十七辑-换舵机实战案例精读外部">第十七辑 · 换舵机实战案例精读(外部)</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>标题</th>
+<th>解读对象</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>201</td>
+<td><a href="/learn/deep-201">案例精读(上):把 XL330 换成 HD-1910,他们改了什么</a></td>
+<td>HD-1910 迁移训练审计报告(已归档 <code>docs/research/</code>)§1–§5、§11</td>
+</tr>
+<tr>
+<td>202</td>
+<td><a href="/learn/deep-202">案例精读(下):结果怎么读,哪些不能照搬</a></td>
+<td>同报告 §12–§14 + 本仓库已落地实现对照</td>
+</tr>
+</tbody>
+</table>
+<h2 id="第十八辑-台架实操">第十八辑 · 台架实操</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>标题</th>
+<th>解读对象</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>203</td>
+<td><a href="/learn/deep-203">台架实操:URT2 + 三件套软件,第一次点亮你的 HL-2915</a></td>
+<td>URT2 + HL-2915/HL-1910 + GUI/FD/bench 软件三件套</td>
 </tr>
 </tbody>
 </table>

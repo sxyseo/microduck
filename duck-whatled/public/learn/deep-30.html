@@ -125,7 +125,7 @@
 <h1 id="解读-30-ball-kick-与-ground-pick带物体的任务">解读 30 · ball_kick 与 ground_pick:带物体的任务</h1>
 <blockquote>
 <p><strong>解读对象</strong>:<code>tasks/microduck_ball_kick_env_cfg.py</code>(661 行)、<code>tasks/microduck_ground_pick_env_cfg.py</code>(706 行)<br />
-<strong>需要的前置</strong>:<a href="/learn/deep-24">解读 24</a>、<a href="/learn/deep-29">解读 29</a>(相位命令)、<a href="README.md">总纲</a></p>
+<strong>需要的前置</strong>:<a href="/learn/deep-24">解读 24</a>、<a href="/learn/deep-29">解读 29</a>(相位命令)、<a href="/learn/deep">总纲</a></p>
 </blockquote>
 <h2 id="在做什么">在做什么</h2>
 <p>接触丰富(contact-rich,即奖励依赖与外部物体的接触动力学)的任务各选了一条路线。ball_kick:机器人站立开局,70 mm / 15 g 的球摆在踢球脚尖前,目标是把球向前踢到目标速度再站稳。ground_pick:下蹲把嘴尖凑到离地尽可能近但<strong>不接触</strong>,再起身;命令槽同样是 <code>[cos 2πφ, sin 2πφ, 0]</code> 相位编码,但时间表是<strong>分段</strong>的——<code>GP_PERIOD = 4.0</code> 秒里 <code>DESCENT_END = 0.375</code>(下降 1.5 s)、<code>HOLD_END = 0.425</code>(贴地 0.2 s)、<code>RISE_END = 0.80</code>(起身 1.5 s)、其余站立(microduck_ground_pick_env_cfg.py:108-111),四段时长互相独立,不像正弦加权那样把降/贴/升耦在一起。</p>

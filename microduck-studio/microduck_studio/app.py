@@ -5,7 +5,11 @@ from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import FileResponse, PlainTextResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
+from .visual import VisualStore, RevisionConflict, model_manifest, model_reference
+from .workbench import Workbench, read_data
+from .training_pipeline import TrainingPipeline
 
 from .core import (
     StudioStore,
@@ -22,6 +26,122 @@ STATIC = ROOT / "web"
 DB_PATH = Path(os.environ.get("MICRODUCK_STUDIO_DB", ROOT / "studio.db"))
 store = StudioStore(DB_PATH)
 app = FastAPI(title="Microduck Studio", version="0.1.0")
+app.mount("/assets", StaticFiles(directory=STATIC), name="studio-assets")
+visual_store = VisualStore(DB_PATH)
+workbench = Workbench(store, DB_PATH)
+training_pipeline = TrainingPipeline(workbench)
+# Build artifacts are local and keep the Color Studio attribution and model license.
+COLOR_BUILD = ROOT / "microduck-color-studio" / "dist"
+COLOR_AVAILABLE = (COLOR_BUILD / "index.html").is_file()
+if COLOR_AVAILABLE:
+    app.mount("/color-studio", StaticFiles(directory=COLOR_BUILD, html=True), name="color-studio")
+
+
+class VisualIn(BaseModel):
+    data: dict
+    expected_revision: int = Field(ge=0, strict=True)
+
+
+@app.get('/api/installation-guide')
+def installation_guide():
+    return {**read_data('installation-guide.json'), 'model': model_manifest(), 'reference': model_reference()}
+
+
+def workbench_call(fn, *args):
+    try:
+        return fn(*args)
+    except KeyError as exc:
+        raise HTTPException(404, 'project or run not found') from exc
+    except RevisionConflict as exc:
+        raise HTTPException(409, str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+@app.get('/api/hardware-catalog')
+def hardware_catalog(project_id: str | None = None):
+    return workbench_call(workbench.catalog, project_id)
+
+
+@app.post('/api/projects/{project_id}/servo-candidates')
+def servo_candidate(project_id: str, body: dict):
+    return workbench_call(workbench.add_servo, project_id, body)
+
+
+@app.get('/api/projects/{project_id}/build-recipes')
+def build_recipes(project_id: str):
+    return workbench_call(workbench.versions, project_id)
+
+
+@app.post('/api/projects/{project_id}/build-recipes/check')
+def check_build_recipe(project_id: str, body: dict):
+    return workbench_call(workbench.validate, project_id, body)
+
+
+@app.post('/api/projects/{project_id}/build-recipes')
+def save_build_recipe(project_id: str, body: VisualIn):
+    return workbench_call(workbench.save, project_id, body.data, body.expected_revision)
+
+
+@app.post('/api/projects/{project_id}/reference-simulation')
+def reference_simulation(project_id: str, body: dict):
+    return workbench_call(workbench.simulation, project_id, 5, body.get('policy_id'))
+
+
+@app.get('/api/projects/{project_id}/simulation-policies')
+def simulation_policies(project_id: str):
+    return workbench_call(workbench.policies, project_id)
+
+
+@app.get('/api/projects/{project_id}/reference-simulation/{run_id}')
+def simulation_trajectory(project_id: str, run_id: str):
+    return workbench_call(workbench.trajectory, project_id, run_id)
+
+
+@app.get('/api/projects/{project_id}/recipe-training/defaults')
+def recipe_training_defaults(project_id: str):
+    return workbench_call(training_pipeline.defaults, project_id)
+
+
+@app.post('/api/projects/{project_id}/recipe-training/prepare')
+def prepare_recipe_training(project_id: str, body: dict):
+    return workbench_call(training_pipeline.prepare, project_id, body)
+
+
+@app.post('/api/projects/{project_id}/recipe-training/start')
+def start_recipe_training(project_id: str, body: dict):
+    return workbench_call(training_pipeline.start, project_id, body)
+
+
+@app.get('/api/projects/{project_id}/recipe-training/{run_id}/{name}')
+def recipe_training_artifact(project_id: str, run_id: str, name: str, display: bool = False):
+    path = workbench_call(training_pipeline.artifact, project_id, run_id, name, display)
+    return FileResponse(path, filename=name)
+
+
+@app.get("/api/visual/model")
+def visual_model():
+    return {"model": model_manifest(), "reference": model_reference(), "available": COLOR_AVAILABLE}
+
+
+@app.get("/api/projects/{project_id}/visual-configs")
+def visual_configs(project_id: str):
+    try:
+        return {"versions": visual_store.list(project_id)}
+    except KeyError as exc:
+        raise HTTPException(404, "project not found") from exc
+
+
+@app.post("/api/projects/{project_id}/visual-configs")
+def save_visual_config(project_id: str, body: VisualIn):
+    try:
+        return visual_store.save(project_id, body.data, body.expected_revision)
+    except KeyError as exc:
+        raise HTTPException(404, "project not found") from exc
+    except RevisionConflict as exc:
+        raise HTTPException(409, str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
 
 
 class ProjectIn(BaseModel):

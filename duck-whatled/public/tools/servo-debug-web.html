@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HL 系列舵机调试台(2915 / 1910) · 什么鸭 WhatDuck</title>
+<meta name="description" content="浏览器里直接调试飞特 HL-2915/HL-1910 总线舵机:Web Serial 连接 URT2,遥测仪表、位置控制、增益与限位参数设置。">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<style>
+  :root{--bg:#14100c;--panel:#1e1812;--panel2:#26201a;--ink:#f2ead9;--soft:#a89a85;--line:#3a3226;
+        --orange:#ff7a1a;--yellow:#f0b429;--green:#7ddb6a;--red:#ff5a4e;--mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:var(--bg);color:var(--ink);font:15px/1.6 -apple-system,"PingFang SC","Microsoft YaHei",sans-serif;padding:18px;max-width:1180px;margin:0 auto}
+  h1{font-size:22px;margin-bottom:2px}h1 .duck{color:var(--orange)}
+  .sub{color:var(--soft);font-size:13px;margin-bottom:16px}
+  .sub a{color:var(--yellow);text-decoration:none}
+  .grid{display:grid;grid-template-columns:340px 1fr;gap:14px}
+  @media(max-width:860px){.grid{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:14px}
+  .card h2{font-size:13px;letter-spacing:.12em;color:var(--soft);text-transform:uppercase;margin-bottom:10px;font-family:var(--mono)}
+  button{font:inherit;cursor:pointer;border:1px solid var(--line);background:var(--panel2);color:var(--ink);border-radius:8px;padding:8px 14px;transition:.15s}
+  button:hover{border-color:var(--orange)}
+  button.primary{background:var(--orange);border-color:var(--orange);color:#1a120a;font-weight:700}
+  button.danger{background:var(--red);border-color:var(--red);color:#fff;font-weight:700}
+  button.small{padding:4px 10px;font-size:13px;border-radius:6px}
+  button:disabled{opacity:.4;cursor:not-allowed}
+  input,select{font:inherit;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:6px 8px}
+  input:focus,select:focus{outline:1px solid var(--orange)}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:8px 0}
+  .row label{font-size:13px;color:var(--soft);min-width:86px}
+  .kv{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px dashed var(--line);font-size:14px}
+  .kv:last-child{border-bottom:none}
+  .kv .k{color:var(--soft)}.kv .v{font-family:var(--mono);font-weight:700}
+  .big{font-family:var(--mono);font-size:34px;font-weight:800;text-align:center;color:var(--yellow)}
+  .big small{font-size:14px;color:var(--soft)}
+  input[type=range]{width:100%;accent-color:var(--orange);height:26px}
+  .warnbox{border:1px solid #6b4a12;background:#2a2010;color:var(--yellow);border-radius:8px;padding:8px 12px;font-size:13px;margin:8px 0}
+  #log{background:#0d0a07;border:1px solid var(--line);border-radius:8px;padding:10px;height:190px;overflow-y:auto;font-family:var(--mono);font-size:12px;line-height:1.7;white-space:pre-wrap}
+  #log .t{color:var(--soft)}
+  .tag{display:inline-block;padding:2px 10px;border-radius:99px;font-size:12px;font-family:var(--mono);font-weight:700}
+  .tag.on{background:#17301c;color:var(--green);border:1px solid var(--green)}
+  .tag.off{background:#301616;color:var(--red);border:1px solid var(--red)}
+  .stbits span{display:inline-block;background:var(--panel2);border:1px solid var(--line);border-radius:5px;padding:1px 7px;font-size:11.5px;margin:2px 3px 2px 0;color:var(--soft)}
+  .stbits span.hit{color:var(--red);border-color:var(--red)}
+  .note{color:var(--soft);font-size:12.5px;margin-top:8px}
+</style>
+</head>
+<body>
+<h1><span class="duck">▲</span> HL 系列舵机调试台 <span style="color:var(--soft);font-size:15px;font-weight:400">(HL-2915 / HL-1910 / 通用磁编码)</span></h1>
+<p class="sub">Web Serial 直连 URT2 调试板 · 需 Chrome/Edge · 协议:飞特磁编码 v1 · 1 Mbps ·
+<a href="/learn/deep-203">台架实操教程</a> · <a href="/learn/deep-63">六课方法论</a> · <a href="/">什么鸭首页</a></p>
+
+<div class="grid">
+<div>
+  <div class="card">
+    <h2>连接</h2>
+    <div class="row">
+      <label>舵机型号</label>
+      <select id="model">
+        <option value="2915" selected>HL-2915-C001(9–14V · 推荐 12V)</option>
+        <option value="1910">HL-1910-C001(4–8.4V · 推荐 7.4V 2S)</option>
+        <option value="gen">其他磁编码型号(自行核对)</option>
+      </select>
+    </div>
+    <div class="row">
+      <label>波特率</label>
+      <select id="baud"><option value="1000000" selected>1,000,000(默认)</option><option value="500000">500,000</option><option value="115200">115,200</option></select>
+    </div>
+    <div class="row">
+      <label>舵机 ID</label>
+      <input id="sid" type="number" min="1" max="253" value="1" style="width:80px">
+      <button class="small" id="btnPing">PING</button>
+    </div>
+    <div class="row">
+      <button class="primary" id="btnConn">🔌 连接舵机</button>
+      <button id="btnDisc" disabled>断开</button>
+      <span id="state" class="tag off">未连接</span>
+    </div>
+    <div class="row">
+      <button id="btnTelem" disabled>开始遥测</button>
+      <button class="danger" id="btnStop" disabled>⛔ 急停(扭矩关)</button>
+    </div>
+    <p class="note">连接前:主电源已上电并<b>限流 0.5A</b>(HL-2915=12V / HL-1910=7.4V 2S),URT2 共地;列表为空时拔插 USB。Web Serial 仅 Chrome/Edge 支持。</p>
+  </div>
+
+  <div class="card">
+    <h2>遥测</h2>
+    <div class="big"><span id="tPos">----</span> <small id="tDeg">/ --.-°</small></div>
+    <div class="kv"><span class="k">电压</span><span class="v" id="tVolt">--</span></div>
+    <div class="kv"><span class="k">温度</span><span class="v" id="tTemp">--</span></div>
+    <div class="kv"><span class="k">电流</span><span class="v" id="tCur">--</span></div>
+    <div class="kv"><span class="k">速度 / 负载</span><span class="v" id="tSpd">--</span></div>
+    <div class="kv"><span class="k">状态位</span><span class="stbits" id="tStat">--</span></div>
+    <div class="kv"><span class="k">丢包</span><span class="v" id="tLoss">0 / 0</span></div>
+  </div>
+
+  <div class="card">
+    <h2>日志</h2>
+    <div id="log"></div>
+  </div>
+</div>
+
+<div>
+  <div class="card">
+    <h2>位置控制</h2>
+    <div class="row">
+      <label>目标位置</label>
+      <input id="goal" type="number" min="0" max="4095" value="2048" style="width:90px"> 步
+      <button class="small" id="btnMid">回中 2048</button>
+      <label style="min-width:auto"><input type="checkbox" id="limitBox" checked> 限幅 ±600 步</label>
+    </div>
+    <input type="range" id="goalRange" min="1448" max="2648" value="2048">
+    <div class="row">
+      <label>目标速度</label><input id="speed" type="number" value="300" style="width:100px"> 步/s
+      <label>加速度</label><input id="accel" type="number" value="500" style="width:100px"> ×100 步/s²
+      <button id="btnGoal" class="primary" disabled>▶ 发送目标</button>
+    </div>
+    <div class="row">
+      <label>扭矩</label>
+      <button class="small" id="btnTon">扭矩开</button>
+      <button class="small" id="btnToff">扭矩关</button>
+      <span id="tState" class="tag off">--</span>
+      <span style="color:var(--soft);font-size:12px">校准当前为 2048:</span>
+      <button class="small danger" id="btnCal">写 40=128(会动!)</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>位置环增益(21/22/23 · RAM)</h2>
+    <div class="row">
+      <label>P(21)</label><input id="pGain" type="number" min="0" max="255" value="32" style="width:80px">
+      <label>D(22)</label><input id="dGain" type="number" min="0" max="255" value="0" style="width:80px">
+      <label>I(23)</label><input id="iGain" type="number" min="0" max="255" value="0" style="width:80px">
+      <button id="btnGain" disabled>写增益</button>
+      <button id="btnGainRead" class="small" disabled>读回</button>
+    </div>
+    <p class="note">HL 系列 P/D/I 为单字节 0–255;过大可能震荡,失力状态(limp)参考 P≈50。P 的运行时映射因固件而异(见解读 201 的 0.16 系数案例)。</p>
+  </div>
+
+  <div class="card">
+    <h2>行程与保护(EEPROM · 掉电保存)</h2>
+    <div class="row">
+      <label>角度下限(9)</label><input id="aMin" type="number" value="0" style="width:100px"> 步
+      <label>上限(11)</label><input id="aMax" type="number" value="4095" style="width:100px"> 步
+    </div>
+    <div class="row">
+      <label>电压上限(14)</label><input id="vMax" type="number" step="0.1" value="16.0" style="width:90px"> V(0.1V)
+      <label>温度上限(13)</label><input id="tMax" type="number" value="80" style="width:80px"> °C
+    </div>
+    <div class="row">
+      <label>最大扭矩(16)</label><input id="tqMax" type="number" value="1000" style="width:100px"> (1000=100%)
+    </div>
+    <div class="row">
+      <button id="btnEeprom" disabled>写入 EEPROM(需 LOCK=0)</button>
+      <button id="btnEepromRead" class="small" disabled>读回</button>
+    </div>
+    <p class="note">写入前会自动检查 55 号锁位(=1 时拒绝);供电前确认电压上限 ≥ 实际电源电压(HL-2915@12V → ≥13.0V;HL-1910 默认 8.4 即可)。写错行程可能造成撞击。</p>
+  </div>
+
+  <div class="card">
+    <h2>原始寄存器(高级)</h2>
+    <div class="row">
+      <label>读</label>
+      <input id="rAddr" type="number" min="0" max="69" value="56" style="width:70px"> 起
+      <input id="rLen" type="number" min="1" max="30" value="14" style="width:70px"> 字节
+      <button id="btnRead" disabled>读</button>
+      <span class="mono" id="rOut" style="font-size:12px"></span>
+    </div>
+    <div class="row">
+      <label>写</label>
+      <input id="wAddr" type="number" min="0" max="69" value="40" style="width:70px">
+      <input id="wData" type="text" value="01" style="width:140px" placeholder="hex, 空格分隔">
+      <button id="btnWrite" class="danger" disabled>写(危险)</button>
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+"use strict";
+const $ = (id) => document.getElementById(id);
+const REG = {FIRM:0,ID:5,BAUD:6,DELAY:7,RESP:8,AMIN:9,AMAX:11,TMAX:13,VMAX:14,VMIN:15,TQMAX:16,
+             P:21,D:22,I:23,OFFSET:31,MODE:33,LOCK:55,TORQUE:40,ACCEL:41,GOAL:42,SPEED:46,
+             POS:56,SPDNOW:58,LOAD:60,VOLT:62,TEMP:63,STATUS:65,MOVING:66,CUR:69};
+let port=null, reader=null, keepReading=false, buf=new Uint8Array(0);
+let sid=1, txN=0, toN=0, telemTimer=null;
+const MODELS={
+  "2915":{name:"HL-2915-C001", vrec:"12V",     warnBelow:9.0, vdef:16.0},
+  "1910":{name:"HL-1910-C001", vrec:"7.4V(2S)",warnBelow:4.5, vdef:8.4},
+  "gen": {name:"磁编码通用",    vrec:"规格书值", warnBelow:4.5, vdef:16.0}
+};
+function model(){ return MODELS[$("model").value]; }
+$("model").onchange = () => {
+  const m=model();
+  $("vMax").value = m.vdef.toFixed(1);
+  log(`型号切换:${m.name} · 工作窗 ${m.warnBelow}–${m===MODELS["2915"]?14.0:m===MODELS["1910"]?8.4:16.0}V · 推荐 ${m.vrec}`);
+};
+
+function log(msg, cls){ const d=document.createElement("div"); if(cls) d.className=cls;
+  d.innerHTML = `<span class="t">[${new Date().toLocaleTimeString()}]</span> ${msg}`;
+  const L=$("log"); L.appendChild(d); L.scrollTop=L.scrollHeight; }
+const enc = (...b) => b;
+
+function packet(sid, instr, params=[]){
+  const body = [sid, params.length+2, instr, ...params];
+  let sum=0; for(const b of body) sum+=b;
+  return new Uint8Array([0xFF,0xFF,...body,(~sum)&0xFF]);
+}
+function parse(buf){
+  let i=0;
+  while(i+6<=buf.length){
+    if(buf[i]!==0xFF||buf[i+1]!==0xFF){i++;continue;}
+    const len=buf[i+3], total=4+len;
+    if(i+total>buf.length) return null;
+    let sum=0; for(let j=i+2;j<i+total-1;j++) sum+=buf[j];
+    if(((~sum)&0xFF)!==buf[i+total-1]){i++;continue;}
+    return {id:buf[i+2], err:buf[i+4], params:buf.slice(i+5,i+total-1), consumed:i+total};
+  }
+  return null;
+}
+function chk(){ throw new Error("舵机无应答(ID/线序/波特率/电源?)"); }
+async function transact(sid, instr, params=[], rxParams=0){
+  if(!port) throw new Error("未连接");
+  txN++;
+  const writer = port.writable.getWriter();
+  await writer.write(packet(sid, instr, params));
+  writer.releaseLock();
+  const want = 6+rxParams, deadline = performance.now()+300;
+  while(performance.now()<deadline){
+    for(let i=0;i<=buf.length-want;i++){
+      if(buf[i]===0xFF&&buf[i+1]===0xFF&&buf[i+2]===sid){
+        const len=buf[i+3], total=4+len;
+        if(i+total<=buf.length){
+          let sum=0; for(let j=i+2;j<i+total-1;j++) sum+=buf[j];
+          if(((~sum)&0xFF)===buf[i+total-1]){
+            const params2=buf.slice(i+5,i+total-1);
+            buf=buf.slice(i+total);
+            if(params2.length!==rxParams) throw new Error(`应答参数 ${params2.length}B,期望 ${rxParams}B`);
+            return params2;
+          }
+        }
+      }
+    }
+    await new Promise(r=>setTimeout(r,4));
+  }
+  toN++; chk();
+}
+const rd=(addr,len)=>transact(sid,0x02,[addr,len],len);
+const wr=(addr,data)=>transact(sid,0x03,[addr,...data],0);
+const u16=(lo,hi)=>lo|(hi<<8);
+const deg=c=>((c-2048)*360/4096).toFixed(1);
+function statusBits(b){
+  const m={0:"过压/欠压",1:"磁编码",2:"过热",3:"过流",5:"过载"};
+  let h=""; for(const k in m) h+=`<span class="${(b>>k)&1?"hit":""}">${m[k]}${((b>>k)&1)?"!":""}</span>`;
+  return h||"<span>正常</span>";
+}
+function updTelem(){
+  const pos=u16(this[0],this[1]), spd=u16(this[2],this[3])&0x7FFF;
+  const load=u16(this[4],this[5])&0x7FFF, volt=this[6]/10, temp=this[7], stat=this[8];
+  const cur=(u16(this[11],this[12])&0x7FFF)*6.5;
+  $("tPos").textContent=pos; $("tDeg").textContent=`/ ${deg(pos)}°`;
+  const m=model(); const vwarn = volt < m.warnBelow ? ` ⚠ 低于 ${m.vrec} 工作区` : "";
+  $("tVolt").textContent=`${volt.toFixed(1)} V${vwarn}`;
+  $("tTemp").textContent=`${temp} °C`; $("tCur").textContent=`${cur.toFixed(0)} mA(口径待验证)`;
+  $("tSpd").textContent=`${spd} 步/s / ${load} (0.1%)`;
+  $("tStat").innerHTML=statusBits(stat);
+}
+async function telemOnce(){
+  try{ const d=await rd(REG.POS,14); updTelem.call(d); $("tLoss").textContent=`${toN} / ${txN}`; }
+  catch(e){ /* 超时计一次 */ $("tLoss").textContent=`${toN} / ${txN}`; }
+}
+async function readDump(addr,len){
+  const d=await rd(addr,len);
+  return Array.from(d).map(b=>b.toString(16).padStart(2,"0")).join(" ");
+}
+
+$("btnConn").onclick = async () => {
+  if(!("serial" in navigator)){ alert("此浏览器不支持 Web Serial,请用 Chrome/Edge"); return; }
+  try{
+    port = await navigator.serial.requestPort();
+    await port.open({ baudRate: Number($("baud").value), dataBits:8, parity:"none", stopBits:1, flowControl:"none" });
+  }catch(e){ log("连接失败: "+e.message); return; }
+  keepReading=true; buf=new Uint8Array(0);
+  reader = port.readable.getReader();
+  (async()=>{ try{
+    while(keepReading){
+      const {value,done} = await reader.read();
+      if(done) break;
+      const t=new Uint8Array(buf.length+value.length); t.set(buf); t.set(value,buf.length); buf=t;
+      if(buf.length>1024) buf=buf.slice(-512);
+    }
+  }catch(e){} })();
+  sid=Number($("sid").value); txN=toN=0;
+  ["btnPing","btnTelem","btnStop","btnGoal","btnGain","btnGainRead","btnEeprom","btnEepromRead","btnRead","btnWrite","btnDisc"].forEach(id=>$(id).disabled=false);
+  $("state").textContent="已连接"; $("state").className="tag on";
+  const m=model();
+  log(`已连接 ${baudName()} · ${m.name} · ID=${sid};先 PING,再开始遥测`);
+  try{ const f=await rd(REG.FIRM,2); log(`固件 v${f[0]}.${f[1]} | ID 寄存器=${(await rd(REG.ID,1))[0]} | 电压窗 ${(await rd(REG.VMIN,1))[0]/10}–${(await rd(REG.VMAX,1))[0]/10}V`);
+      const tq=await rd(REG.TORQUE,1); $("tState").textContent=tq[0]?"开":"关"; $("tState").className="tag "+(tq[0]?"on":"off");
+  }catch(e){ log("读固件信息失败: "+e.message); }
+  $("btnTelem").click();
+};
+function baudName(){ return $("baud").value; }
+$("btnDisc").onclick = async () => {
+  keepReading=false; try{ reader&&await reader.cancel(); }catch(e){}
+  try{ await port.close(); }catch(e){}
+  port=null; $("state").textContent="未连接"; $("state").className="tag off";
+  ["btnPing","btnTelem","btnStop","btnGoal","btnGain","btnGainRead","btnEeprom","btnEepromRead","btnRead","btnWrite","btnDisc"].forEach(id=>$(id).disabled=true);
+  clearInterval(telemTimer); log("已断开");
+};
+$("btnPing").onclick = async () => {
+  sid=Number($("sid").value);
+  try{ await transact(sid,0x01); log(`PING ID=${sid} 成功,舵机在线`); }
+  catch(e){ log(`PING ID=${sid} 失败:${e.message}`); }
+};
+$("btnTelem").onclick = () => {
+  if(telemTimer){ clearInterval(telemTimer); telemTimer=null; $("btnTelem").textContent="开始遥测"; return; }
+  $("btnTelem").textContent="停止遥测"; telemTimer=setInterval(telemOnce,150); telemOnce();
+};
+$("btnStop").onclick = async () => { try{ await wr(REG.TORQUE,[0]); $("tState").textContent="关"; $("tState").className="tag off"; log("⛔ 急停:扭矩已关"); }catch(e){ log("急停失败:"+e.message);} };
+$("btnTon").onclick = async () => { try{ await wr(REG.TORQUE,[1]); $("tState").textContent="开"; $("tState").className="tag on"; }catch(e){ log(e.message);} };
+$("btnToff").onclick = async () => { try{ await wr(REG.TORQUE,[0]); $("tState").textContent="关"; $("tState").className="tag off"; }catch(e){ log(e.message);} };
+$("btnCal").onclick = async () => { if(!confirm("写 40=128:舵机会把当前位置校正为中位 2048,输出轴会动作!确认空载/安全位姿?")) return;
+  try{ await wr(REG.TORQUE,[128]); log("校准指令已写(40=128)"); }catch(e){ log(e.message);} };
+$("goalRange").oninput = e => $("goal").value = e.target.value;
+$("goal").oninput = e => { const v=Number(e.target.value); if(v>=0&&v<=4095) $("goalRange").value=v; };
+$("btnMid").onclick = () => { $("goal").value=2048; $("goalRange").value=2048; };
+$("btnGoal").onclick = async () => {
+  const g=Number($("goal").value), sp=Number($("speed").value), ac=Number($("accel").value);
+  const lim=$("limitBox").checked, cur=Number($("tPos").textContent);
+  if(isNaN(g)||g<0||g>4095) return log("目标位置超出 0–4095");
+  if(lim && cur && Math.abs(g-cur)>600) return log(`已拦截:与当前位置差 ${Math.abs(g-cur)} 步,超出 ±600 步安全限幅(取消勾选可解除)`);
+  try{
+    await wr(REG.ACCEL,[ac&0xFF,(ac>>8)&0xFF]);
+    await wr(REG.SPEED,[sp&0xFF,(sp>>8)&0xFF]);
+    await wr(REG.TORQUE,[1]); $("tState").textContent="开"; $("tState").className="tag on";
+    await wr(REG.GOAL,[g&0xFF,(g>>8)&0xFF]);
+    log(`目标 ${g} 步(${deg(g)}°) · 速度 ${sp} · 加速度 ${ac}`);
+  }catch(e){ log("发送失败:"+e.message); }
+};
+$("btnGain").onclick = async () => {
+  const p=Number($("pGain").value),d=Number($("dGain").value),i=Number($("iGain").value);
+  if([p,d,i].some(v=>v<0||v>255)) return log("增益范围 0–255");
+  try{ await wr(REG.P,[p]); await wr(REG.D,[d]); await wr(REG.I,[i]); log(`增益已写:P=${p} D=${d} I=${i}(RAM,掉电不保存)`); }catch(e){ log(e.message);}
+};
+$("btnGainRead").onclick = async () => {
+  try{ const p=await rd(REG.P,1),d=await rd(REG.D,1),i=await rd(REG.I,1);
+    $("pGain").value=p[0]; $("dGain").value=d[0]; $("iGain").value=i[0];
+    log(`读回增益:P=${p[0]} D=${d[0]} I=${i[0]}`);}catch(e){ log(e.message);}
+};
+$("btnEeprom").onclick = async () => {
+  try{
+    const lock=await rd(REG.LOCK,1);
+    if(lock[0]!==0) return log(`55 号锁位=${lock[0]},EEPROM 已锁定;先写 55=0(改动掉电保存,谨慎)`);
+    const amin=Number($("aMin").value),amax=Number($("aMax").value);
+    const vmax=Math.round(Number($("vMax").value)*10),tmax=Number($("tMax").value),tq=Number($("tqMax").value);
+    await wr(REG.AMIN,[amin&0xFF,(amin>>8)&0xFF]); await wr(REG.AMAX,[amax&0xFF,(amax>>8)&0xFF]);
+    await wr(REG.VMAX,[vmax&0xFF]); await wr(REG.TMAX,[tmax&0xFF]);
+    await wr(REG.TQMAX,[tq&0xFF,(tq>>8)&0xFF]);
+    log(`EEPROM 已写:行程[${amin},${amax}] 电压上限${vmax/10}V 温度上限${tmax}°C 最大扭矩${tq}`);
+  }catch(e){ log(e.message);}
+};
+$("btnEepromRead").onclick = async () => {
+  try{
+    const amin=await rd(REG.AMIN,2),amax=await rd(REG.AMAX,2),v=await rd(REG.VMAX,1),t=await rd(REG.TMAX,1),tq=await rd(REG.TQMAX,2);
+    $("aMin").value=u16(amin[0],amin[1]); $("aMax").value=u16(amax[0],amax[1]);
+    $("vMax").value=(v[0]/10).toFixed(1); $("tMax").value=t[0]; $("tqMax").value=u16(tq[0],tq[1]);
+    log("EEPROM 参数已读回并填入表单");
+  }catch(e){ log(e.message);}
+};
+$("btnRead").onclick = async () => {
+  try{ log(`寄存器 ${$("rAddr").value} 起 ${$("rLen").value}B: ${await readDump(Number($("rAddr").value),Number($("rLen").value))}`);}
+  catch(e){ log(e.message);}
+};
+$("btnWrite").onclick = async () => {
+  const addr=Number($("wAddr").value);
+  const data=$("wData").value.trim().split(/\s+/).map(x=>parseInt(x,16));
+  if(data.some(isNaN)) return log("数据格式:hex 空格分隔,如 01 或 E8 03");
+  if(!confirm(`向寄存器 ${addr} 写 ${data.length} 字节: ${data.map(x=>x.toString(16).padStart(2,"0")).join(" ")} ?`)) return;
+  try{ await wr(addr,data); log(`已写 ${addr} ← ${data.map(x=>x.toString(16).padStart(2,"0")).join(" ")}`);}catch(e){ log(e.message);}
+};
+["btnPing","btnGoal","btnGain","btnRead"].forEach(id=>$(id).disabled=true);
+log("就绪。连接后:先看遥测电压 —— 若 <7V 说明 12V 主电源未上,位置指令不会动作。");
+</script>
+</body>
+</html>

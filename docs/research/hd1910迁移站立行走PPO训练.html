@@ -1,0 +1,418 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>MicroDuck：XL330 到 HD-1910 的完整适配报告</title>
+  <style>
+    :root{--ink:#18222d;--muted:#617080;--line:#d8e0e7;--paper:#fff;--bg:#eef2f5;--nav:#101d29;--cyan:#00a8a8;--blue:#2463a9;--amber:#a85d00;--red:#b33030;--green:#18794e;--code:#f4f7f9}
+    *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.68 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
+    aside{position:fixed;inset:0 auto 0 0;width:272px;background:var(--nav);color:#d9e6ef;padding:28px 22px;overflow:auto}aside h1{font-size:18px;line-height:1.35;color:#fff;margin:0 0 6px}aside .sub{font-size:12px;color:#91a7b8;margin-bottom:22px}nav a{display:block;color:#bcd0dc;text-decoration:none;padding:5px 0;border-left:2px solid transparent;padding-left:10px;font-size:13px}nav a:hover{color:#fff;border-color:var(--cyan)}
+    main{max-width:1160px;margin-left:272px;padding:42px 48px 80px}.page{background:var(--paper);box-shadow:0 2px 15px #23313e18;padding:48px 56px;border-radius:8px}
+    h1{font-size:34px;line-height:1.25;margin:0 0 10px;letter-spacing:-.5px}h2{font-size:24px;margin:46px 0 16px;padding-top:10px;border-bottom:2px solid var(--ink);padding-bottom:8px}h3{font-size:18px;margin:28px 0 10px;color:#173f66}h4{font-size:15px;margin:20px 0 6px}p{margin:9px 0}.lead{font-size:17px;color:#394957;max-width:900px}.meta{color:var(--muted);font-size:13px;margin:12px 0 24px}.tag{display:inline-block;border-radius:99px;padding:2px 9px;font-size:12px;font-weight:700;margin:0 5px 4px 0}.ok{background:#e1f5eb;color:var(--green)}.warn{background:#fff0d2;color:var(--amber)}.bad{background:#fde7e7;color:var(--red)}.info{background:#e6f0fb;color:var(--blue)}
+    .callout{border-left:4px solid var(--blue);background:#f0f6fc;padding:13px 17px;margin:18px 0}.callout.warn{border-color:#e39a28;background:#fff7e8;color:var(--ink)}.callout.bad{border-color:var(--red);background:#fff0f0;color:var(--ink)}.callout.ok{border-color:var(--green);background:#edf8f3;color:var(--ink)}
+    table{width:100%;border-collapse:collapse;margin:14px 0 24px;font-size:13px}th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}th{background:#eaf0f4;font-weight:700}tr:nth-child(even) td{background:#fbfcfd}.num{text-align:right;white-space:nowrap}code{font-family:"SFMono-Regular",Consolas,monospace;font-size:.91em;background:var(--code);padding:1px 4px;border-radius:3px}pre{background:#14202b;color:#d8e5ed;padding:16px 18px;border-radius:6px;overflow:auto;font:12px/1.55 "SFMono-Regular",Consolas,monospace}ul,ol{padding-left:22px}.compact li{margin:3px 0}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:18px 0}.card{border:1px solid var(--line);border-radius:6px;padding:14px;background:#fbfcfd}.card b{display:block;font-size:19px;color:#173f66}.small{font-size:12px;color:var(--muted)}.formula{font-family:Consolas,monospace;background:#f5f7f8;border:1px solid var(--line);padding:9px 12px;margin:8px 0}.status-dot{font-weight:800}.green{color:var(--green)}.amber{color:var(--amber)}.red{color:var(--red)}footer{margin-top:45px;padding-top:18px;border-top:1px solid var(--line);color:var(--muted);font-size:12px}
+    @media(max-width:900px){aside{position:relative;width:auto}main{margin:0;padding:15px}.page{padding:28px 20px}.grid{grid-template-columns:1fr}nav{columns:2}}
+    @media print{body{background:#fff;font-size:10.5pt}aside{display:none}main{margin:0;padding:0;max-width:none}.page{box-shadow:none;padding:0}h2{break-before:page;margin-top:0}h2:first-of-type{break-before:auto}table,pre,.callout,.card{break-inside:avoid}a{color:inherit;text-decoration:none}}
+  </style>
+</head>
+<body>
+<aside>
+  <h1>HD‑1910 适配报告</h1>
+  <div class="sub">MicroDuck · XL330 → HD‑1910<br>代码事实快照：2026‑09‑19</div>
+  <nav>
+    <a href="#summary">1. 结论与完成度</a><a href="#scope">2. 适配原则与范围</a>
+    <a href="#files">3. 修改文件全表</a><a href="#mechanics">4. 质量、惯量与几何</a>
+    <a href="#actuator">5. 电机与执行器模型</a><a href="#task">6. 任务、命令与观测</a>
+    <a href="#reward">7. 奖励函数完整清单</a><a href="#dr">8. 域随机化与课程</a>
+    <a href="#ppo">9. PPO 如何适配</a><a href="#train">10. 训练与导出脚本</a>
+    <a href="#runtime">11. 真机部署适配</a><a href="#verification">12. 验证和训练结果</a>
+    <a href="#risks">13. 已知限制和风险</a><a href="#next">14. 后续闭环</a>
+    <a href="#appendix">附录：参数速查</a>
+  </nav>
+</aside>
+<main><article class="page">
+  <header>
+    <div><span class="tag info">技术审计</span><span class="tag ok">仿真链路已跑通</span><span class="tag warn">真机仍需台架验证</span></div>
+    <h1>从 XL330 到 HD‑1910：训练、PPO 与部署适配完整梳理</h1>
+    <p class="lead">本文按当前工作区中的实际代码、训练产物和测试结果整理。重点不是描述“计划做什么”，而是区分：已经生效、仅有预留代码、经过仿真验证，以及仍待真机辨识的内容。</p>
+    <div class="meta">训练仓库：<code>/home/july/microduck_rl</code>　运行时仓库：<code>/home/july/microduck</code>　生成日期：2026‑09‑19（Asia/Shanghai）</div>
+  </header>
+
+  <section id="summary">
+    <h2>1. 结论与当前完成度</h2>
+    <div class="grid">
+      <div class="card"><b>仿真：可运行</b>HD‑1910 独立任务已注册；CPU/GPU smoke、长训练、ONNX 导出和回放评测均已跑通。</div>
+      <div class="card"><b>能力：基础站立/前行</b>零命令站立和 0.2 m/s 前向行走已表现稳定；横移和转向跟踪仍明显不足。</div>
+      <div class="card"><b>真机：未闭环</b>Feetech 后端代码已接通，但电机辨识、IMU 协议固件、零位/方向/限位和台架热测试未完成。</div>
+    </div>
+    <p>这次适配采用“保持策略接口和任务逻辑不变、只替换物理对象”的路线。HD‑1910 与 XL330 任务仍共享 61 维 actor 输入、14 维动作、同一套奖励、课程和 PPO；实际差异集中在舵机质量/惯量、BAM 执行器参数、控制延迟，以及摩擦与转子惯量的不确定性范围。</p>
+    <div class="callout"><b>最重要的事实：</b>PPO 本身没有针对 HD‑1910 重新调参。<code>MicroduckHd1910RlCfg = deepcopy(MicroduckRlCfg)</code>，只改了实验名和 run 名。当前成果证明“原 PPO 配方在新的近似动力学上能够学习”，不等于已经完成 HD‑1910 的 sim‑to‑real 标定。</div>
+    <table><thead><tr><th>层级</th><th>状态</th><th>证据/含义</th></tr></thead><tbody>
+      <tr><td>任务注册</td><td class="green status-dot">已完成</td><td><code>Mjlab-Velocity-Flat-HD1910-MicroDuck</code> 可由官方 train/play/export 入口直接调用。</td></tr>
+      <tr><td>质量和惯量近似</td><td class="green status-dot">已生效</td><td>15 个舵机各 +3 g，总增重 45 g；对应刚体惯量同比缩放。</td></tr>
+      <tr><td>HD 电机模型</td><td class="amber status-dot">初版</td><td>数据手册参数 + 估计摩擦/转子惯量；尚非摆锤辨识结果。</td></tr>
+      <tr><td>站立/前行策略</td><td class="green status-dot">仿真验证</td><td>8 小时训练产出迭代 16250 checkpoint 和 ONNX；定向测试 0 跌倒。</td></tr>
+      <tr><td>横移/转向</td><td class="amber status-dot">可输出但不成熟</td><td>转向误差偏高，压力测试仍有跌倒。</td></tr>
+      <tr><td>真机总线后端</td><td class="amber status-dot">代码完成/硬件待验</td><td>Feetech protocol v1 读写、单位换算、配置和检查已实现。</td></tr>
+      <tr><td>真机自由行走</td><td class="red status-dot">不建议</td><td>缺少 HD‑1910 实测 BAM 参数和 ID 200 Feetech IMU 固件，动作峰值也需处理。</td></tr>
+    </tbody></table>
+  </section>
+
+  <section id="scope">
+    <h2>2. 适配原则与边界</h2>
+    <ol>
+      <li><b>最大复用：</b>直接调用现有 <code>make_microduck_velocity_env_cfg(play, rough=False)</code>；不复制奖励、观测、课程或 PPO 主体。</li>
+      <li><b>策略契约不变：</b>保持关节名、顺序、HOME 位、14 动作、61 维 actor 观测及 ONNX 运行时接口不变。</li>
+      <li><b>差异下沉到物理层：</b>HD‑1910 的重量、电机电气参数、固件控制律和控制延迟放在 robot/actuator 配置中。</li>
+      <li><b>未知量用随机化包络：</b>辨识前扩大摩擦和 armature 随机化，而不是凭空改变奖励或 PPO。</li>
+      <li><b>默认平台不受影响：</b>运行时总线默认仍为 <code>dynamixel2</code>，HD 路径由 <code>[bus].protocol = "feetech-sts"</code> 显式选择。</li>
+    </ol>
+    <p>站立与行走没有拆成两个任务。速度命令为精确零时训练站立；非零 <code>vx/vy/wz</code> 训练前后/横向行走和转向。当前任务不包含 VelStand 的随机趴倒、起身和跌倒恢复目标。</p>
+  </section>
+
+  <section id="files">
+    <h2>3. 修改文件全表</h2>
+    <h3>3.1 训练仓库 <code>microduck_rl</code></h3>
+    <table><thead><tr><th>文件</th><th>改动</th><th>作用</th></tr></thead><tbody>
+      <tr><td><code>robot/hd1910_params/preliminary_m1.json</code></td><td>新增</td><td>HD‑1910 初版 BAM m1/STS3215 参数。</td></tr>
+      <tr><td><code>robot/hd1910_constants.py</code></td><td>新增</td><td>质量/惯量补丁、HD robot cfg、执行器和延迟。</td></tr>
+      <tr><td><code>tasks/microduck_hd1910_env_cfg.py</code></td><td>新增</td><td>复用速度任务，切换机器人并扩大两个 DR 范围。</td></tr>
+      <tr><td><code>tasks/__init__.py</code></td><td>修改</td><td>注册 HD‑1910 flat velocity 任务和 runner。</td></tr>
+      <tr><td><code>actuator/friction_dr_bam.py</code></td><td>修改</td><td>为直接加载的 STS m1 模型初始化/重置 <code>q_target_smooth</code>。</td></tr>
+      <tr><td><code>scripts/train_hd1910.sh</code></td><td>新增</td><td>smoke/train 包装，GPU 选择和参数透传。</td></tr>
+      <tr><td><code>tests/test_hd1910_cfg.py</code></td><td>新增</td><td>质量计数、参数、任务配置和契约测试。</td></tr>
+      <tr><td><code>docs/hd1910-stand-walk.md</code></td><td>新增</td><td>训练、导出和真机前检查说明。</td></tr>
+    </tbody></table>
+    <p class="small">工作区还有已有的 <code>uv.lock</code> 和 <code>docs/microduck_velocity_ppo_analysis.html</code> 改动；它们不是本报告生成时重写的内容，也不作为 HD 适配的核心代码依据。</p>
+    <h3>3.2 运行时仓库 <code>microduck</code></h3>
+    <table><thead><tr><th>文件</th><th>改动</th></tr></thead><tbody>
+      <tr><td><code>duck-control/src/bus_feetech.rs</code></td><td>新增 Feetech STS3215 的 RobotIo 实现。</td></tr>
+      <tr><td><code>duck-control/src/lib.rs</code></td><td>导出 <code>bus_feetech</code> 模块。</td></tr>
+      <tr><td><code>robotd-params/src/lib.rs</code></td><td>新增 <code>BusProtocol</code>、P 映射比例及 15 关节方向配置和校验。</td></tr>
+      <tr><td><code>robotd-params/src/registry.rs</code> / <code>edit.rs</code></td><td>参数注册表新增 Choice 与固定长度整数列表编辑能力。</td></tr>
+      <tr><td><code>robotd/src/main.rs</code></td><td>新增 BusIo 枚举，在启动时选择 DynamixelIo/FeetechIo，之后共用控制与安全层。</td></tr>
+      <tr><td><code>deploy/robotd.toml</code></td><td>补充 HD 总线配置字段和默认值。</td></tr>
+      <tr><td><code>docs/robot/hd1910-bringup.md</code> 等</td><td>增加硬件契约、安全上电流程并更新设计文档索引。</td></tr>
+    </tbody></table>
+  </section>
+
+  <section id="mechanics">
+    <h2>4. 质量、惯量与几何适配</h2>
+    <table><thead><tr><th>量</th><th>XL330</th><th>HD‑1910</th><th>适配</th></tr></thead><tbody>
+      <tr><td>单舵机质量</td><td class="num">0.018 kg</td><td class="num">0.021 kg</td><td class="num">+0.003 kg</td></tr>
+      <tr><td>舵机数量</td><td colspan="2" class="num">15</td><td class="num">总增重 +0.045 kg</td></tr>
+      <tr><td>模型几何</td><td>XL330 mesh</td><td>暂沿用 XL330 mesh</td><td>平地脚部接触几何保持不变</td></tr>
+      <tr><td>关节/运动学</td><td colspan="3">关节名、轴、限位、HOME_FRAME 和 soft joint limit factor 0.9 均保持不变</td></tr>
+    </tbody></table>
+    <p>补丁遍历 MuJoCo spec 的刚体，只统计 <code>meshname == "xl330"</code> 且 <code>group == 2</code> 的可视舵机网格。全碰撞模型还存在 group 3 的重复碰撞 mesh，因此不按所有 mesh 计数，以免一次舵机增重两次。检测数量不等于 15 时直接抛错，防止模型结构变化后静默产生错误质量。</p>
+    <div class="formula">new_mass = old_mass + servo_count_on_body × (0.021 − 0.018)<br>new_fullinertia = old_fullinertia × new_mass / old_mass</div>
+    <p>质心位置保持原值，惯量张量按质量比例整体缩放；walk spec 与 all-collisions spec 都应用同一补丁。这保证张量保持正定，但只是“相似质量分布”的近似。最终应由带 HD‑1910 装配的 CAD/URDF/MJCF 导出逐连杆质量、质心和完整惯量，而不是长期依赖比例缩放。</p>
+  </section>
+
+  <section id="actuator">
+    <h2>5. 电机与执行器模型</h2>
+    <h3>5.1 XL330 基线与 HD‑1910 的实际差异</h3>
+    <table><thead><tr><th>参数</th><th>XL330 原任务</th><th>HD‑1910 任务</th><th>说明</th></tr></thead><tbody>
+      <tr><td>BAM 模型</td><td><code>motor_name=xl330</code>，拟合 m6</td><td>直接读 <code>preliminary_m1.json</code></td><td>HD 模型更简化，尚未实测拟合</td></tr>
+      <tr><td>固件执行器</td><td>XL330</td><td><code>sts3215</code></td><td>复用 BAM 的 STS 固件 P 控制和目标限速逻辑</td></tr>
+      <tr><td><code>kp_fw</code></td><td class="num">200</td><td class="num">32</td><td>运行时 200 × 0.16 = STS P 32</td></tr>
+      <tr><td>输入电压</td><td>6.5–8.2 V</td><td>6.6–8.2 V</td><td>HD 下界略提高</td></tr>
+      <tr><td>电压下降增益</td><td colspan="2">0.0–0.2</td><td>每环境随机化</td></tr>
+      <tr><td>最低有效电压</td><td colspan="2">6.0 V</td><td>保持</td></tr>
+      <tr><td>命令延迟</td><td>3–6 control ticks</td><td>2–6 control ticks</td><td>HD 尚未测量；当前为初始包络</td></tr>
+      <tr><td>目标关节</td><td colspan="2"><code>^(?!passive_).*</code></td><td>排除被动 jaw linkage，14 个动作</td></tr>
+    </tbody></table>
+    <h3>5.2 <code>preliminary_m1.json</code> 全参数</h3>
+    <table><thead><tr><th>字段</th><th>值</th><th>来源/意义</th></tr></thead><tbody>
+      <tr><td><code>kt</code></td><td class="num">0.73575 N·m/A</td><td>由 1.47 N·m / 2 A 堵转规格推导</td></tr>
+      <tr><td><code>R</code></td><td class="num">3.7 Ω</td><td>由 7.4 V / 2 A 推导</td></tr>
+      <tr><td><code>armature</code></td><td class="num">0.00224</td><td>估计值，尚未摆锤辨识</td></tr>
+      <tr><td><code>q_offset</code></td><td class="num">0.0 rad</td><td>模型内部零偏</td></tr>
+      <tr><td><code>friction_base</code></td><td class="num">0.015</td><td>估计的库仑摩擦</td></tr>
+      <tr><td><code>friction_viscous</code></td><td class="num">0.005</td><td>估计的黏性摩擦</td></tr>
+      <tr><td><code>error_gain_ratio</code></td><td class="num">1.0</td><td>误差增益比例</td></tr>
+      <tr><td><code>max_velocity</code></td><td class="num">11.833 rad/s</td><td>113 RPM 空载速度换算</td></tr>
+      <tr><td><code>model</code></td><td><code>m1</code></td><td>基本电机 + 库仑/黏性摩擦模型</td></tr>
+      <tr><td><code>actuator</code></td><td><code>sts3215</code></td><td>STS 系列固件控制器</td></tr>
+    </tbody></table>
+    <p>由电气量得到的理想堵转扭矩上限约为 <code>V × kt / R</code>；在 8.2 V 时约 1.63 N·m。实际输出还受电压 sag、固件 P、目标速率限制和摩擦影响。</p>
+    <div class="callout warn"><b>模型精度差异：</b>XL330 的 m6 含更丰富的负载相关、方向相关、Stribeck/非线性项；当前 HD 的 m1 只有基础电机、库仑和黏性摩擦。扩大随机化只能覆盖不确定性，不能替代真实系统辨识。</div>
+    <h3>5.3 为 STS 模型补上的状态初始化</h3>
+    <p>BAM 的 STS3215 控制器通常在 <code>load_log</code> 时创建内部目标 <code>q_target_smooth</code>。Mjlab 直接加载 JSON，不经过硬件日志路径，第一控制步会因状态不存在而失败。适配在 actuator 构造时创建形状为 <code>[num_envs, num_target_joints]</code> 的 float32 零张量，并在全局或指定 env reset 时归零。这是 smoke test 实际发现并修复的兼容问题，不是训练调参。</p>
+  </section>
+
+  <section id="task">
+    <h2>6. 任务、命令、动作与观测</h2>
+    <h3>6.1 任务入口</h3>
+    <ul class="compact">
+      <li>任务 ID：<code>Mjlab-Velocity-Flat-HD1910-MicroDuck</code></li>
+      <li>地形：平面（<code>rough=False</code>）</li>
+      <li>仿真步长：0.005 s；decimation 4；策略周期 0.02 s，即 50 Hz</li>
+      <li>每回合：20 s，即最多 1000 个策略步</li>
+      <li>每 PPO iteration：每环境 24 步（0.48 s）</li>
+      <li>训练默认 4096 环境、50000 iterations；smoke 默认 64 环境、5 iterations</li>
+      <li>MuJoCo：implicitfast、Newton、10 iterations、20 line-search、pyramidal friction、重力 −9.81 m/s²、<code>nconmax=35</code>、<code>njmax=1500</code>、tolerance 1e−8。</li>
+    </ul>
+    <h3>6.2 命令空间</h3>
+    <table><thead><tr><th>命令</th><th>维度</th><th>范围/行为</th></tr></thead><tbody>
+      <tr><td>twist</td><td class="num">3</td><td><code>vx ∈ [−0.4,0.4]</code> m/s，<code>vy ∈ [−0.3,0.3]</code> m/s，<code>wz ∈ [−1,1]</code> rad/s；范围固定，不再扩张。</td></tr>
+      <tr><td>站立桶</td><td>—</td><td>初始 2%，课程增至 25%；twist 精确为 0。</td></tr>
+      <tr><td>原地转向桶</td><td>—</td><td>15% 环境：线速度为 0，<code>|wz|</code> 在最大值的 40%–100%。</td></tr>
+      <tr><td>head pose</td><td class="num">4</td><td>neck pitch、head pitch、yaw、roll 相对 HOME 的增量；2–5 s 重采样，范围随课程扩大。</td></tr>
+      <tr><td>body pose</td><td class="num">6</td><td>x/y/z 各 ±0.005 m，roll/pitch/yaw 各 ±0.05 rad；2–5 s 重采样；奖励权重为 0，仅保持输入契约。</td></tr>
+    </tbody></table>
+    <h3>6.3 动作</h3>
+    <p>14 维 joint-position action，scale 1.0，以默认/HOME 位置为 offset。匹配所有非 <code>passive_*</code> 关节；嘴部被动连杆不进入策略动作。当前没有策略侧 action clip（runner 的 <code>clip_actions=None</code>），这是后文所列动作峰值风险的来源之一。</p>
+    <h3>6.4 Actor 观测：61 维</h3>
+    <table><thead><tr><th>顺序</th><th>项</th><th>维度</th><th>噪声/延迟/说明</th></tr></thead><tbody>
+      <tr><td>1</td><td>base angular velocity</td><td class="num">3</td><td>均匀噪声 ±0.03；lag 0–1；每 64 步更新 lag；最多 6° IMU 随机轴失配</td></tr>
+      <tr><td>2</td><td>projected gravity</td><td class="num">3</td><td>均匀噪声 ±0.01；lag 0–1；最多 6° IMU 失配</td></tr>
+      <tr><td>3</td><td>relative joint position</td><td class="num">14</td><td>噪声 ±0.001 rad；叠加每环境固定编码器偏置 ±0.015 rad</td></tr>
+      <tr><td>4</td><td>joint velocity</td><td class="num">14</td><td>噪声 ±0.25 rad/s；固定落后 1 个 control tick</td></tr>
+      <tr><td>5</td><td>last action</td><td class="num">14</td><td>上一时刻动作</td></tr>
+      <tr><td>6</td><td>twist command</td><td class="num">3</td><td>目标 vx/vy/wz</td></tr>
+      <tr><td>7</td><td>head command</td><td class="num">4</td><td>头颈目标增量</td></tr>
+      <tr><td>8</td><td>body command</td><td class="num">6</td><td>身体位姿目标槽位</td></tr>
+      <tr><th colspan="2">合计</th><th class="num">61</th><th>actor 不读取 base linear velocity 或 terrain height scan</th></tr>
+    </tbody></table>
+    <h3>6.5 Critic 特权观测：76 维</h3>
+    <p>base linear velocity 3、base angular velocity 3、projected gravity 3、真实 joint position 14、joint velocity 14、action 14、twist 3、foot height 2、foot air time 2、foot contact 2、foot contact forces 6、head command 4、body command 6，共 76 维。Critic 的 joint position 不含编码器偏置；三个传感器项使用 NaN-safe wrapper，防止接触/射线数据的非有限值污染价值网络。</p>
+    <p>ONNX 固定接口为 <code>[1,61] → [1,14]</code>。导出脚本把 actor observation normalizer 烘焙进模型，因此部署不能绕过官方 <code>scripts/export.py</code> 自行只导网络主体。</p>
+  </section>
+
+  <section id="reward">
+    <h2>7. 奖励函数完整清单</h2>
+    <p>HD‑1910 wrapper <b>没有改任何奖励</b>；下面全部继承自 canonical MicroDuck flat velocity task。正权重为奖励，负权重为代价。</p>
+    <table><thead><tr><th>名称</th><th>权重</th><th>函数/关键参数</th><th>训练目的</th></tr></thead><tbody>
+      <tr><td><code>track_linear_velocity</code></td><td class="num">+2.0</td><td>Gaussian，std = √0.1</td><td>跟踪 vx/vy</td></tr>
+      <tr><td><code>track_angular_velocity</code></td><td class="num">+2.0</td><td>Gaussian，std = √0.5</td><td>跟踪 yaw rate</td></tr>
+      <tr><td><code>upright</code></td><td class="num">+2.0</td><td>仅 trunk_base，std = √0.05</td><td>保持躯干竖直，抑制持续前倾</td></tr>
+      <tr><td><code>pose</code></td><td class="num">+1.0</td><td>仅腿部；walk threshold 0.01</td><td>在站立/行走中约束相对 HOME 姿态</td></tr>
+      <tr><td><code>body_ang_vel</code></td><td class="num">−0.05</td><td>trunk_base</td><td>抑制躯干旋转抖动</td></tr>
+      <tr><td><code>angular_momentum</code></td><td class="num">−0.02</td><td>继承基础实现</td><td>抑制全身角动量</td></tr>
+      <tr><td><code>dof_pos_limits</code></td><td class="num">−1.0</td><td>继承基础实现</td><td>避免靠近软关节限位</td></tr>
+      <tr><td><code>action_rate_l2</code></td><td>−0.1 → −1.0</td><td>全 14 动作；课程递增</td><td>平滑命令，含头颈动作</td></tr>
+      <tr><td><code>air_time</code></td><td class="num">+3.0</td><td>窗口 0.125–0.300 s；命令阈值 0.01</td><td>形成有效摆动相</td></tr>
+      <tr><td><code>foot_clearance</code></td><td class="num">−2.0</td><td>target 0.02 m；命令阈值 0.01</td><td>约束摆动脚离地高度偏差</td></tr>
+      <tr><td><code>foot_swing_height</code></td><td class="num">−0.25</td><td>target 0.02 m；命令阈值 0.01</td><td>避免拖脚/异常高抬腿</td></tr>
+      <tr><td><code>foot_slip</code></td><td class="num">−0.1</td><td>命令阈值 0.01</td><td>弱化惩罚，保留 pivot 转向能力</td></tr>
+      <tr><td><code>self_collisions</code></td><td class="num">−1.0</td><td>self-collision contact sensor</td><td>避免腿/电池架等自碰撞</td></tr>
+      <tr><td><code>head_pose_tracking</code></td><td class="num">+2.0</td><td>4 关节 Gaussian 均值，std 0.5</td><td>跟踪头颈命令，不与腿 pose 奖励冲突</td></tr>
+      <tr><td><code>body_pose_tracking</code></td><td class="num">0.0</td><td>6D；nominal h 0.095 m；xy std .05、z std .02、角度 std 15°</td><td><b>当前禁用</b>，只保留命令/输入槽位</td></tr>
+      <tr><td><code>head_pose_bias</code></td><td>权重 0 → +3</td><td>函数返回 −mean(|1 s EMA(error)|)，故正权重形成惩罚；课程 0→1→2→3</td><td>只惩罚可消除的 DC 头部下垂，不惩罚步态瞬时振荡</td></tr>
+    </tbody></table>
+    <h3>7.1 腿部 pose 容差</h3>
+    <table><thead><tr><th>关节类</th><th>站立 std (rad)</th><th>行走/跑步 std (rad)</th></tr></thead><tbody>
+      <tr><td>hip yaw</td><td class="num">0.10</td><td class="num">0.30</td></tr><tr><td>hip roll</td><td class="num">0.05</td><td class="num">0.05</td></tr><tr><td>hip pitch</td><td class="num">0.15</td><td class="num">0.40</td></tr><tr><td>knee</td><td class="num">0.15</td><td class="num">0.40</td></tr><tr><td>ankle</td><td class="num">0.10</td><td class="num">0.25</td></tr>
+    </tbody></table>
+    <p><code>soft_landing</code> 被移除；站立没有单独的“完全不迈步”奖励，而是通过站立命令桶、姿态、竖直和动作平滑共同学习。头颈关节被显式排除出腿部 <code>pose</code> 奖励，避免 HOME 目标与 head command 相互拉扯。</p>
+  </section>
+
+  <section id="dr">
+    <h2>8. 域随机化、扰动和课程</h2>
+    <h3>8.1 HD 相对 XL 真正改动的随机化</h3>
+    <table><thead><tr><th>项</th><th>XL330</th><th>HD‑1910</th><th>状态</th></tr></thead><tbody>
+      <tr><td>BAM friction scale</td><td>0.9–1.1</td><td><b>0.5–1.5</b></td><td>已生效，每回合 reset 重采样</td></tr>
+      <tr><td>joint armature scale</td><td>0.9–1.1</td><td><b>0.6–1.4</b></td><td>已生效，每回合 reset 重采样</td></tr>
+      <tr><td>motor Kp scale</td><td>关闭</td><td>wrapper 中写 0.75–1.25</td><td><b>未生效</b>：基础配置没有创建该 event</td></tr>
+      <tr><td>motor Kd scale</td><td>关闭</td><td>wrapper 中写 0.8–1.2</td><td><b>未生效</b>：同上</td></tr>
+    </tbody></table>
+    <div class="callout warn"><b>不要误读：</b><code>microduck_hd1910_env_cfg.py</code> 中确实存在 “if randomize_motor_gains” 的范围覆盖代码，但基础任务的 <code>ENABLE_KP_RANDOMIZATION=False</code>、<code>ENABLE_KD_RANDOMIZATION=False</code>，因此 event 根本不存在，这两个 HD 范围在本次训练中没有执行。</div>
+    <h3>8.2 继承且实际启用的随机化</h3>
+    <table><thead><tr><th>项</th><th>模式</th><th>范围/细节</th></tr></thead><tbody>
+      <tr><td>脚底摩擦</td><td>startup</td><td>0.7–1.3；左右脚 collision geom</td></tr>
+      <tr><td>躯干质量+惯量</td><td>startup</td><td>共同缩放 0.95–1.05；pseudo inertia alpha = [ln(.95)/2, ln(1.05)/2] ≈ [−0.0256466, 0.0243951]</td></tr>
+      <tr><td>躯干 CoM</td><td>reset</td><td>三个轴 additive，初始 ±3 mm，课程最大 ±15 mm，非累积</td></tr>
+      <tr><td>头部组件 CoM</td><td>reset</td><td>初始 ±3 mm，课程最大 ±10 mm；匹配 neck、neck_pitch、yaw_roll_motion、bottom_head_shell/jaw_soft、bearing_roll</td></tr>
+      <tr><td>编码器偏置</td><td>startup/每环境常量</td><td>每关节 ±0.015 rad；仅 actor 可见</td></tr>
+      <tr><td>IMU 安装失配</td><td>观测层/每环境常量</td><td>最多 6° 随机轴旋转；actor 的角速度和重力，critic 不变</td></tr>
+      <tr><td>速度推扰</td><td>interval</td><td>训练每 3–6 s，x/y 各 −0.3–0.3 m/s；play 每 0.5–1.0 s</td></tr>
+      <tr><td>输入电压/sag</td><td>执行器内部</td><td>6.6–8.2 V；drop gain 0–0.2；floor 6.0 V</td></tr>
+      <tr><td>执行器命令延迟</td><td>执行器内部</td><td>2–6 control ticks，即当前 40–120 ms 包络</td></tr>
+    </tbody></table>
+    <p>关节 damping DR 和初始 base orientation DR 当前关闭。NaN state termination 已启用：检测非有限关节/根状态后立即终止并 reset，避免污染 observation 和 PPO 权重。</p>
+    <h3>8.3 课程表（step = iteration × 24）</h3>
+    <table><thead><tr><th>课程</th><th>阶段</th></tr></thead><tbody>
+      <tr><td>action-rate weight</td><td>step 0: −0.1；12000: −0.2；18000: −0.4；24000: −0.6；30000: −0.8；36000: −1.0</td></tr>
+      <tr><td>standing fraction</td><td>0: 2%；12000: 5%；18000: 10%；24000: 15%；36000: 20%；48000: 25%</td></tr>
+      <tr><td>head pose ranges</td><td>0: ±(.05,.05,.07,.015)；12000: ±(.17,.17,.21,.047)；24000: ±(.39,.39,.49,.11)；36000: ±(.72,.72,.91,.20)；48000: ±(1.10,1.10,1.40,.31)</td></tr>
+      <tr><td>trunk CoM</td><td>0: ±.003 m；12000: ±.005；24000: ±.010；36000: ±.015</td></tr>
+      <tr><td>head CoM</td><td>0: ±.003 m；12000: ±.005；24000: ±.010</td></tr>
+      <tr><td>head bias weight</td><td>0: 0；14400（iter 600）: 1；24000: 2；36000: 3</td></tr>
+      <tr><td>body pose</td><td>仅一个阶段，始终 ±.005 m / ±.05 rad</td></tr>
+    </tbody></table>
+    <p>默认 terrain-level curriculum 在 flat 模式删除，默认 command-velocity range curriculum 也删除；速度命令范围从头到尾固定。</p>
+  </section>
+
+  <section id="ppo">
+    <h2>9. PPO 如何适配</h2>
+    <div class="callout ok"><b>答案：</b>通过保持同一观测/动作/奖励契约，让 PPO 无需结构适配；HD 的变化由 MDP 动力学和 DR 吸收。网络、损失和采样超参数全部继承，只有日志命名变化。</div>
+    <h3>9.1 网络</h3>
+    <table><thead><tr><th>部分</th><th>结构</th><th>说明</th></tr></thead><tbody>
+      <tr><td>Actor</td><td>61 → 512 → 256 → 128 → 14</td><td>ELU；经验观测归一化；Gaussian action distribution；scalar learned std，初值 1.0</td></tr>
+      <tr><td>Critic</td><td>76 → 512 → 256 → 128 → 1</td><td>ELU；独立经验观测归一化；使用特权观测</td></tr>
+      <tr><td>RNN/CNN</td><td>无</td><td>纯 MLP</td></tr>
+      <tr><td>Symmetry</td><td>关闭</td><td><code>ENABLE_SYMMETRY=False</code>，实际 <code>symmetry_cfg=None</code></td></tr>
+    </tbody></table>
+    <h3>9.2 PPO 超参数</h3>
+    <table><thead><tr><th>参数</th><th>值</th><th>作用</th></tr></thead><tbody>
+      <tr><td>rollout</td><td>24 steps/env</td><td>4096 环境时每 iteration 98,304 transitions</td></tr>
+      <tr><td>learning epochs</td><td class="num">5</td><td>每批数据重复优化 5 轮</td></tr>
+      <tr><td>mini batches</td><td class="num">4</td><td>每 epoch 切 4 批</td></tr>
+      <tr><td>learning rate</td><td class="num">1e−3</td><td>adaptive schedule</td></tr>
+      <tr><td>desired KL</td><td class="num">0.01</td><td>自适应学习率目标</td></tr>
+      <tr><td>policy clip</td><td class="num">0.2</td><td>PPO clipped surrogate</td></tr>
+      <tr><td>value loss coef</td><td class="num">1.0</td><td>clipped value loss 启用</td></tr>
+      <tr><td>entropy coef</td><td class="num">0.01</td><td>维持探索</td></tr>
+      <tr><td>gamma</td><td class="num">0.99</td><td>折扣因子</td></tr>
+      <tr><td>GAE lambda</td><td class="num">0.95</td><td>优势估计偏差/方差权衡</td></tr>
+      <tr><td>max grad norm</td><td class="num">1.0</td><td>梯度裁剪</td></tr>
+      <tr><td>advantage normalization</td><td>非 per-mini-batch</td><td>保持 runner 的原配置</td></tr>
+      <tr><td>optimizer</td><td>Adam</td><td>官方 runner 默认路径</td></tr>
+      <tr><td>seed</td><td class="num">42</td><td>实际 resolved 配置</td></tr>
+      <tr><td>save interval</td><td>250 iterations</td><td>定期 checkpoint</td></tr>
+      <tr><td>max iterations</td><td class="num">50000</td><td>脚本默认上限；本次用户在约 8 小时处停止</td></tr>
+    </tbody></table>
+    <h3>9.3 仅有的 RL config 差异</h3>
+    <pre>MicroduckHd1910RlCfg = deepcopy(MicroduckRlCfg)
+experiment_name = "velocity_hd1910"
+run_name        = "velocity_hd1910_preliminary"</pre>
+    <p>因此不能说“PPO 针对 HD 调低学习率/修改 clip/改变网络”。真正的适配是：策略在相同接口下看到 HD 的质量、电机、延迟和随机化后，利用同一 PPO 优化器重新学习一套参数。</p>
+  </section>
+
+  <section id="train">
+    <h2>10. 训练、恢复与导出</h2>
+    <h3>10.1 包装脚本</h3>
+    <pre>./scripts/train_hd1910.sh smoke   # 64 env，5 iterations
+./scripts/train_hd1910.sh train   # 4096 env，50000 iterations
+
+# 可覆盖
+GPU_IDS=1 NUM_ENVS=2048 MAX_ITERATIONS=1000 ./scripts/train_hd1910.sh train</pre>
+    <p>脚本设置 <code>CUDA_VISIBLE_DEVICES</code>，向官方入口传 <code>--gpu-ids all</code>。这修复了 tyro 将命令行 <code>--gpu-ids 0</code> 误解析为“包含一个 list 的 list”而报错的问题。其余额外参数原样透传给 <code>uv run train</code>。</p>
+    <p>当前 MDP 启动补丁还包括：reward/advantage NaN-safe、ONNX 导出过滤 <code>passive_*</code> 关节，以及 <code>MICRODUCK_WARM_START=1</code> 时 checkpoint 恢复后重新启动课程。后者只有显式设置环境变量才生效。</p>
+    <h3>10.2 导出</h3>
+    <pre>uv run scripts/export.py Mjlab-Velocity-Flat-HD1910-MicroDuck \
+  --wandb-run-path &lt;entity/project/run_id&gt;</pre>
+    <p>导出必须保留 observation normalizer，且过滤被动关节，最终固定 batch 形状是输入 <code>[1,61]</code>、输出 <code>[1,14]</code>。该契约与现有 robotd policy 路径相同。</p>
+  </section>
+
+  <section id="runtime">
+    <h2>11. 真机部署侧适配</h2>
+    <h3>11.1 架构</h3>
+    <p>新增 <code>FeetechIo</code> 实现既有 <code>RobotIo</code> trait，<code>robotd</code> 启动时按 <code>BusProtocol</code> 选择 <code>DynamixelIo</code> 或 <code>FeetechIo</code>。选完后，策略、观测拼装、插值、安全状态机、跌倒检测、扭矩管理和控制循环继续走同一套代码，避免产生 HD 专用策略分叉。</p>
+    <h3>11.2 配置与校验</h3>
+    <pre>[bus]
+port = "/dev/ttyS2"
+protocol = "feetech-sts"
+feetech_p_scale = 0.16
+feetech_direction = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]</pre>
+    <ul class="compact">
+      <li><code>protocol</code> 默认仍为 <code>dynamixel2</code>，不会影响旧机器人。</li>
+      <li><code>feetech_p_scale</code> 必须为有限正数；正常 runtime Kp 200 × 0.16 = STS P 32，limp Kp 50 则映射为 8；最终 round 并 clamp 到 1–254。</li>
+      <li><code>feetech_direction</code> 必须恰好 15 项，且每项只能是 +1 或 −1，顺序严格对应 <code>JOINT_NAMES</code>。</li>
+      <li>配置编辑器和 registry 增加 Choice 与 FixedIntegerList(15) 类型，避免自由文本造成长度/类型错误。</li>
+    </ul>
+    <h3>11.3 Feetech 线上协议</h3>
+    <table><thead><tr><th>项目</th><th>实现</th></tr></thead><tbody>
+      <tr><td>串口</td><td><code>/dev/ttyS2</code>，1,000,000 baud，30 ms timeout，Feetech protocol v1</td></tr>
+      <tr><td>ID</td><td>IMU 200；15 舵机沿用 20–24、30–34、10–14</td></tr>
+      <tr><td>启动检查</td><td>逐个 ping；要求 mode=4（position PD）和 response status level=1；只校验、不在启动时写 EEPROM</td></tr>
+      <tr><td>同步读</td><td>地址 56、长度 15；同时获取 IMU 和电机 block</td></tr>
+      <tr><td>IMU block</td><td>前 12 byte 为现有 canonical SFLP payload；其余状态保持兼容</td></tr>
+      <tr><td>位置</td><td>bytes 0–1，mask <code>0x7fff</code>；<code>(count × 2π/4095 − π) × direction</code></td></tr>
+      <tr><td>速度</td><td>bytes 2–3，bit15 符号幅值；<code>count × 2π/4095 × direction</code></td></tr>
+      <tr><td>电压/温度</td><td>byte 6 × 0.1 V；byte 7 °C；非零电压平均并缓存慢传感量</td></tr>
+      <tr><td>电流</td><td>bytes 13–14，符号幅值取绝对值 × 6.5 mA/count</td></tr>
+      <tr><td>同步写</td><td>策略目标先乘 joint direction，再转换为 STS goal-position counts</td></tr>
+      <tr><td>故障/恢复</td><td>复用安全位置插值、torque enable/disable、reboot、stale IMU 计数与健康上报</td></tr>
+    </tbody></table>
+    <div class="callout bad"><b>当前硬阻塞：</b>ID 200 的 IMU 转接板必须提供 Feetech v1 兼容固件，并在地址 56/长度 15 返回上述 SFLP 数据。仓库现有生产固件说的是 Dynamixel 2，该 Feetech 变体不在仓库内；没有它，整条真机同步读链路不能成立。</div>
+    <p>舵机机械零位为 count 2048。所有方向、零位和机械限位必须逐关节在支撑架与限流电源下校准；代码不会自动猜测方向，也不会在总线上自动收养/重写替换舵机的 EEPROM。</p>
+  </section>
+
+  <section id="verification">
+    <h2>12. 验证、训练产物与实测结果</h2>
+    <h3>12.1 工程验证</h3>
+    <ul>
+      <li>训练配置单元测试：3 项通过；覆盖 15 舵机质量 patch、HD actuator 配置和任务/策略接口。</li>
+      <li>CPU smoke 在修复 STS <code>q_target_smooth</code> 后可以进入 PPO iteration，reward/advantage 有限。</li>
+      <li>Rust：<code>duck-control</code> 72 tests；<code>robotd</code> 151 tests 加 integration；参数 registry 修复后通过；<code>cargo check</code> 通过。</li>
+      <li>Feetech 单元测试覆盖符号幅值速度/电流、位置 count 换算及方向。</li>
+      <li>ONNX checker 通过；输入 <code>[1,61]</code>、输出 <code>[1,14]</code>，metadata 和 normalizer 均存在。</li>
+    </ul>
+    <h3>12.2 8 小时训练</h3>
+    <p>run：<code>logs/rsl_rl/velocity_hd1910/2026-09-19_01-29-44_velocity_hd1910_preliminary</code>。保存到 <code>model_16250.pt</code>，最终事件约 iteration 16384，同时生成同名 ONNX。</p>
+    <table><thead><tr><th>指标</th><th>结果</th><th>解释</th></tr></thead><tbody>
+      <tr><td>最后平均 reward</td><td class="num">87.4</td><td>训练末段仍保持较高回报</td></tr>
+      <tr><td>最好平均 reward</td><td class="num">93.026 @ 13817</td><td>后段并非单调提高；选 checkpoint 不应只取最新</td></tr>
+      <tr><td>最后平均 episode length</td><td class="num">983.28 / 1000</td><td>大部分回合接近时限结束</td></tr>
+      <tr><td>NaN</td><td class="num">0</td><td>训练/评测未观察到非有限值</td></tr>
+      <tr><td>yaw tracking reward metric</td><td>4.0297 → 4.1952</td><td>13750 到 16250 略改善</td></tr>
+      <tr><td>linear tracking metric</td><td>0.55889 → 0.55739</td><td>基本持平/轻微下降</td></tr>
+      <tr><td>fall metric</td><td>0.25 → 0.208；最终 0.1667</td><td>稳定性有所改善</td></tr>
+    </tbody></table>
+    <h3>12.3 回放评测</h3>
+    <table><thead><tr><th>场景</th><th>结果</th></tr></thead><tbody>
+      <tr><td>压力回放：64 env × 10 s，频繁 pushes</td><td>0 NaN，4 falls，平均 tilt 5.678°；鲁棒性尚可但跟踪较差</td></tr>
+      <tr><td>基准：32 env × 6 s，无 pushes</td><td>0 falls，0 NaN，平均 tilt 4.295°；站立 drift 0.0353 m/s、yaw 0.2778 rad/s；行走 xy error 0.2535 m/s、yaw error 1.6179 rad/s</td></tr>
+      <tr><td>定向：8 站立 + 8 前行，5 s，无 pushes</td><td>0 falls，0 NaN；站立 speed 0.02112 m/s、|yaw| 0.16514 rad/s；前向目标 0.2 m/s 时 |x error| 0.04501 m/s、|lateral| 0.16774 m/s</td></tr>
+    </tbody></table>
+    <p>合理结论是：<b>基础站立和前向行走在当前近似仿真中已经形成</b>；横向漂移、原地转向/角速度跟踪还不够好，推扰下也非零跌倒。不能把“episode length 很长”直接等同于所有速度方向都跟踪准确。</p>
+  </section>
+
+  <section id="risks">
+    <h2>13. 已知限制、未生效项和风险</h2>
+    <ol>
+      <li><b>电机未辨识：</b><code>armature</code>、摩擦、固件 P 映射、延迟、电压 sag 都含估计量；当前模型只适合管线 bring-up 和初版策略。</li>
+      <li><b>惯量近似：</b>只有舵机质量差被分配到刚体并同比缩放惯量，没有 HD 装配后的真实 CoM/惯量张量。</li>
+      <li><b>几何仍是 XL330：</b>若 HD‑1910 外壳尺寸改变碰撞、关节间距或安装姿态，当前模型没有反映。</li>
+      <li><b>gain DR 实际关闭：</b>HD wrapper 写的 Kp/Kd 范围未挂载，不能声称训练覆盖了增益漂移。</li>
+      <li><b>动作峰值：</b>基准回放记录 raw action p95 约 6.759、最大约 13.37；策略无 action clip。即使下游目标/关节限位会约束，这仍是上真机前必须检查并消除的饱和/冲击风险。</li>
+      <li><b>头部 body list 历史问题：</b><code>bearing_roll</code> 实际是右 hip-yaw link，却为保持既有 DR 行为仍在 head CoM 列表中；这不是 HD 新增问题，但会影响解释。</li>
+      <li><b>IMU 固件缺失：</b>Feetech v1 的 ID 200 adapter firmware 是真机链路的必要条件，当前未交付。</li>
+      <li><b>热和时序未验：</b>50 Hz 闭环总线占用、温升、堵转电流、欠压和硬件 latency 尚未台架量测。</li>
+      <li><b>能力边界：</b>没有训练起身/摔倒恢复；横移和 yaw 仍弱；当前只应称“stand/walk preliminary”。</li>
+      <li><b>checkpoint 选择：</b>最新 16250 不是 reward 峰值，未来应按站立、前行、横移、转向、push 稳定性组成多指标评估，而非只看 mean reward。</li>
+    </ol>
+  </section>
+
+  <section id="next">
+    <h2>14. 后续闭环（当前先不继续训练）</h2>
+    <p>既然当前决定暂停训练，最有价值的下一阶段不是继续堆 iteration，而是把真机参数变成可测数据：</p>
+    <ol>
+      <li>完成 ID 200 Feetech-v1 IMU 固件，先验证同步读的 15-byte 契约。</li>
+      <li>在 6.6、7.4、8.2 V 下采集带时间戳的自由摆/阶跃/负载轨迹，用 <code>bam.fit</code> 得到 HD‑1910 模型，替换 <code>preliminary_m1.json</code>。</li>
+      <li>测量 runtime Kp 到 STS P 的等效映射、命令到运动延迟及目标速率限制，训练/部署两边使用同一数值。</li>
+      <li>从真实 CAD/称重摆测得到每连杆质量、CoM、惯量；更新碰撞几何。</li>
+      <li>支撑架逐关节校准 15 个方向、2048 零位和软/硬限位，记录为硬件配置。</li>
+      <li>处理动作峰值：确认 action→target 的实际限制链，并考虑显式 action clip、target rate/position clamp 或再训练。</li>
+      <li>先做零命令、低 P、限流、悬空；再做支撑站立和 0.05–0.1 m/s 前行；最后才评估脱离支撑。</li>
+    </ol>
+  </section>
+
+  <section id="appendix">
+    <h2>附录 A：XL330 → HD‑1910 差异速查</h2>
+    <table><thead><tr><th>类别</th><th>唯一/主要变化</th><th>保持不变</th></tr></thead><tbody>
+      <tr><td>刚体</td><td>15 × +3 g；惯量同比缩放</td><td>运动学、HOME、关节限位、脚接触</td></tr>
+      <tr><td>执行器</td><td>m6 XL330 → preliminary m1 STS；Kp 200→32；延迟 3–6→2–6；vin 下界 6.5→6.6</td><td>14 actuator target、voltage sag envelope、vin floor</td></tr>
+      <tr><td>DR</td><td>friction .9–1.1→.5–1.5；armature .9–1.1→.6–1.4</td><td>脚摩擦、CoM、质量惯量、IMU、encoder、push</td></tr>
+      <tr><td>任务</td><td>robot entity 替换；task ID 新增</td><td>命令、观测、动作、奖励、课程、终止</td></tr>
+      <tr><td>PPO</td><td>experiment/run name</td><td>网络、lr、clip、gamma、lambda、epochs、batch、entropy</td></tr>
+      <tr><td>部署</td><td>Feetech protocol v1 backend、STS 单位换算、方向和 P scale</td><td>RobotIo 上层、policy、安全、61→14 ONNX 契约</td></tr>
+    </tbody></table>
+    <h2>附录 B：可复现路径</h2>
+    <ul>
+      <li>HD 环境：<code>/home/july/microduck_rl/src/mjlab_microduck/tasks/microduck_hd1910_env_cfg.py</code></li>
+      <li>HD 机器人：<code>/home/july/microduck_rl/src/mjlab_microduck/robot/hd1910_constants.py</code></li>
+      <li>电机参数：<code>/home/july/microduck_rl/src/mjlab_microduck/robot/hd1910_params/preliminary_m1.json</code></li>
+      <li>官方复用任务：<code>/home/july/microduck_rl/src/mjlab_microduck/tasks/microduck_velocity_env_cfg.py</code></li>
+      <li>训练脚本：<code>/home/july/microduck_rl/scripts/train_hd1910.sh</code></li>
+      <li>训练产物：<code>/home/july/microduck_rl/logs/rsl_rl/velocity_hd1910/2026-09-19_01-29-44_velocity_hd1910_preliminary/</code></li>
+      <li>Feetech 后端：<code>/home/july/microduck/duck-control/src/bus_feetech.rs</code></li>
+      <li>真机 bring-up：<code>/home/july/microduck/docs/robot/hd1910-bringup.md</code></li>
+    </ul>
+  </section>
+  <footer>本文为本地工作区审计报告。参数表以 2026‑09‑19 当前代码为准；“已通过仿真”不等价于“已通过真机安全验证”。浏览器中可直接打印为 PDF。</footer>
+</article></main>
+</body></html>

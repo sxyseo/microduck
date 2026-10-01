@@ -124,7 +124,7 @@
   <main class="doc-card doc-body">
 <h1 id="microduck-进阶篇-训练模型搭建仿真rust-部署到-radxa-zero-3理解原理与移植">Microduck 进阶篇 —— 训练模型、搭建仿真、Rust 部署到 Radxa Zero 3、理解原理与移植</h1>
 <blockquote>
-<p>前置：先读 <a href="新手学习文档.md">新手学习文档</a>（概念与硬件路线）。本篇回答七个问题：<br />
+<p>前置：先读 <a href="/learn/newbie">新手学习文档</a>（概念与硬件路线）。本篇回答七个问题：<br />
 ① 怎么自己训练模型并装上 Radxa Zero 3？② Rust 环境怎么搭？③ 仿真环境怎么搭？<br />
 ④ 原理怎么理解？⑤ 怎么移植到别的项目？⑥ 从哪起步？⑦ 电路/结构/硬件怎么深化学习？</p>
 <p>所有命令都来自你工作区里的官方文档，出处随文标注。</p>
@@ -145,12 +145,12 @@ walk.onnx  obs[1,61]→actions[1,14]    ──拷贝──▶ sudo robotctl poli
  在仿真里会走？                    ──────────▶  真机上会走？（先吊装！）
 </code></pre>
 <p><strong>两条铁律现在就记住：</strong><br />
-1. <strong>部署契约不可动</strong>：<code>obs[1,61] → actions[1,14] @ 50Hz</code>。改了观测顺序、归一化或关节顺序，权重再对也白搭（<a href="../open-microduck/docs/zh-CN/simulation/reproducible-training-and-export.md">可复现训练与导出</a>）；<br />
+1. <strong>部署契约不可动</strong>：<code>obs[1,61] → actions[1,14] @ 50Hz</code>。改了观测顺序、归一化或关节顺序，权重再对也白搭（<a href="https://github.com/SaberOnGo/open-microduck/blob/main/docs/zh-CN/simulation/reproducible-training-and-export.md">可复现训练与导出</a>）；<br />
 2. <strong><code>robotd</code> 会拒绝一切输入输出形状不对的 ONNX</strong>——这是安全网，不是障碍（<code>scripts/seed-policies.sh</code> 头注释）。</p>
 <hr />
 <h2 id="1-搭建仿真环境你的电脑上无需-gpu一个下午">1. 搭建仿真环境（你的电脑上，无需 GPU，一个下午）</h2>
 <blockquote>
-<p>完整版教程：<a href="../open-microduck/docs/zh-CN/getting-started/simulation-first.md">open-microduck/simulation-first.md</a>，以下是其精髓 + 补充解释。</p>
+<p>完整版教程：<a href="https://github.com/SaberOnGo/open-microduck/blob/main/docs/zh-CN/getting-started/simulation-first.md">open-microduck/simulation-first.md</a>，以下是其精髓 + 补充解释。</p>
 </blockquote>
 <h3 id="11-装两个工具">1.1 装两个工具</h3>
 <pre><code class="language-bash"># ① uv：Python 的包管理器（官方项目用它管理一切依赖）
@@ -192,7 +192,7 @@ uv sync
 <hr />
 <h2 id="2-训练自己的模型">2. 训练自己的模型</h2>
 <blockquote>
-<p>完整版：<a href="../open-microduck/docs/zh-CN/simulation/reproducible-training-and-export.md">可复现训练与 ONNX 导出</a> + <a href="../microduck-replica/docs/训练参数调整与新动作开发指南.md">训练参数调整与新动作开发指南</a>（882 行，按"你想改什么"查表）。</p>
+<p>完整版：<a href="https://github.com/SaberOnGo/open-microduck/blob/main/docs/zh-CN/simulation/reproducible-training-and-export.md">可复现训练与 ONNX 导出</a> + <a href="https://github.com/sxyseo/microduck-replica/blob/master/docs/训练参数调整与新动作开发指南.md">训练参数调整与新动作开发指南</a>（882 行，按"你想改什么"查表）。</p>
 </blockquote>
 <h3 id="21-先想清楚你要哪条路">2.1 先想清楚：你要哪条路</h3>
 <table>
@@ -243,7 +243,7 @@ uv run scripts/infer_policy.py --walking output.onnx
 </code></pre>
 <p>没有 GPU 时走 HF Jobs：<code>hf auth login</code> + <code>wandb login</code> 后，<strong>第一次必须加 <code>--dry-run</code></strong> 看清规格和费用再真提交，<code>hf jobs cancel &lt;id&gt;</code> 可取消（费用提醒见教程原文）。</p>
 <h3 id="23-改参数去哪改不用读完-882-行按目标查">2.3 改参数去哪改（不用读完 882 行，按目标查）</h3>
-<p><a href="../microduck-replica/docs/训练参数调整与新动作开发指南.md">训练参数调整指南</a> 第 6 节是一张"症状→文件"对照表，例如：</p>
+<p><a href="https://github.com/sxyseo/microduck-replica/blob/master/docs/训练参数调整与新动作开发指南.md">训练参数调整指南</a> 第 6 节是一张"症状→文件"对照表，例如：</p>
 <ul>
 <li>想改站立姿态/零位 → §6.1；想改关节行程/质量/摩擦 → §6.2–6.3</li>
 <li>想走得更快 → §6.4；想让脚抬更高 → §6.5；想更稳 → §6.6</li>
@@ -257,7 +257,7 @@ uv run scripts/infer_policy.py --walking output.onnx
 <hr />
 <h2 id="3-搭建-rust-环境并部署到-radxa-zero-3w">3. 搭建 Rust 环境并部署到 Radxa Zero 3W</h2>
 <blockquote>
-<p>出处：<a href="../CONTRIBUTING.md">CONTRIBUTING.md</a>、<a href="../docs/robot/install-dev.md">install-dev.md</a>、<a href="../docs/robot/dev-push.md">dev-push.md</a>。</p>
+<p>出处：<a href="https://github.com/pollen-robotics/microduck/blob/main/CONTRIBUTING.md">CONTRIBUTING.md</a>、<a href="https://github.com/pollen-robotics/microduck/blob/main/docs/robot/install-dev.md">install-dev.md</a>、<a href="https://github.com/pollen-robotics/microduck/blob/main/docs/robot/dev-push.md">dev-push.md</a>。</p>
 </blockquote>
 <h3 id="31-先分清两台机器">3.1 先分清两台机器</h3>
 <ul>
@@ -295,7 +295,7 @@ export DUCK_TOKEN=ghp_xxx             # 仓库若已公开可省
 robotctl health
 grep -c 'DEV BOARD' /var/lib/robot/provision.log   # 输出 1 = dev key 装好了
 </code></pre>
-<p><code>--pause-btd-on-pair</code> 不是可省的仪式感：aic8800 无线芯片在手柄<strong>首次配对</strong>时需要它，漏了会得到一个"怎么都查不出原因的配不上的手柄"（<a href="../docs/robot/install-dev.md">install-dev.md</a> 用一整节解释了三种配置怎么选）。</p>
+<p><code>--pause-btd-on-pair</code> 不是可省的仪式感：aic8800 无线芯片在手柄<strong>首次配对</strong>时需要它，漏了会得到一个"怎么都查不出原因的配不上的手柄"（<a href="https://github.com/pollen-robotics/microduck/blob/main/docs/robot/install-dev.md">install-dev.md</a> 用一整节解释了三种配置怎么选）。</p>
 <h3 id="34-把代码推上板日常循环约一分钟">3.4 把代码推上板（日常循环，约一分钟）</h3>
 <pre><code class="language-bash"># 一次性准备：交叉编译工具（二选一）
 cargo install cargo-zigbuild --locked &amp;&amp; brew install zig    # 方案 A
@@ -326,17 +326,17 @@ sudo robotctl policy reset walk       # 恢复官方该槽位策略
 <h2 id="4-原理怎么理解六层地图按序通读">4. 原理怎么理解：六层地图，按序通读</h2>
 <p>"原理"不是一本书，是六层。每层给你：一句话本质 + 你仓库里的对应教材。建议按序，每层花一晚上。</p>
 <p><strong>L1 强化学习是什么（1 晚，零代码到玩具代码）</strong><br />
-本质：不写规则，给奖励让 AI 自己试错。先跑 <a href="../microduck-replica/learning/duck_food_qlearning.py"><code>learning/duck_food_qlearning.py</code></a>（7 格世界 Q-learning，半小时），再看 <a href="../open-microduck/docs/zh-CN/getting-started/glossary.md">小白术语表</a> 的 Observation→Policy→Action→Reward 图。之后记住 PPO 只是一句："好动作多来点，坏动作少来点"的概率化版本。</p>
+本质：不写规则，给奖励让 AI 自己试错。先跑 <a href="https://github.com/sxyseo/microduck-replica/blob/master/learning/duck_food_qlearning.py"><code>learning/duck_food_qlearning.py</code></a>（7 格世界 Q-learning，半小时），再看 <a href="https://github.com/SaberOnGo/open-microduck/blob/main/docs/zh-CN/getting-started/glossary.md">小白术语表</a> 的 Observation→Policy→Action→Reward 图。之后记住 PPO 只是一句："好动作多来点，坏动作少来点"的概率化版本。</p>
 <p><strong>L2 61→14 契约（1 晚）</strong><br />
-61 维 = 姿态(IMU) + 各关节位置/速度/力矩 + 上一步动作 + 指令(速度/转向) 等，拼成一个向量；14 维 = 14 个关节的目标。看 <a href="../microduck-replica/docs/训练参数调整与新动作开发指南.md">指南 §4</a> 和 <code>rl-series/scripts/diagram_obs_layout.py</code>（画出每个维度的含义）。<strong>这是模型与机器人的全部接口，改哪一层都不能碰它。</strong></p>
+61 维 = 姿态(IMU) + 各关节位置/速度/力矩 + 上一步动作 + 指令(速度/转向) 等，拼成一个向量；14 维 = 14 个关节的目标。看 <a href="https://github.com/sxyseo/microduck-replica/blob/master/docs/训练参数调整与新动作开发指南.md">指南 §4</a> 和 <code>rl-series/scripts/diagram_obs_layout.py</code>（画出每个维度的含义）。<strong>这是模型与机器人的全部接口，改哪一层都不能碰它。</strong></p>
 <p><strong>L3 控制循环 50Hz（1 晚）</strong><br />
-每 20ms：一次 <code>sync_read</code> 从总线读回 16 台设备（15 舵机 + 200 号 IMU）→ 拼 61 维观测 → ONNX 推理 → 电压自适应 → <code>sync_write</code> 下发。看 <a href="../docs/design/architecture.md">docs/design/architecture.md</a>（为什么 7 个守护进程分开、为什么只有 robotd 能碰机器人）+ <a href="../open-microduck/docs/zh-CN/software/control-loop-and-sensor-dataflow.md">控制循环与数据流</a>。</p>
+每 20ms：一次 <code>sync_read</code> 从总线读回 16 台设备（15 舵机 + 200 号 IMU）→ 拼 61 维观测 → ONNX 推理 → 电压自适应 → <code>sync_write</code> 下发。看 <a href="https://github.com/pollen-robotics/microduck/blob/main/docs/design/architecture.md">docs/design/architecture.md</a>（为什么 7 个守护进程分开、为什么只有 robotd 能碰机器人）+ <a href="https://github.com/SaberOnGo/open-microduck/blob/main/docs/zh-CN/software/control-loop-and-sensor-dataflow.md">控制循环与数据流</a>。</p>
 <p><strong>L4 总线与电子（1 晚）</strong><br />
-1Mbps 单线半双工 TTL，Dynamixel 协议 V2，菊花链，ID 寻址；IMU 伪装成 200 号舵机挂同一条线。看 <a href="../microduck-replica/docs/硬件入门.md">硬件入门</a> 和 <a href="../microduck-replica/docs/硬件规格速查.md">硬件规格速查</a>，配合新手篇第 5 节的原理图课。</p>
+1Mbps 单线半双工 TTL，Dynamixel 协议 V2，菊花链，ID 寻址；IMU 伪装成 200 号舵机挂同一条线。看 <a href="https://github.com/sxyseo/microduck-replica/blob/master/docs/硬件入门.md">硬件入门</a> 和 <a href="https://github.com/sxyseo/microduck-replica/blob/master/docs/硬件规格速查.md">硬件规格速查</a>，配合新手篇第 5 节的原理图课。</p>
 <p><strong>L5 Sim-to-real（1–2 晚，最精彩的一层）</strong><br />
-为什么仿真里学的能搬到真机？三个手段：<strong>域随机化</strong>（训练时故意随机化摩擦/质量/延迟，逼策略皮实）、<strong>BAM 执行器模型</strong>（XL330 的真实摩擦/回差建模，你仓库 <code>bam/</code> 就是它）、<strong>backlash 变体</strong>（仿真里加齿轮间隙）。看 <a href="../open-microduck/docs/zh-CN/simulation/sim-to-real-parameter-reference.md">Sim-to-real 参数总表</a> + <a href="../open-microduck/docs/zh-CN/simulation/model-and-rl.md">model-and-rl</a>。</p>
+为什么仿真里学的能搬到真机？三个手段：<strong>域随机化</strong>（训练时故意随机化摩擦/质量/延迟，逼策略皮实）、<strong>BAM 执行器模型</strong>（XL330 的真实摩擦/回差建模，你仓库 <code>bam/</code> 就是它）、<strong>backlash 变体</strong>（仿真里加齿轮间隙）。看 <a href="https://github.com/SaberOnGo/open-microduck/blob/main/docs/zh-CN/simulation/sim-to-real-parameter-reference.md">Sim-to-real 参数总表</a> + <a href="https://github.com/SaberOnGo/open-microduck/blob/main/docs/zh-CN/simulation/model-and-rl.md">model-and-rl</a>。</p>
 <p><strong>L6 安全与更新（1 晚）</strong><br />
-为什么敢让它自己动？robotd 内置跌倒检测、关节/温度限位、意图心跳（deadman）；updaterd 每次更新验签→健康门→不健康自动回滚。看 <a href="../docs/design/architecture.md">architecture.md</a> 和 <code>updater/tests/apply.rs</code>（CONTRIBUTING 说这是"它到底保证了什么"的诚实答案）。</p>
+为什么敢让它自己动？robotd 内置跌倒检测、关节/温度限位、意图心跳（deadman）；updaterd 每次更新验签→健康门→不健康自动回滚。看 <a href="https://github.com/pollen-robotics/microduck/blob/main/docs/design/architecture.md">architecture.md</a> 和 <code>updater/tests/apply.rs</code>（CONTRIBUTING 说这是"它到底保证了什么"的诚实答案）。</p>
 <hr />
 <h2 id="5-如何移植到其他项目">5. 如何移植到其他项目</h2>
 <p>"移植"在这个项目里有四种含义，难度递增：</p>
@@ -345,7 +345,7 @@ sudo robotctl policy reset walk       # 恢复官方该槽位策略
 <p><strong>5b. 大脑架构模式移植（中等）</strong><br />
 "一个 50Hz 循环 + 策略网络 + 安全层，其余守护进程走 JSON-RPC"这套架构不绑定鸭子。你自己的机器人只要能提供同结构的观测（姿态+关节）并接受同结构的动作，就能套用。</p>
 <p><strong>5c. 给别的机器人训练策略（真正意义上的移植，数周）</strong><br />
-步骤固定：① 给新机器人建 MJCF 模型（几何/质量/惯量/关节轴）→ ② 定义新的 obs/action 空间 → ③ 用 BAM 辨识你舵机的动力学参数（<a href="../microduck-replica/docs/换舵机重训全流程.md">换舵机重训全流程</a> 的四层判定法原样适用）→ ④ 重训 → ⑤ L1–L7 测试金字塔上真机。<strong>官方 ONNX 不可移植</strong>——它是"这只 737g 鸭子"的肌肉记忆。</p>
+步骤固定：① 给新机器人建 MJCF 模型（几何/质量/惯量/关节轴）→ ② 定义新的 obs/action 空间 → ③ 用 BAM 辨识你舵机的动力学参数（<a href="https://github.com/sxyseo/microduck-replica/blob/master/docs/换舵机重训全流程.md">换舵机重训全流程</a> 的四层判定法原样适用）→ ④ 重训 → ⑤ L1–L7 测试金字塔上真机。<strong>官方 ONNX 不可移植</strong>——它是"这只 737g 鸭子"的肌肉记忆。</p>
 <p><strong>5d. 接入小智语音（独立支线，可并行）</strong><br />
 官方架构预留了"服务端 LLM 经 WebSocket 发意图"的路径（architecture §5.3）；小智 ESP32 支持 MCP 设备端控制。组合拳：小智做语音前端 → 意图 → 鸭子执行。这是你 ESP32 硬件的正经用途，等鸭子能站了再接。</p>
 <hr />
@@ -370,15 +370,15 @@ uv run scripts/infer_policy.py --walking /absolute/path/to/alpha_walking.onnx --
 1. 万用表周：量电池电压、量 USB 线 5V、测通断——建立"电是可测量的"手感；<br />
 2. SG90 周：Pi 2 点亮第一只舵机（信号/电源/共地三件事）；<br />
 3. 总线周：USB 调试板 + 1 只总线舵机 + Dynamixel Wizard，改 ID、读角度；<br />
-4. 读图周：把 <a href="../microduck-replica/hardware/imu_to_dxl/imu_to_dxl-原理图.pdf">imu_to_dxl 原理图</a> 讲给别人听（讲不出来 = 没懂）；<br />
+4. 读图周：把 <a href="https://github.com/sxyseo/microduck-replica/blob/master/hardware/imu_to_dxl/imu_to_dxl-原理图.pdf">imu_to_dxl 原理图</a> 讲给别人听（讲不出来 = 没懂）；<br />
 5. 嘉立创 EDA 周：打开 <code>imu_to_dxl.eprj2</code>，把每个元件的 datasheet 下载来对照引脚。<br />
 系统教材推荐：B 站搜"上电"系列/《电子电路入门》类视频即可起步，不必啃大学教材——<strong>这个项目的电路量（一块 5 芯片小板 + 一块官方开源 HAT）用项目驱动学刚刚好</strong>。</p>
 <p><strong>结构（从装配到设计的三级跳）</strong><br />
-1. 读：21 页<a href="../microduck-replica-cad/安装说明书/microduck装配安装说明书.pdf">装配安装说明书</a> 翻三遍，对照 23 张组件图；<br />
+1. 读：21 页<a href="https://github.com/fanhao375/microduck-replica-cad/blob/master/安装说明书/microduck装配安装说明书.pdf">装配安装说明书</a> 翻三遍，对照 23 张组件图；<br />
 2. 装：打印测试片定补偿 → 装一条腿（第 4 周）→ 装整机（第二个月）；<br />
 3. 改：FreeCAD 打开 <code>cad/</code> 装配体 → 30 分钟小任务（加走线槽/卡扣）→ 再学 Fusion 360 系统课。设计感只能从"装过 50 颗 M2 螺丝"里长出来。</p>
 <p><strong>硬件系统知识（读仓库自带的设计文档，这是最被低估的资源）</strong><br />
-官方 <code>docs/design/</code> 是一整套"为什么这么设计"的写作：<a href="../docs/design/architecture.md">architecture.md</a>（架构）、<code>updater-design.md</code>（更新/回滚）、<code>policy-channel-design.md</code>（策略通道）。复刻仓 <code>docs/</code> 是一整套"为什么这么复刻"：<a href="../microduck-replica/docs/硬件方案逆向.md">硬件方案逆向</a>、<a href="../microduck-replica/docs/执行器选型.md">执行器选型</a>。<strong>看完这两套，你对机器人系统的理解就超过大多数只玩过成品的人。</strong></p>
+官方 <code>docs/design/</code> 是一整套"为什么这么设计"的写作：<a href="https://github.com/pollen-robotics/microduck/blob/main/docs/design/architecture.md">architecture.md</a>（架构）、<code>updater-design.md</code>（更新/回滚）、<code>policy-channel-design.md</code>（策略通道）。复刻仓 <code>docs/</code> 是一整套"为什么这么复刻"：<a href="https://github.com/sxyseo/microduck-replica/blob/master/docs/硬件方案逆向.md">硬件方案逆向</a>、<a href="https://github.com/sxyseo/microduck-replica/blob/master/docs/执行器选型.md">执行器选型</a>。<strong>看完这两套，你对机器人系统的理解就超过大多数只玩过成品的人。</strong></p>
 <hr />
 <p><em>和新手篇同一句话收尾：这条流水线上没有魔法——仿真跑通、训练出步态、导出验证、一条命令上板，每一步都有现成的命令和文档，你要补的只是按顺序把它们各跑一遍。</em></p>
     <div class="doc-foot">

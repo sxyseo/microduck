@@ -1,0 +1,17 @@
+{
+  "01": "trunk_base",
+  "02": "yaw2roll",
+  "03": "hip_l",
+  "04": "upper_leg_left",
+  "05": "leg",
+  "06": "ankle_left",
+  "07": "neck",
+  "08": "neck_pitch",
+  "09": "yaw_roll_motion",
+  "10": "jaw_soft",
+  "11": "bearing_roll",
+  "12": "hip_l_2",
+  "13": "upper_leg_right",
+  "14": "leg_2",
+  "15": "ankle_right"
+}

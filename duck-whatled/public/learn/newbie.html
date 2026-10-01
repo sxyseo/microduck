@@ -265,10 +265,10 @@
 </table>
 <p>第一遍只读这四个文件：</p>
 <ul>
-<li><a href="../README.md">README</a></li>
-<li><a href="design/architecture.md">系统架构</a></li>
-<li><a href="design/robotd-design.md">robotd 设计</a></li>
-<li><a href="course/README.md">仓库课程目录</a></li>
+<li><a href="https://github.com/pollen-robotics/microduck/blob/main/README.md">README</a></li>
+<li><a href="https://github.com/pollen-robotics/microduck/blob/main/docs/design/architecture.md">系统架构</a></li>
+<li><a href="https://github.com/pollen-robotics/microduck/blob/main/docs/design/robotd-design.md">robotd 设计</a></li>
+<li><a href="/learn/course">仓库课程目录</a></li>
 </ul>
 <hr />
 <h2 id="2-先认识你手里的东西">2. 先认识你手里的东西</h2>
@@ -281,12 +281,12 @@ USB 就能工作的“万能转接板”。</p>
 <li>刷系统、SSH 登录、学习 Linux；</li>
 <li>运行假总线模式、编译和测试软件。</li>
 </ol>
-<p>真正接电机之前，先读 <a href="robot/install-dev.md">开发板安装</a>。不要在 Windows 终端里直接运行<br />
+<p>真正接电机之前，先读 <a href="https://github.com/pollen-robotics/microduck/blob/main/docs/robot/install-dev.md">开发板安装</a>。不要在 Windows 终端里直接运行<br />
 <code>setup-board.sh</code>；这些脚本应在目标 Radxa 上执行，或由 <code>provision-board.sh</code> 通过 SSH<br />
 执行。</p>
 <h3 id="3d-打印外壳件">3D 打印外壳件</h3>
 <p>它们目前只是“待验收的机械零件”，不能因为外形像鸭子就假定与项目模型完全匹配。仓库里<br />
-可核对的机械来源是 <a href="../kinematics/assets/alpha/robot_walk.xml">MJCF 模型</a>，不是一套可直接<br />
+可核对的机械来源是 <a href="https://github.com/pollen-robotics/microduck/blob/main/kinematics/assets/alpha/robot_walk.xml">MJCF 模型</a>，不是一套可直接<br />
 打印的 CAD 装配包。</p>
 <p>到手后的顺序：</p>
 <ol>
@@ -451,17 +451,17 @@ HL-2915；也不要在只有两只舵机时启动要求 15 只设备的 <code>ro
 方式。未知项没有数据手册前不要填数字；这正是工程记录的一部分。</p>
 <p>深入阅读顺序：</p>
 <ul>
-<li><a href="deep-dive/41-电控架构总览.md">电控架构总览</a></li>
-<li><a href="deep-dive/45-电源树.md">电源树</a></li>
-<li><a href="deep-dive/46-半双工总线.md">半双工总线</a></li>
-<li><a href="deep-dive/50-供电冲突.md">供电冲突</a></li>
-<li><a href="deep-dive/53-舵机协议.md">舵机协议</a></li>
+<li><a href="/learn/deep-41">电控架构总览</a></li>
+<li><a href="/learn/deep-45">电源树</a></li>
+<li><a href="/learn/deep-46">半双工总线</a></li>
+<li><a href="/learn/deep-50">供电冲突</a></li>
+<li><a href="/learn/deep-53">舵机协议</a></li>
 </ul>
 <p>这些是解释性笔记，不是你当前硬件的接线批准书。真正上电仍以实物手册和万用表测量为准。</p>
 <hr />
 <h2 id="6-小白如何看懂和设计结构">6. 小白如何看懂和设计结构</h2>
 <h3 id="61-先看运动链再看外壳">6.1 先看运动链，再看外壳</h3>
-<p>打开 <a href="../kinematics/assets/alpha/robot_walk.xml">robot_walk.xml</a>，先只找 <code>body</code>、<code>joint</code>、<br />
+<p>打开 <a href="https://github.com/pollen-robotics/microduck/blob/main/kinematics/assets/alpha/robot_walk.xml">robot_walk.xml</a>，先只找 <code>body</code>、<code>joint</code>、<br />
 <code>inertial</code> 三类标签：</p>
 <pre><code class="language-text">trunk_base
 ├─ 左腿：left_hip_yaw → left_hip_roll → left_hip_pitch → left_knee → left_ankle
@@ -543,12 +543,12 @@ HL-2915；也不要在只有两只舵机时启动要求 15 只设备的 <code>ro
 <h3 id="第-0-阶段不通电建立地图">第 0 阶段：不通电，建立地图</h3>
 <p>按下面顺序读，每篇只写三句话笔记：它解决什么问题、输入是什么、输出是什么。</p>
 <ol>
-<li><a href="course/00-导学-这只鸭子是什么.md">第 00 课：这只鸭子是什么</a></li>
-<li><a href="course/01-先让它动起来-浏览器仿真.md">第 01 课：浏览器仿真</a></li>
-<li><a href="course/02-十个必懂概念.md">第 02 课：十个必懂概念</a></li>
-<li><a href="course/04-61到14-鸭子的神经回路.md">第 04 课：61 到 14</a></li>
-<li><a href="course/08-看懂电路图.md">第 08 课：看懂电路图</a></li>
-<li><a href="course/09-3D打印测试片先行.md">第 09 课：3D 打印测试片</a></li>
+<li><a href="/learn/course-00">第 00 课：这只鸭子是什么</a></li>
+<li><a href="/learn/course-01">第 01 课：浏览器仿真</a></li>
+<li><a href="/learn/course-02">第 02 课：十个必懂概念</a></li>
+<li><a href="/learn/course-04">第 04 课：61 到 14</a></li>
+<li><a href="/learn/course-08">第 08 课：看懂电路图</a></li>
+<li><a href="/learn/course-09">第 09 课：3D 打印测试片</a></li>
 </ol>
 <p>验收标准：你能不看文档解释“摇杆为什么不是直接控制某一只腿”。</p>
 <h3 id="第-1-阶段在电脑上验证软件">第 1 阶段：在电脑上验证软件</h3>
@@ -558,7 +558,7 @@ cargo test -p kinematics
 </code></pre>
 <p>如果报 <code>requires rustc 1.89</code>，不是项目代码坏了，而是本机工具链太旧；先用 rustup<br />
 安装 1.89 或更新版本，再重跑。</p>
-<p>这两步不需要 Radxa、不需要舵机，也不需要电池。然后阅读 <a href="进阶学习文档-训练仿真与部署.md">测试和仿真部署说明</a>。</p>
+<p>这两步不需要 Radxa、不需要舵机，也不需要电池。然后阅读 <a href="/learn/advanced">测试和仿真部署说明</a>。</p>
 <p>如果想观察运行时而不接总线，可以编译后使用 <code>robotd --fake</code>；它的意义是“没有总线、<br />
 没有真实机器人”，不是模拟一个完整的物理世界。命令帮助以当前代码为准：</p>
 <pre><code class="language-bash">cargo run -p robotd -- --help
@@ -577,7 +577,7 @@ cargo test -p kinematics
 掰走后，程序并不知道。</p>
 <p>验收标准：能安全地让一只舵机来回小角度运动，能解释为什么电源不能取自 Pi 的 5 V 脚。</p>
 <h3 id="第-3-阶段让-radxa-只跑软件">第 3 阶段：让 Radxa 只跑软件</h3>
-<p>在 Radxa 上按 <a href="robot/install-dev.md">install-dev.md</a> 做系统安装，重点观察：</p>
+<p>在 Radxa 上按 <a href="https://github.com/pollen-robotics/microduck/blob/main/docs/robot/install-dev.md">install-dev.md</a> 做系统安装，重点观察：</p>
 <ul>
 <li>开发机负责编译，板子负责运行；</li>
 <li><code>/dev/ttyS2</code> 是项目默认电机 UART；</li>
@@ -712,43 +712,43 @@ cargo test -p kinematics
 <tbody>
 <tr>
 <td>看全局</td>
-<td><a href="../README.md">README</a>、<a href="design/architecture.md">architecture.md</a></td>
+<td><a href="https://github.com/pollen-robotics/microduck/blob/main/README.md">README</a>、<a href="https://github.com/pollen-robotics/microduck/blob/main/docs/design/architecture.md">architecture.md</a></td>
 </tr>
 <tr>
 <td>学控制闭环</td>
-<td><a href="design/robotd-design.md">robotd-design.md</a>、<a href="course/04-61到14-鸭子的神经回路.md">第 04 课</a></td>
+<td><a href="https://github.com/pollen-robotics/microduck/blob/main/docs/design/robotd-design.md">robotd-design.md</a>、<a href="/learn/course-04">第 04 课</a></td>
 </tr>
 <tr>
 <td>学电路思路</td>
-<td><a href="deep-dive/41-电控架构总览.md">电控架构</a>、<a href="deep-dive/45-电源树.md">电源树</a>、<a href="deep-dive/46-半双工总线.md">半双工总线</a></td>
+<td><a href="/learn/deep-41">电控架构</a>、<a href="/learn/deep-45">电源树</a>、<a href="/learn/deep-46">半双工总线</a></td>
 </tr>
 <tr>
 <td>学协议和 ID</td>
-<td><a href="deep-dive/53-舵机协议.md">舵机协议</a>、<a href="deep-dive/59-ID分配与模式.md">ID 与模式</a></td>
+<td><a href="/learn/deep-53">舵机协议</a>、<a href="/learn/deep-59">ID 与模式</a></td>
 </tr>
 <tr>
 <td>学结构</td>
-<td><a href="../kinematics/assets/alpha/robot_walk.xml">MJCF 模型</a>、<code>kinematics/src/</code></td>
+<td><a href="https://github.com/pollen-robotics/microduck/blob/main/kinematics/assets/alpha/robot_walk.xml">MJCF 模型</a>、<code>kinematics/src/</code></td>
 </tr>
 <tr>
 <td>学 Radxa</td>
-<td><a href="robot/install-dev.md">开发板安装</a>、<a href="robot/install-by-hand.md">手工安装</a></td>
+<td><a href="https://github.com/pollen-robotics/microduck/blob/main/docs/robot/install-dev.md">开发板安装</a>、<a href="https://github.com/pollen-robotics/microduck/blob/main/docs/robot/install-by-hand.md">手工安装</a></td>
 </tr>
 <tr>
 <td>学日常命令</td>
-<td><a href="robot/cheatsheet.md">robotctl cheat sheet</a></td>
+<td><a href="https://github.com/pollen-robotics/microduck/blob/main/docs/robot/cheatsheet.md">robotctl cheat sheet</a></td>
 </tr>
 <tr>
 <td>学仿真/训练</td>
-<td><a href="进阶学习文档-训练仿真与部署.md">进阶学习文档</a>、<a href="../tools/microduck_learning/README.md">学习工具</a></td>
+<td><a href="/learn/advanced">进阶学习文档</a>、学习工具（工作区文件）</td>
 </tr>
 <tr>
 <td>评估更便宜舵机</td>
-<td><a href="低成本舵机替换决策表.md">低成本舵机替换决策表</a></td>
+<td>低成本舵机替换决策表（工作区文件）</td>
 </tr>
 <tr>
 <td>学排错</td>
-<td><a href="course/07-排错方法论.md">第 07 课</a>、<a href="deep-dive/60-testbench验证.md">testbench 验证</a></td>
+<td><a href="/learn/course-07">第 07 课</a>、<a href="/learn/deep-60">testbench 验证</a></td>
 </tr>
 </tbody>
 </table>
@@ -974,7 +974,7 @@ Ping/只读命令，不要运行 <code>--move-center</code> 或摆锤记录器�
 <code>SYNC_WRITE=0x83</code>。协议示例用从地址 56 读取 8 字节，一次拿到位置、速度、负载、电压、<br />
 温度。这正好可以替代当前项目 XL330 的连续寄存器读取，但地址和数据单位不能照搬。</p>
 <h3 id="123-复刻任务清单">12.3 复刻任务清单</h3>
-<p>第一次实际通电时，直接使用<a href="HL2915两只舵机现场验收表.md">两只舵机现场验收表</a>，边操作边记录<br />
+<p>第一次实际通电时，直接使用两只舵机现场验收表（工作区文件），边操作边记录<br />
 电源、ID、温升、通信错误和 CSV 路径；不要只保存终端里最后一行输出。</p>
 <h4 id="task-hl2915-001单舵机资料确认">Task HL2915-001：单舵机资料确认</h4>
 <ul>
@@ -989,7 +989,8 @@ Ping/只读命令，不要运行 <code>--move-center</code> 或摆锤记录器�
 <ul>
 <li>Goal：证明一只舵机可稳定读写。</li>
 <li>Files：新增测试脚本或临时工具，不碰行走策略。</li>
-<li>Action：用 FE-URT-1 或兼容半双工 TTL 调试器；12 V 限流供电；完成 PING、读位置、<br />
+<li>Action：用 FE-URT-2 或兼容半双工 TTL 调试器；URT2 用 USB-C 通信、舵机用独立 12 V 限流<br />
+  电源；完成 PING、读位置、<br />
   写目标位置、读电压和温度。</li>
 <li>Why：先排除供电、接线、协议问题。</li>
 <li>Verification：连续读写 10 分钟无随机丢包；低速小角度移动；扭矩可关闭。</li>
@@ -998,10 +999,10 @@ Ping/只读命令，不要运行 <code>--move-center</code> 或摆锤记录器�
 <h4 id="task-hl2915-003替换底层总线驱动">Task HL2915-003：替换底层总线驱动</h4>
 <ul>
 <li>Goal：让项目的上层控制循环能使用 HL-2915-C001。</li>
-<li>Files：保留 <a href="../duck-control/src/io.rs">RobotIo 接口</a>，使用 <code>Hl2915RobotIo</code>；不要修改<br />
+<li>Files：保留 <a href="https://github.com/pollen-robotics/microduck/blob/main/duck-control/src/io.rs">RobotIo 接口</a>，使用 <code>Hl2915RobotIo</code>；不要修改<br />
 <code>Xl330Controller</code> 来冒充 HL-2915。</li>
 <li>Action：实现读写、扭矩、批量读写、位置单位转换、温度/电压/电流解析、错误状态。</li>
-<li>Why：当前 <a href="../duck-control/src/bus.rs">bus.rs</a> 按 Dynamixel XL330 地址和协议实现。</li>
+<li>Why：当前 <a href="https://github.com/pollen-robotics/microduck/blob/main/duck-control/src/bus.rs">bus.rs</a> 按 Dynamixel XL330 地址和协议实现。</li>
 <li>Verification：1 只 → 3 只 → 15 只，逐级通过 PING、SYNC_READ、SYNC_WRITE。</li>
 <li>Expected result：50 Hz 控制循环可以稳定运行，只有一个程序占用串口。</li>
 </ul>
@@ -1018,7 +1019,7 @@ Ping/只读命令，不要运行 <code>--move-center</code> 或摆锤记录器�
 <h4 id="task-hl2915-005打印一个关节适配件">Task HL2915-005：打印一个关节适配件</h4>
 <ul>
 <li>Goal：验证一只 HL-2915 能安全安装。</li>
-<li>Files：<a href="../kinematics/assets/alpha/robot_walk.xml">原始 MJCF</a> 只作为关节位置和轴线参考。</li>
+<li>Files：<a href="https://github.com/pollen-robotics/microduck/blob/main/kinematics/assets/alpha/robot_walk.xml">原始 MJCF</a> 只作为关节位置和轴线参考。</li>
 <li>Action：按官方外形图重新画支架；保留输出轴中心和原关节轴线；使用 25T/4.95 mm 的匹配舵盘；<br />
   给线缆留弯曲空间；增加硬限位。</li>
 <li>Why：舵机外形接近 XL330，但安装孔、输出轴、侧向载荷和线缆位置不能想当然。</li>
@@ -1057,18 +1058,21 @@ Ping/只读命令，不要运行 <code>--move-center</code> 或摆锤记录器�
 <h2 id="13-两只-hl-2915-c001-的实际落地步骤代码已放入仓库">13. 两只 HL-2915-C001 的实际落地步骤（代码已放入仓库）</h2>
 <p>本仓库现在已经有一个“只做台架验证”的最小程序：</p>
 <ul>
-<li><a href="../duck-control/src/hl2915.rs">HL-2915 驱动封装</a>：复用 <code>rustypot</code> 已验证的 Feetech 协议 v1，<br />
+<li>HL-2915 驱动封装（工作区文件）：复用 <code>rustypot</code> 已验证的 Feetech 协议 v1，<br />
   按 HL-2915 的寄存器地址读写；这里没有把它伪装成 XL330。</li>
-<li><a href="../duck-control/src/bin/hl2915_probe.rs">台架探测器</a>：默认只 Ping 和读取状态，<strong>不会主动运动</strong>。</li>
-<li><a href="../duck-control/src/bin/imu_probe.rs">IMU 探测器</a>：只读 ID=200 的协议 v2 IMU。</li>
-<li><a href="../duck-control/src/bin/hl2915_mixed_probe.rs">混合协议探测器</a>：只读两只 HL-2915 + IMU，验证同一串口的协议切换。</li>
-<li><a href="../duck-control/src/bin/hl2915_record.rs">原始数据记录器</a>：只读采集 CSV，给后续标定和 BAM 参数辨识留证据。</li>
-<li><a href="../duck-control/src/bin/hl2915_bam_record.rs">BAM 摆锤记录器</a>：在独立摆锤台架上，以受限幅度采集可直接交给 BAM 的 JSON；它会开扭矩，不能当作只读工具。</li>
+<li>台架探测器（工作区文件）：默认只 Ping 和读取状态，<strong>不会主动运动</strong>。</li>
+<li>IMU 探测器（工作区文件）：只读 ID=200 的协议 v2 IMU。</li>
+<li>混合协议探测器（工作区文件）：只读两只 HL-2915 + IMU，验证同一串口的协议切换。</li>
+<li>原始数据记录器（工作区文件）：只读采集 CSV，给后续标定和 BAM 参数辨识留证据。</li>
+<li>BAM 摆锤记录器（工作区文件）：在独立摆锤台架上，以受限幅度采集可直接交给 BAM 的 JSON；它会开扭矩，不能当作只读工具。</li>
 </ul>
 <h3 id="131-先准备硬件">13.1 先准备硬件</h3>
-<p>你至少需要：两只 HL-2915-C001、一个支持单线半双工 TTL 的 Feetech 调试器（例如官方 FE-URT-1/FE-URT1-C001）、<br />
+<p>你至少需要：两只 HL-2915-C001、一个支持单线半双工 TTL 的 Feetech 调试器（本项目使用官方 FE-URT-2/FE-URT2-C001）、<br />
 一个可限流的 12 V 电源、万用表和一根 USB 线。Radxa 的 5 V 电源不能直接接到舵机 Vcc，<br />
 树莓派和小智 ESP32 也先不要接舵机总线。</p>
+<p>URT2 的 USB-C 只负责给调试器逻辑供电并建立 COM 口；舵机电源接 TTL 侧 <code>G/V1</code>，HL-2915<br />
+接 <code>TTL-Bus</code>，不要接 RS485 侧 <code>V2</code>。完整接线和 FD 首次调试顺序见<br />
+两只舵机现场验收表（工作区文件）。</p>
 <p>舵机 PH1.25-3P 的线序按官方资料核对：</p>
 <pre><code class="language-text">1 = GND（电源负极、调试器 GND、Radxa GND 共地）
 2 = Vcc（先用 12 V，限流）
@@ -1137,7 +1141,7 @@ cargo check -p duck-control --bin hl2915_probe
 </code></pre>
 <p>真实舵机的供电压降、丢包率、温升、回差、安装强度和“是否真的转到正确机械角度”，只能按 13.2–13.6<br />
 的台架顺序现场验证。仓库现在已有显式选择的 HL-2915 <code>RobotIo</code>：它用协议 v1 访问舵机，用协议 v2<br />
-访问 ID=200 的 IMU；原 <a href="../duck-control/src/bus.rs">bus.rs</a> 仍只负责 XL330。混合后端尚未经过实体 HAT/IMU<br />
+访问 ID=200 的 IMU；原 <a href="https://github.com/pollen-robotics/microduck/blob/main/duck-control/src/bus.rs">bus.rs</a> 仍只负责 XL330。混合后端尚未经过实体 HAT/IMU<br />
 验证，而且默认零位 2048、方向 <code>+1</code> 只是台架起点，因此现在仍不能运行行走策略。</p>
 <h3 id="138-通过后再搬到-radxa-zero-3w">13.8 通过后再搬到 Radxa Zero 3W</h3>
 <p>电脑上的 <code>COM3</code> 只是第一次调试用的端口。Radxa 上通常会显示成 <code>/dev/ttyUSB0</code> 或 <code>/dev/ttyACM0</code>，<br />

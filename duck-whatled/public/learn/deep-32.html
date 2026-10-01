@@ -125,7 +125,7 @@
 <h1 id="解读-32-exportpy-与-infer-policypy导出与回放">解读 32 · export.py 与 infer_policy.py:导出与回放</h1>
 <blockquote>
 <p><strong>解读对象</strong>:<code>scripts/export.py</code>(11 行)+ <code>src/mjlab_microduck/export.py</code>(311 行)、<code>scripts/infer_policy.py</code>(1524 行)<br />
-<strong>需要的前置</strong>:<a href="/learn/deep-27">解读 27</a>–<a href="/learn/deep-31">解读 31</a>(被导出的训练配置)、<a href="README.md">总纲</a></p>
+<strong>需要的前置</strong>:<a href="/learn/deep-27">解读 27</a>–<a href="/learn/deep-31">解读 31</a>(被导出的训练配置)、<a href="/learn/deep">总纲</a></p>
 </blockquote>
 <h2 id="在做什么">在做什么</h2>
 <p>部署件的「最后一公里」两端。export 侧:把训练 checkpoint 变成 ONNX——<code>scripts/export.py</code> 是 11 行薄壳(export.py:8-11),真正逻辑在 <code>mjlab_microduck/export.py</code> 的 <code>run_export</code>,发布流水线 <code>uv run publish</code> 直接调用同一函数,发布物<strong>不可能</strong>绕过这条路。infer 侧:<code>scripts/infer_policy.py</code> 是 1500 行的 CPU 排练场——用 onnxruntime 在 MuJoCo 里跑导出的策略,50 Hz 控制(decimation 4 × timestep 0.005,infer_policy.py:1149),键盘当遥操,把真机要发生的一切先在笔记本上过一遍。</p>

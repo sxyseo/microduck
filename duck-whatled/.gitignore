@@ -1,0 +1,7 @@
+.wrangler/
+review/node_modules/
+review/*.png
+review/crop-*
+review/thumb-check.png
+__pycache__/
+.DS_Store

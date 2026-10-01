@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "model_id": "microduck-walk-v1",
+  "model_archive_sha256": "fa696d5f8d7ad8032a996fb1f052c55e6d5b1a450f917b7c55597167ce4eb439",
+  "display_sha256": {
+    "microduck-color-studio/dist/models/parts.json": "ab6af382ae4f7f7ca3b193b4e6a84efc651c5b5178e49e8196d09a51df137f4a",
+    "microduck-color-studio/dist/models/microduck.glb": "07f2d27d8270a739174d6d94cc0bdd1432018dd5c3f76e7b99d2205c989fb2fb"
+  },
+  "verified_at": "2026-09-14",
+  "engine": "MuJoCo 3.10.0",
+  "scope": "Local reference pairing for visualization, not hardware validation. Re-verify before updating this binding."
+}

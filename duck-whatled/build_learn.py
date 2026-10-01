@@ -9,6 +9,24 @@ from pathlib import Path
 import markdown
 
 ROOT = Path(__file__).resolve().parent
+CONTENT = ROOT / "content"
+
+# 内容解析:优先用仓库内 content/ 快照(自包含构建),否则回落到工作区原始路径。
+_FALLBACK = Path("/Volumes/dev/dev/microduck/docs")
+_REPL = {
+    str(_FALLBACK / "course"): CONTENT / "course",
+    str(_FALLBACK / "deep-dive"): CONTENT / "deep-dive",
+    str(_FALLBACK): CONTENT,
+    "/Volumes/dev/dev/microduck/microduck-replica/docs/训练参数调整与新动作开发指南.md": CONTENT / "训练参数调整与新动作开发指南.md",
+}
+
+def resolve_src(path: str) -> str:
+    for old, new in _REPL.items():
+        if path.startswith(str(old)):
+            candidate = new / path[len(str(old)):].lstrip("/")
+            if candidate.exists():
+                return str(candidate)
+    return path
 OUT = ROOT / "public" / "learn"
 OUT.mkdir(parents=True, exist_ok=True)
 
@@ -76,6 +94,14 @@ DOCS = [
         "desc": "SG90 过树莓派的四课实验、总线舵机的供电与共地、Dynamixel Wizard 改 ID 的精确操作,以及 CAD 与电路图在 macOS 上用什么软件看。",
         "tag": "MANUAL 04 · 调试篇",
         "date": "2026-09-11",
+    },
+    {
+        "src": "/Volumes/dev/dev/microduck/docs/HD1910仿真迁移与PPO训练教程.md",
+        "out": "hd1910-tutorial.html",
+        "title": "HD-1910 仿真迁移与 PPO 训练教程",
+        "desc": "从 XL330 到 HD-1910：机械与执行器参数迁移、BAM 建模、PPO 训练、横移与转向评测、ONNX 导出，以及真机验证的完整路线。",
+        "tag": "MANUAL 05 · HD-1910 迁移篇",
+        "date": "2026-09-19",
     },
 ]
 
@@ -245,9 +271,45 @@ def rewrite_course_links(text: str) -> str:
     return re.sub(r"\]\(((?:\.\./|docs/|microduck-replica/|open-microduck/)[^)]+)\)", r"\1", text)
 
 
+# 手册/research 页的相对链接重写:站内互引 → /learn/*;官方与协作仓库文件 → GitHub blob。
+_GH_MICRODUCK = "https://github.com/pollen-robotics/microduck/blob/main/"
+_GH_REPLICA = "https://github.com/sxyseo/microduck-replica/blob/master/"
+_GH_OPENMD = "https://github.com/SaberOnGo/open-microduck/blob/main/"
+_MANUAL_RULES = [
+    (re.compile(r"\]\(course/README\.md\)"), "](/learn/course)"),
+    (re.compile(r"\]\(course/(\d\d)-[^)]*\.md\)"), r"]( /learn/course-\1)".replace(" ", "")),
+    (re.compile(r"\]\(deep-dive/(\d\d?\d?)-[^)]*\.md\)"), lambda m: "](/learn/deep-" + m.group(1) + ")"),
+    (re.compile(r"\]\(新手学习文档\.md\)"), "](/learn/newbie)"),
+    (re.compile(r"\]\(进阶学习文档-训练仿真与部署\.md\)"), "](/learn/advanced)"),
+    (re.compile(r"\]\((?:\.\./)?(README\.md|CONTRIBUTING\.md)\)"), lambda m: "](" + _GH_MICRODUCK + m.group(1) + ")"),
+    (re.compile(r"\]\((?:\.\./docs/|\.\./)?((?:design|robot)/[^)]+\.md)\)"), lambda m: "](" + _GH_MICRODUCK + "docs/" + m.group(1) + ")"),
+    (re.compile(r"\]\(\.\./kinematics/([^)]+)\)"), lambda m: "](" + _GH_MICRODUCK + "kinematics/" + m.group(1) + ")"),
+    (re.compile(r"\]\(\.\./microduck-build-tutorial/(README\.md)\)"), "](https://github.com/sxyseo/Microduck-build-tutorial/blob/main/README.md)"),
+    (re.compile(r"\]\(\.\./microduck-replica/docs/([^)]+\.md)\)"), lambda m: "](" + _GH_REPLICA + "docs/" + m.group(1) + ")"),
+    (re.compile(r"\]\((?:执行器选型|换舵机重训全流程|硬件入门|硬件方案逆向|硬件规格速查)\.md\)"),
+     lambda m: "](" + _GH_REPLICA + "docs/" + m.group(0)[2:-1] + ")"),
+    (re.compile(r"\]\(\.\./rl-series/([^)]+\.md)\)"), lambda m: "](" + _GH_REPLICA + "rl-series/" + m.group(1) + ")"),
+    (re.compile(r"\]\(\.\./open-microduck/docs/([^)]+\.md)\)"), lambda m: "](" + _GH_OPENMD + "docs/" + m.group(1) + ")"),
+    (re.compile(r"\]\(\.\./duck-control/src/(bus|io)\.rs\)"), lambda m: "](" + _GH_MICRODUCK + "duck-control/src/" + m.group(1) + ".rs)"),
+    (re.compile(r"\]\(\.\./microduck-replica/((?:hardware|learning|rl-series)/[^)]+\.(?:pdf|py))\)"),
+     lambda m: "](" + _GH_REPLICA + m.group(1) + ")"),
+    (re.compile(r"\]\(\.\./microduck-replica-cad/([^)]+\.pdf)\)"),
+     lambda m: "](https://github.com/fanhao375/microduck-replica-cad/blob/master/" + m.group(1) + ")"),
+]
+
+def rewrite_manual_links(text: str) -> str:
+    """手册与调研页:可映射的相对链接改写为站内/GitHub;纯本地文件去链接留文字。"""
+    for pat, repl in _MANUAL_RULES:
+        text = pat.sub(repl, text)
+    # 本地才有、无线上归宿的文件:去链接留文字
+    text = re.sub(r"\[([^\]]+)\]\((?:\.\./tools/[^)]+|\.\./duck-control/src/(?:bin/)?(?:hl2915|imu)[^)]*\.rs|HL2915两只舵机现场验收表\.md|低成本舵机替换决策表\.md)\)", r"\1（工作区文件）", text)
+    return text
+
+
 def rewrite_deep_links(text: str) -> str:
     """解读系列内的 NN-xxx.md 相对链接 → /learn/deep-NN;工作区路径留文字去链接。"""
     text = re.sub(r"\]\((\d{1,3})-[^)]*\.md\)", lambda m: "](/learn/deep-" + m.group(1) + ")", text)
+    text = text.replace("](README.md)", "](/learn/deep)")
     return re.sub(r"\]\(((?:\.\./|docs/|microduck-replica/|open-microduck/|bam/|xiaozhi-esp32/)[^)]+)\)", r"\1", text)
 
 
@@ -297,6 +359,9 @@ def deep_stage_tag(n: int) -> str:
     if n <= 180:
         return "第十五辑 · 其他舵机案例库"
     return "第十六辑 · 小白基础课"
+    if n <= 202:
+        return "第十七辑 · 换舵机实战案例"
+    return "第十八辑 · 台架实操"
 
 
 # 课程正文按文件名自动发现(00/01 已在上面手工登记,这里跳过)
@@ -358,11 +423,14 @@ md = markdown.Markdown(
 )
 
 for doc in DOCS:
+    doc["src"] = resolve_src(doc["src"])
     text = Path(doc["src"]).read_text(encoding="utf-8")
     if "/course/" in doc["src"]:
         text = rewrite_course_links(text)
     elif "/deep-dive/" in doc["src"]:
         text = rewrite_deep_links(text)
+    else:
+        text = rewrite_manual_links(text)
     md.reset()
     body = md.convert(text)
     html = TEMPLATE.format(body=body, slug=doc["out"][:-5], **doc)

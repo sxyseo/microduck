@@ -125,7 +125,7 @@
 <h1 id="解读-31-symmetrypy-与-backlashpy对称与齿隙">解读 31 · symmetry.py 与 backlash.py:对称与齿隙</h1>
 <blockquote>
 <p><strong>解读对象</strong>:<code>tasks/symmetry.py</code>(169 行)、<code>tasks/backlash.py</code>(92 行)<br />
-<strong>需要的前置</strong>:<a href="/learn/deep-23">解读 23</a>(61 维观测拼装)、<a href="/learn/deep-25">解读 25</a>、<a href="README.md">总纲</a></p>
+<strong>需要的前置</strong>:<a href="/learn/deep-23">解读 23</a>(61 维观测拼装)、<a href="/learn/deep-25">解读 25</a>、<a href="/learn/deep">总纲</a></p>
 </blockquote>
 <h2 id="在做什么">在做什么</h2>
 <p>两个小文件,各管一件「模型改造」:symmetry.py 给 PPO 加左右镜像对称(mirror symmetry,即假设「机器人镜像后的观测应对应镜像后的动作」)损失;backlash.py 把任意环境配置一键换成带齿隙(backlash,齿轮副之间的空程)的机器人模型。前者作用于训练算法,后者作用于仿真模型——但都遵守同一纪律:<strong>观测/动作的维度和布局一字不改</strong>,这样运行时和导出链路完全不用动。</p>

@@ -40,6 +40,7 @@ EVIDENCE_SCOPES = {
     "deployment_preflight": "local_software",
     "support_bundle": "local_software",
     "training_smoke": "training_or_simulation",
+    "recipe_training": "training_or_simulation",
     "training": "training_or_simulation",
     "tensorboard_summary": "training_or_simulation",
     "bench_continuous": "bench_evidence",
@@ -1532,6 +1533,8 @@ def validate_assembly(data: dict[str, Any]) -> tuple[dict[str, Any], str]:
         if status == "passed" and not evidence:
             raise ValueError(f"assembly check {index} passed requires evidence")
         normalized_checks.append({"id": check_id, "title": title, "status": status, "evidence": evidence})
+        if "part_ids" in check:
+            normalized_checks[-1]["part_ids"] = check["part_ids"]
 
     statuses = {check["status"] for check in normalized_checks}
     material_statuses_present = {material["status"] for material in normalized_materials}
@@ -1547,6 +1550,10 @@ def validate_assembly(data: dict[str, Any]) -> tuple[dict[str, Any], str]:
         "materials": normalized_materials,
         "checks": normalized_checks,
     }
+    from .visual import validate_binding
+    binding = validate_binding(data)
+    if binding:
+        normalized["model_binding"] = binding
     for field in ("measurements", "photos"):
         if field in data:
             if not isinstance(data[field], (dict, list)):
@@ -3045,13 +3052,13 @@ class StudioStore:
         return {**run, "status": "running", "result": initial}
 
     def _start_training_run(self, project_id: str, kind: str = "training_smoke") -> dict[str, Any]:
-        if kind not in {"training_smoke", "training"}:
+        if kind not in {"training_smoke", "training", "recipe_training"}:
             raise ValueError("invalid training run kind")
         with _TRAINING_RUN_LOCK:
             with self._connect() as conn:
                 conn.execute("BEGIN IMMEDIATE")
                 active = conn.execute(
-                    "SELECT id FROM runs WHERE kind IN ('training_smoke', 'training') AND status = 'running' LIMIT 1"
+                    "SELECT id FROM runs WHERE kind IN ('training_smoke', 'training', 'recipe_training') AND status = 'running' LIMIT 1"
                 ).fetchone()
                 if active:
                     raise RuntimeError("a training run is already running")

@@ -1,28 +1,42 @@
 <!doctype html>
 <html lang="zh-CN">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Microduck Studio</title>
-  <style>
-    :root{font:16px system-ui,sans-serif;color:#211a11;background:#f6f1e7}body{max-width:1180px;margin:0 auto;padding:28px}h1{margin-bottom:4px}small,.muted{color:#6b6151}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}.card{background:#fff;border:1px solid #d9cdb9;border-radius:12px;padding:18px;box-shadow:4px 4px #e9dcc8}label{display:block;margin:10px 0 4px}input,textarea,select,button{font:inherit;padding:9px;border:1px solid #9c8e7b;border-radius:7px}input,textarea,select{width:100%;box-sizing:border-box}textarea{min-height:100px;font-family:ui-monospace,monospace}button{background:#211a11;color:#fff;cursor:pointer;margin-top:12px}.status{white-space:pre-wrap;font-family:ui-monospace,monospace;background:#211a11;color:#f6f1e7;padding:12px;border-radius:8px;min-height:90px;overflow:auto}.metric-chart{width:100%;height:100px;background:#f6f1e7;border-radius:8px}.ok{color:#17633a}.bad{color:#9d2d14}
-    @media(max-width:700px){body{padding:12px}.grid{grid-template-columns:1fr}.card{padding:14px;box-shadow:2px 2px #e9dcc8}button{width:100%;min-height:44px}.dangerous-start{display:none}}
-  </style>
-</head>
-<body>
-  <h1>Microduck Studio</h1>
-  <p class="muted">个人本地复刻工作台 · 阶段 0/1</p>
-  <div class="grid">
-    <section class="card">
-      <h2>新建“我的鸭子”</h2>
-      <label>项目名称<input id="name" value="我的鸭子"></label>
-      <label>仓库路径<input id="root" value=".."></label>
-      <button id="create">创建项目</button>
-      <label>已有项目<select id="project-list" style="width:100%;padding:9px;border:1px solid #9c8e7b;border-radius:7px"><option value="">加载中…</option></select></label>
-      <p id="project" class="muted">尚未创建项目</p>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><title>Microduck Studio · 个人复刻工作台</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23526443'/%3E%3Ctext x='6' y='24' fill='white' font-size='24'%3Em%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/assets/studio.css?v=20260914-pipeline-1">
+<style>@media(max-width:700px){.dangerous-start{display:none}}</style>
+</head><body>
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true"><symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></symbol><symbol id="i-duck" viewBox="0 0 24 24"><path d="M5 14V8a5 5 0 0 1 5-5h4a5 5 0 0 1 5 5v5H8a3 3 0 0 0 0 6h9M10 19v3m6-3v3M5 10H2v4h3"/><circle cx="14" cy="8" r="1.5"/></symbol><symbol id="i-cpu" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="3"/><rect x="9" y="9" width="6" height="6" rx="1"/><path d="M9 2v3m6-3v3M9 19v3m6-3v3M2 9h3m-3 6h3m14-6h3m-3 6h3"/></symbol><symbol id="i-servo" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="3"/><circle cx="12" cy="12" r="3"/><path d="M12 9V3m-5 18v-2m10 2v-2"/></symbol><symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 3v17h17M7 14l4-5 4 3 5-8"/></symbol><symbol id="i-book" viewBox="0 0 24 24"><path d="M12 5v15m0-15C8 2 3 3 3 3v16s5-1 9 1c4-2 9-1 9-1V3s-5-1-9 2Z"/></symbol><symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7V5a2 2 0 0 1 2-2h5l3 3h6a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/></symbol><symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 16V3m-5 5 5-5 5 5M4 15v5a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-5"/></symbol><symbol id="i-settings" viewBox="0 0 24 24"><path d="M4 7h16M4 17h16"/><circle cx="8" cy="7" r="3" fill="white"/><circle cx="16" cy="17" r="3" fill="white"/></symbol><symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14m-5-5 5 5-5 5"/></symbol><symbol id="i-chevron" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></symbol><symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol><symbol id="i-alert" viewBox="0 0 24 24"><path d="m12 3 10 18H2L12 3Z"/><path d="M12 9v5m0 3v.1"/></symbol><symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 6v6l4 2"/></symbol><symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></symbol><symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol><symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></symbol><symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 7A9 9 0 0 0 4 7m0 0V2m0 5h5M4 17a9 9 0 0 0 16 0m0 0v5m0-5h-5"/></symbol><symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 2 3 6v6c0 5 9 10 9 10s9-5 9-10V6l-9-4Z"/><path d="m8 12 3 3 5-6"/></symbol><symbol id="i-layers" viewBox="0 0 24 24"><path d="m12 3 10 5-10 5L2 8l10-5Zm-10 9 10 5 10-5M2 16l10 5 10-5"/></symbol><symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M6 18 18 6"/></symbol><symbol id="i-bolt" viewBox="0 0 24 24"><path d="m14 2-9 12h6l-1 8 9-13h-6l1-7Z"/></symbol></svg>
+<a class="skip-link" href="#main-content">跳到工作区</a>
+<button class="mobile-scrim" id="menu-dismiss" aria-label="关闭导航"></button>
+<aside class="sidebar">
+  <div class="brand"><div class="brand-mark"><svg class="icon" aria-hidden="true"><use href="#i-duck"/></svg></div><div><strong>Microduck</strong><small>STUDIO</small></div></div>
+  <div class="workspace-label"><span><svg class="icon" aria-hidden="true"><use href="#i-folder"/></svg><strong id="active-project-name">个人复刻工作空间</strong></span><span class="dot"></span></div>
+  <nav aria-label="工作台导航"><div class="nav-label">我的工作空间</div><button class="nav-button" data-view="overview"><svg class="icon" aria-hidden="true"><use href="#i-grid"/></svg><span>工作台总览</span></button><button class="nav-button" data-view="hardware"><svg class="icon" aria-hidden="true"><use href="#i-duck"/></svg><span>我的鸭子</span></button><div class="nav-label">复刻与调试</div><button class="nav-button" data-view="bench"><svg class="icon" aria-hidden="true"><use href="#i-servo"/></svg><span>舵机实验室</span></button><button class="nav-button" data-view="controller"><svg class="icon" aria-hidden="true"><use href="#i-cpu"/></svg><span>主控诊断</span></button><button class="nav-button" data-view="visual"><svg class="icon" aria-hidden="true"><use href="#i-duck"/></svg><span>3D 外观与装配</span></button><button class="nav-button" data-view="assembly"><svg class="icon" aria-hidden="true"><use href="#i-layers"/></svg><span>装配与标定</span></button><button class="nav-button" data-view="training"><svg class="icon" aria-hidden="true"><use href="#i-chart"/></svg><span>仿真与训练</span></button><button class="nav-button" data-view="deployment"><svg class="icon" aria-hidden="true"><use href="#i-upload"/></svg><span>部署与验收</span></button><div class="nav-label">知识与记录</div><button class="nav-button" data-view="records"><svg class="icon" aria-hidden="true"><use href="#i-folder"/></svg><span>实验与记录</span></button><button class="nav-button" data-view="knowledge"><svg class="icon" aria-hidden="true"><use href="#i-book"/></svg><span>资料与证据</span></button></nav>
+  <div class="sidebar-bottom"><button class="nav-button" data-view="settings"><svg class="icon" aria-hidden="true"><use href="#i-settings"/></svg><span>项目与设置</span></button><div class="local-note"><svg class="icon" aria-hidden="true"><use href="#i-shield"/></svg>本地运行 · 数据保存在此设备</div></div>
+</aside>
+<div class="app-main">
+  <header class="topbar"><button class="mobile-toggle" id="menu-toggle" aria-label="打开导航" aria-expanded="false"><svg class="icon" aria-hidden="true"><use href="#i-menu"/></svg></button><div class="breadcrumbs"><span>工作空间</span><span>/</span><strong id="breadcrumb-title">工作台总览</strong></div><div class="topbar-actions"><button class="search-trigger" id="quick-search"><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg><span>搜索资料与证据</span><kbd>⌘ K</kbd></button><div class="connection" id="connection"><span class="dot"></span><span id="connection-text">正在连接本地服务</span></div><div class="avatar">ME</div></div></header>
+  <main class="page-content" id="main-content" tabindex="-1">
+    <div class="page-heading"><div><span class="eyebrow" id="page-eyebrow">YOUR REPLICATION WORKBENCH</span><h1 id="page-title">每一步，都有据可循。</h1><p class="muted" id="page-description">从第一只舵机，到迈出的第一步。继续你的 Microduck 复刻。</p></div><div class="heading-actions"><button class="ghost" id="refresh-overview" aria-label="刷新项目状态"><svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg></button><button id="edit-project"><svg class="icon" aria-hidden="true"><use href="#i-folder"/></svg><span>切换项目</span></button></div></div>
+    <div class="inline-note warning notice-bar" id="project-picker" hidden><div style="flex:1;min-width:0"><label for="project-list">当前项目</label><select id="project-list"><option value="">加载中…</option></select><small id="project">尚未选择项目</small></div><button data-view="settings">新建项目</button></div>
+    <div class="inline-note active-run-bar" id="active-run-bar" hidden><span>任务正在后台运行，切换页面不影响采集。</span><button id="stop-bench">中止台架任务</button><button id="stop-training">中止训练任务</button></div>
+    <section id="view-overview" data-panel="overview">
+      <div class="hero-grid"><article class="next-card"><div class="section-kicker"><svg class="icon" aria-hidden="true"><use href="#i-bolt"/></svg>建议的下一步 <span id="next-badge" class="pill needs_confirmation">开始复刻</span></div><h2 id="next-title">建立你的“我的鸭子”档案</h2><p id="next-description">选择已有项目，或创建一份硬件档案。后续任务与实验都将围绕它展开。</p><div class="next-card-footer"><button class="primary" id="next-action">开始设置 <svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></button><div class="task-meta"><span><svg class="icon" aria-hidden="true"><use href="#i-clock"/></svg><span id="next-duration">约 5 分钟</span></span><span><svg class="icon" aria-hidden="true"><use href="#i-shield"/></svg><span id="next-risk">仅记录资料</span></span></div></div></article>
+      <article class="robot-card"><div class="robot-card-header"><div><strong id="duck-name">我的 Microduck</strong><small>PERSONAL BUILD · 001</small></div><span class="pill needs_confirmation" id="duck-status">未选择项目</span></div><img class="robot-image" src="/assets/microduck.png" alt="仓库中的 Microduck 仿真模型参考渲染，不代表当前实物装配状态"><div class="robot-card-bottom"><strong id="duck-model">硬件路线待核实</strong><span>模型参考 · 非实机状态</span></div></article></div>
+      <div class="metrics-strip"><div class="stat"><div class="stat-icon"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg></div><div><small>已完成任务</small><strong id="metric-complete">— <em>/ —</em></strong></div></div><div class="stat"><div class="stat-icon amber"><svg class="icon" aria-hidden="true"><use href="#i-alert"/></svg></div><div><small>待解除阻塞</small><strong id="metric-blocked">—</strong></div></div><div class="stat"><div class="stat-icon"><svg class="icon" aria-hidden="true"><use href="#i-folder"/></svg></div><div><small>已保存运行</small><strong id="metric-runs">—</strong></div></div><div class="stat"><div class="stat-icon"><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg></div><div><small>未解决问题</small><strong id="metric-issues">—</strong></div></div></div>
+      <section class="panel"><div class="panel-header"><h2>你的复刻路线</h2><small>按真实依赖推进，准备工作可并行</small></div><div class="journey" id="journey"></div></section>
+      <div class="overview-bottom"><section class="panel"><div class="panel-header"><h2>当前值得关注</h2><button class="ghost" id="toggle-all-tasks">查看全部任务 <svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></button></div><div id="attention-list"><div class="empty-state">选择项目后，在这里查看前置条件与阻塞原因。</div></div></section><section class="panel"><div class="panel-header"><h2>最近的实验与证据</h2><button class="ghost" data-view="records">全部记录 <svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></button></div><div id="recent-runs"><div class="empty-state"><svg class="icon" aria-hidden="true"><use href="#i-folder"/></svg><strong>第一份记录，从下一步开始</strong>完整保存条件、数据、规则与结论。</div></div></section></div>
+      <section class="panel all-task-list" id="all-tasks" hidden><div class="panel-header"><h2>全部任务与前置条件</h2></div><div id="all-task-rows"></div></section>
+      <div class="footer-note"><span>Microduck Studio · 个人本地复刻工作台</span><span id="last-updated">每个结论都有来源，每次验证都有记录。</span></div>
     </section>
-    <section class="card">
-      <h2>硬件路线</h2>
+    <section id="view-visual" class="view-panel" data-panel="visual" hidden>
+      <div class="visual-toolbar"><div><span class="eyebrow">COLOR STUDIO × 我的鸭子</span><strong id="visual-save-state" role="status">选择项目后开始</strong></div><div class="visual-actions"><input id="visual-name" aria-label="外观方案名称" placeholder="给这套配色起个名字" maxlength="120"><button id="visual-save" class="primary" disabled>保存到项目</button><button data-view="assembly" data-target-card="assembly">装配清单 ↗</button></div></div>
+      <div class="visual-model-note"><span class="pill needs_confirmation">参考模型</span><span>原版 XL330 步行装配 · 70 个模型实例，含 36 个打印件。HL-2915 改件的尺寸与实际适配需另行核实。</span></div>
+      <div id="visual-host" class="visual-host"><div class="empty-state">正在准备本地模型…</div></div>
+      <div class="visual-bottom"><div class="selected-part"><span class="eyebrow">MODEL → ASSEMBLY</span><strong id="visual-selected-name">点击模型或零件列表，选择要检查的部件</strong><small id="visual-selected-meta">配色与预览不构成装配验收证据。</small><button id="visual-add-check" disabled>将所选零件加入装配检查</button></div><div class="visual-versions"><label>项目中的外观版本<select id="visual-version"><option value="">尚无保存版本</option></select></label><button id="visual-load-version" disabled>载入为草稿</button><button id="visual-reload">重新读取项目版本</button><small>恢复旧版后再次保存会创建新版本。草稿暂存于当前标签页，关闭前请保存到项目。</small></div></div>
+    </section>
+    <div class="workspace-layout" id="workspace-layout" hidden><div><section class="view-panel" id="view-hardware" data-panel="hardware" hidden><div class="inline-note warning"><svg class="icon" aria-hidden="true"><use href="#i-alert"/></svg><span>型号以实物或采购记录为准。HL-1910 与 HL-2915 的资料存在冲突，未确认前保留待核实状态。</span></div>    <section class="card" id="card-hardware">
+      <h2><svg class="icon" aria-hidden="true"><use href="#i-duck"/></svg>硬件路线</h2>
       <p class="muted">未确认型号不会自动选择默认参数；留空会继续保持待确认。</p>
       <label>已确认舵机型号（可留空）<input id="servo-model" placeholder="例如 HL-2915"></label>
       <label>舵机候选（逗号分隔）<input id="servos" value="HL-2915"></label>
@@ -36,9 +50,14 @@
       <label>训练仓版本<input id="training-revision" placeholder="commit 或版本号"></label>
       <label>分阶段部件（JSON）<textarea id="hardware-components">{"controller":{"state":"planned"},"servo_bench":{"state":"owned","model":"HL-2915"},"imu":{"state":"planned"},"camera":{"state":"planned"},"whole_robot":{"state":"planned"}}</textarea></label>
       <button id="save-hardware">保存硬件档案</button>
-    </section>
-    <section class="card">
-      <h2>工作台配置</h2>
+    </section></section><section class="view-panel" id="view-settings" data-panel="settings" hidden>    <section class="card" id="card-project">
+      <h2><svg class="icon" aria-hidden="true"><use href="#i-folder"/></svg>新建“我的鸭子”</h2>
+      <label>项目名称<input id="name" value="我的鸭子"></label>
+      <label>仓库路径<input id="root" value=".."></label>
+      <button id="create">创建项目</button>
+
+    </section>    <section class="card" id="card-settings">
+      <h2><svg class="icon" aria-hidden="true"><use href="#i-settings"/></svg>工作台配置</h2>
       <p class="muted">按项目保存默认执行位置、可见指标和告警阈值；每次运行仍会记录实际生效值。</p>
       <label>可见指标（逗号分隔）<input id="settings-metrics" value="reward,episode_length,temperature_c,latency_ms"></label>
       <label>告警阈值（JSON）<textarea id="settings-thresholds">{"temperature_c":65,"latency_ms":50}</textarea></label>
@@ -46,11 +65,10 @@
       <label>WSL 发行版<input id="settings-wsl-distro" value="Ubuntu"></label>
       <label>WSL 训练路径<input id="settings-wsl-path" placeholder="/home/duck/microduck_rl"></label>
       <button id="settings-save">保存工作台配置</button>
-    </section>
-    <section class="card">
-      <h2>HL-2915 只读探针计划</h2>
-      <p class="muted">只生成命令，不打开串口；需要先确认 HL-2915。</p>
-      <label>本机可见端口<select id="probe-port-list" style="width:100%;padding:9px;border:1px solid #9c8e7b;border-radius:7px"><option value="">尚未读取</option></select></label>
+    </section></section><section class="view-panel" id="view-bench" data-panel="bench" hidden><div class="inline-note"><svg class="icon" aria-hidden="true"><use href="#i-shield"/></svg><span>先确认独立单舵机与串口，再执行只读检查。USB 转接板名称不代表舵机型号。</span></div>    <section class="card" id="card-probe">
+      <h2><svg class="icon" aria-hidden="true"><use href="#i-servo"/></svg>第一只舵机通信验证</h2>
+      <p class="muted">生成计划不会打开串口。执行前核对 HL-2915 与实际接线。</p>
+      <label>本机可见端口<select id="probe-port-list"><option value="">尚未读取</option></select></label>
       <button id="probe-ports">列出本机端口（只读）</button>
       <label>已确认串口<input id="probe-port" value="" placeholder="例如 COM3 或 /dev/ttyUSB0"></label>
       <p class="muted">端口列表不会判断舵机型号；请根据实际接线确认后再执行探针。</p>
@@ -60,41 +78,36 @@
       <button id="probe-plan">生成只读计划</button>
       <button id="probe-run">执行只读探针（需确认）</button>
       <button id="probe-cancel">取消当前探针</button>
-    </section>
-    <section class="card">
-      <h2>开发机只读预检</h2>
+    </section>    <section class="card" id="card-bench">
+      <h2><svg class="icon" aria-hidden="true"><use href="#i-chart"/></svg>连续测试结果</h2>
+      <p class="muted">需先确认硬件路线；导入原始计数后由工作台重新判定并绑定当前档案，不采信脚本 PASS。</p>
+      <label>原始数据（JSON）<textarea id="bench">{"packets_sent":null,"packets_lost":null,"duration_s":null}</textarea></label>
+      <button id="bench-run">判定 60 秒测试</button>
+    </section></section><section class="view-panel" id="view-controller" data-panel="controller" hidden>    <section class="card" id="card-preflight">
+      <h2><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>开发机只读预检</h2>
       <button id="preflight">运行预检</button>
-      <div id="status" class="status">等待操作</div>
-    </section>
-    <section class="card">
-      <h2>主控只读诊断</h2>
+<p class="muted">检查本机开发工具与版本，保存可追溯的环境基线。</p>
+    </section>    <section class="card" id="card-controller">
+      <h2><svg class="icon" aria-hidden="true"><use href="#i-cpu"/></svg>主控只读诊断</h2>
       <p class="muted">仅执行固定的 <code>robotctl health --json</code>；SSH 使用 BatchMode 和严格主机密钥校验。</p>
       <label>主控地址<input id="controller-host" placeholder="例如 duck.local"></label>
       <label>SSH 用户<input id="controller-user" value="rock"></label>
       <label>SSH 端口<input id="controller-port" type="number" value="22" min="1" max="65535"></label>
       <button id="controller-plan">生成诊断计划</button>
       <button id="controller-run">执行诊断（需确认）</button>
-    </section>
-    <section class="card">
-      <h2>连续测试结果</h2>
-      <p class="muted">需先确认硬件路线；导入原始计数后由工作台重新判定并绑定当前档案，不采信脚本 PASS。</p>
-      <label>原始数据（JSON）<textarea id="bench">{"packets_sent":1000,"packets_lost":0,"duration_s":60,"script_pass":true}</textarea></label>
-      <button id="bench-run">判定 60 秒测试</button>
-    </section>
-    <section class="card">
-      <h2>CPU smoke 训练</h2>
+    </section></section><section class="view-panel" id="view-training" data-panel="training" hidden><div class="inline-note"><svg class="icon" aria-hidden="true"><use href="#i-chart"/></svg><span>从小规模验证开始。仿真与训练结果单独记录，实机能力以逐级验收为准。</span></div>    <section class="card" id="card-smoke">
+      <h2><svg class="icon" aria-hidden="true"><use href="#i-bolt"/></svg>CPU smoke 训练</h2>
       <p class="muted">固定 5 次迭代、8 环境、每环境 24 steps；只在你确认后启动，训练 checkout 会写入日志和模型。</p>
-      <label>训练 checkout 路径<input id="training-dir" placeholder="例如 ..\microduck_rl"></label>
+      <label>训练 checkout 路径<input id="training-dir" placeholder="例如 ../microduck_rl"></label>
       <button id="training-plan">生成训练计划</button>
       <button id="training-run">启动 smoke（需确认）</button>
       <button id="training-cancel">取消当前运行</button>
-    </section>
-    <section class="card">
-      <h2>模型训练与续训</h2>
+    </section>    <section class="card" id="card-training">
+      <h2><svg class="icon" aria-hidden="true"><use href="#i-chart"/></svg>模型训练与续训</h2>
       <p class="muted">只执行内置配方。续训必须同时填写父运行 ID 和已由该运行登记的 checkpoint。</p>
       <label>训练配方<select id="training-recipe"><option value="walk">Microduck 平地行走</option></select></label>
       <label>执行位置<select id="training-target"><option value="local">本机 Linux/macOS</option><option value="wsl">本机 WSL2</option><option value="ssh">远程 GPU（计划模式）</option></select></label>
-      <label>训练 checkout 路径<input id="training-full-dir" placeholder="例如 ..\microduck_rl"></label>
+      <label>训练 checkout 路径<input id="training-full-dir" placeholder="例如 ../microduck_rl"></label>
       <label>WSL 发行版<input id="training-wsl-distro" value="Ubuntu"></label>
       <label>WSL 内 checkout 路径<input id="training-wsl-path" placeholder="/home/duck/microduck_rl"></label>
       <label>并行环境数<input id="training-num-envs" type="number" min="1" max="16384" value="4096"></label>
@@ -106,18 +119,16 @@
       <label>checkpoint 路径（新训练留空）<input id="training-checkpoint"></label>
       <button id="training-full-plan">生成受控计划</button>
       <button id="training-full-run">启动训练／续训（需确认）</button>
-    </section>
-    <section class="card">
-      <h2>TensorBoard 指标摘要</h2>
+    </section>    <section class="card" id="card-tensorboard">
+      <h2><svg class="icon" aria-hidden="true"><use href="#i-chart"/></svg>TensorBoard 指标摘要</h2>
       <p class="muted">读取已完成训练的 event 文件，生成 scalars.csv、summary.md 和 metrics.png；输出目录必须在项目根目录内。</p>
-      <label>训练 checkout 路径<input id="tb-training-dir" placeholder="例如 ..\microduck_rl"></label>
-      <label>run 目录<input id="tb-run-dir" placeholder="例如 ..\microduck_rl\logs\rsl_rl\velocity\run"></label>
+      <label>训练 checkout 路径<input id="tb-training-dir" placeholder="例如 ../microduck_rl"></label>
+      <label>run 目录<input id="tb-run-dir" placeholder="例如 ../microduck_rl/logs/rsl_rl/velocity/run"></label>
       <label>输出目录<input id="tb-output-dir" value="artifacts/tensorboard/latest"></label>
       <button id="tb-plan">生成摘要计划</button>
       <button id="tb-run">生成摘要（需确认）</button>
-    </section>
-    <section class="card">
-      <h2>运行时间线与数据对比</h2>
+    </section></section><section class="view-panel" id="view-records" data-panel="records" hidden>    <section class="card" id="card-timeline">
+      <h2><svg class="icon" aria-hidden="true"><use href="#i-chart"/></svg>运行时间线与数据对比</h2>
       <label>时间线运行 ID<input id="run-timeline-id" placeholder="运行开始后自动填入"></label>
       <button id="run-timeline">刷新运行时间线</button>
       <div id="run-timeline-body" class="status">尚未选择运行</div>
@@ -129,18 +140,17 @@
       <button id="run-compare">比较运行</button>
       <svg id="run-compare-chart" class="metric-chart" viewBox="0 0 300 100" role="img" aria-label="运行指标变化图"></svg>
       <div id="run-compare-body" class="status">尚未比较</div>
-    </section>
-    <section class="card">
-      <h2>实验记录</h2>
-      <label>标题<input id="exp-title" value="动作滤波一致性"></label>
-      <label>假设<input id="exp-hypothesis" value="训练与运行时一致后抖动会减少"></label>
-      <label>变量<input id="exp-variable" value="action_filter"></label>
+    </section>    <section class="card" id="card-experiment">
+      <h2><svg class="icon" aria-hidden="true"><use href="#i-folder"/></svg>实验记录</h2>
+      <label>标题<input id="exp-title" placeholder="例如：动作滤波一致性"></label>
+      <label>假设<input id="exp-hypothesis" placeholder="填写本次实验要验证的假设"></label>
+      <label>变量<input id="exp-variable" placeholder="例如 action_filter"></label>
       <label>基线（JSON）<textarea id="exp-baseline">true</textarea></label>
       <label>用户条件（JSON，可留空）<textarea id="exp-context">{}</textarea></label>
-      <label>预期<input id="exp-expected" value="更稳定"></label>
+      <label>预期<input id="exp-expected" placeholder="填写可观察、可验收的预期"></label>
       <button id="exp-create">建立实验</button>
       <label>记录结果的实验 ID<input id="exp-update-id" placeholder="建立实验后粘贴 ID"></label>
-      <label>实验状态<select id="exp-update-status" style="width:100%;padding:9px;border:1px solid #9c8e7b"><option value="running">进行中</option><option value="concluded">已结论</option><option value="abandoned">已放弃</option></select></label>
+      <label>实验状态<select id="exp-update-status"><option value="running">进行中</option><option value="concluded">已结论</option><option value="abandoned">已放弃</option></select></label>
       <label>结果（JSON）<textarea id="exp-update-result">null</textarea></label>
       <label>结论<input id="exp-update-decision" placeholder="例如：保留，待真机验证"></label>
       <label>证据引用（JSON 数组）<textarea id="exp-update-evidence">[]</textarea></label>
@@ -150,39 +160,14 @@
       <label>左侧实验 ID<input id="exp-left-id" placeholder="建立实验后粘贴 ID"></label>
       <label>右侧实验 ID<input id="exp-right-id" placeholder="建立实验后粘贴 ID"></label>
       <button id="exp-compare">比较实验</button>
-    </section>
-    <section class="card">
-      <h2>标定记录（只记录，不驱动）</h2>
-      <p class="muted">绑定当前已确认硬件；记录舵机 ID、方向、零位、限位和可选 IMU 安装姿态，不会写寄存器。</p>
-    <label>标定数据（JSON）<textarea id="calibration-data">{"joints":[{"name":"left_hip","id":1,"direction":1,"zero_deg":0,"limits_deg":[-30,30]}],"imu":{"frame":"base_link","rpy_deg":[0,0,0]},"conditions":{"voltage_v":12,"temperature_c":24},"operator":"","verified":false}</textarea></label>
-      <button id="calibration-save">保存标定记录</button>
-      <button id="calibration-list">查看标定记录</button>
-    </section>
-    <section class="card">
-      <h2>装配与上电清单</h2>
-      <p class="muted">关联资料、物料和人工检查证据；没有证据的项目不能标记为通过，不会自动判断实物尺寸或接线正确。</p>
-      <label>装配数据（JSON）<textarea id="assembly-data">{"title":"第一次干装配","source_refs":["docs/course/20-组装与上电.md"],"materials":[{"name":"M2 自攻螺丝","status":"received","quantity":20,"spec":"M2×8","source":"旧物料记录","alternative":"M2×6","price":0.12}],"checks":[{"id":"trunk","title":"躯干作为基准件","status":"pending","evidence":[]},{"id":"power","title":"上电前确认电压、共地、急停","status":"pending","evidence":[]}]}</textarea></label>
-      <button id="assembly-save">保存装配记录</button>
-      <button id="assembly-list">查看装配记录</button>
-    </section>
-    <section class="card">
-      <h2>执行器辨识证据</h2>
-      <p class="muted">只记录 HL-2915/BAM 摘要、拟合文件和独立验证；没有独立数据或原始摘要故障时不会标记为可进入仿真。</p>
-      <label>辨识数据（JSON）<textarea id="identification-data">{"actuator_model":"HL-2915","raw_summary":{"status":"pending","rows":0,"duration_s":0,"expected_hz":50,"ids":[],"faults":[],"errors":[]},"fit":{"path":"artifacts/bam/hl2915-m6.json","model":"m6","trials":1},"validation":{"dataset":"待填写","independent":false,"mae":0},"conditions":{"voltage_v":[12,12],"temperature_c":[],"load":"待填写"}}</textarea></label>
-      <button id="identification-save">保存辨识记录</button>
-      <button id="identification-list">查看辨识记录</button>
-      <label>BAM 采样计划（JSON）<textarea id="bam-plan-data">{"port":"","servo_id":1,"mass_kg":0.05,"arm_length_m":0.1,"output_path":"artifacts/bam/raw/test.json","amplitude_deg":10,"duration_s":6,"hz":100,"confirm_motion":false}</textarea></label>
-      <button id="bam-plan">生成辨识采样计划（不执行）</button>
-      <button id="bam-run" class="dangerous-start">启动 BAM 采样（双重确认）</button>
-    </section>
-    <section class="card">
-      <h2>问题台账</h2>
+    </section>    <section class="card" id="card-issue">
+      <h2><svg class="icon" aria-hidden="true"><use href="#i-alert"/></svg>问题台账</h2>
       <p class="muted">记录症状、可能原因、下一项检查和解决结论；也可从已有运行记录自动带入诊断证据。</p>
       <label>问题数据（JSON）<textarea id="issue-data">{"title":"待记录问题","severity":"warning","symptom":"填写实际症状","suspected_causes":[],"next_checks":[],"evidence_refs":[]}</textarea></label>
       <button id="issue-save">保存问题</button>
       <button id="issue-list">查看问题</button>
       <label>更新问题 ID<input id="issue-update-id" placeholder="保存问题后粘贴 ID"></label>
-      <label>问题状态<select id="issue-update-status" style="width:100%;padding:9px;border:1px solid #9c8e7b"><option value="open">开放</option><option value="investigating">调查中</option><option value="resolved">已解决</option><option value="wont_fix">不处理</option></select></label>
+      <label>问题状态<select id="issue-update-status"><option value="open">开放</option><option value="investigating">调查中</option><option value="resolved">已解决</option><option value="wont_fix">不处理</option></select></label>
       <label>解决结论<input id="issue-update-resolution" placeholder="填写验证过的解决结论"></label>
       <label>证据引用（JSON 数组）<textarea id="issue-update-evidence">[]</textarea></label>
       <button id="issue-update">更新问题</button>
@@ -190,39 +175,57 @@
       <button id="issue-link-run">把运行关联为问题证据</button>
       <label>从运行记录创建（run ID）<input id="issue-run-id" placeholder="粘贴失败运行 ID"></label>
       <button id="issue-from-run">从运行记录带入</button>
-    </section>
-    <section class="card">
-      <h2>策略包检查</h2>
+    </section>    <section class="card" id="card-report">
+      <h2><svg class="icon" aria-hidden="true"><use href="#i-book"/></svg>当前报告</h2>
+      <button id="report">刷新报告</button>
+      <a id="download-report" class="download-link" download="microduck-report.md" hidden>下载 Markdown 报告</a>
+      <button id="retry-last-run">重试最近失败/中断探针或训练</button>
+      <button id="issue-from-latest-run">从最近失败/中断运行建问题草稿</button>
+      <label>支持包路径（留空自动生成）<input id="support-path" placeholder="例如 artifacts/support/issue-001.zip"></label>
+      <button id="support-bundle">生成脱敏支持包（需确认）</button>
+      <div id="report-body" class="status">尚未创建项目</div>
+    </section></section><section class="view-panel" id="view-assembly" data-panel="assembly" hidden>    <section class="card" id="card-assembly">
+      <h2><svg class="icon" aria-hidden="true"><use href="#i-layers"/></svg>装配与上电清单</h2>
+      <p class="muted">关联资料、物料和人工检查证据；没有证据的项目不能标记为通过，不会自动判断实物尺寸或接线正确。</p>
+      <div id="assembly-editor"></div><label>装配数据（JSON）<textarea id="assembly-data">{"title":"第一次干装配","source_refs":["docs/course/20-组装与上电.md"],"materials":[{"name":"M2 自攻螺丝","status":"received","quantity":20,"spec":"M2×8","source":"旧物料记录","alternative":"M2×6","price":0.12}],"checks":[{"id":"trunk","title":"躯干作为基准件","status":"pending","evidence":[]},{"id":"power","title":"上电前确认电压、共地、急停","status":"pending","evidence":[]}]}</textarea></label>
+      <button id="assembly-save">保存装配记录</button>
+      <button id="assembly-list">查看装配记录</button>
+    </section>    <section class="card" id="card-calibration">
+      <h2><svg class="icon" aria-hidden="true"><use href="#i-settings"/></svg>标定记录（只记录，不驱动）</h2>
+      <p class="muted">绑定当前已确认硬件；记录舵机 ID、方向、零位、限位和可选 IMU 安装姿态，不会写寄存器。</p>
+    <div id="calibration-editor"></div><label>标定数据（JSON）<textarea id="calibration-data">{"joints":[{"name":"left_hip","id":1,"direction":1,"zero_deg":0,"limits_deg":[-30,30]}],"imu":{"frame":"base_link","rpy_deg":[0,0,0]},"conditions":{"voltage_v":12,"temperature_c":24},"operator":"","verified":false}</textarea></label>
+      <button id="calibration-save">保存标定记录</button>
+      <button id="calibration-list">查看标定记录</button>
+    </section>    <section class="card" id="card-identification">
+      <h2><svg class="icon" aria-hidden="true"><use href="#i-servo"/></svg>执行器辨识证据</h2>
+      <p class="muted">只记录 HL-2915/BAM 摘要、拟合文件和独立验证；没有独立数据或原始摘要故障时不会标记为可进入仿真。</p>
+      <label>辨识数据（JSON）<textarea id="identification-data">{"actuator_model":"HL-2915","raw_summary":{"status":"pending","rows":0,"duration_s":0,"expected_hz":50,"ids":[],"faults":[],"errors":[]},"fit":{"path":"artifacts/bam/hl2915-m6.json","model":"m6","trials":1},"validation":{"dataset":"待填写","independent":false,"mae":0},"conditions":{"voltage_v":[12,12],"temperature_c":[],"load":"待填写"}}</textarea></label>
+      <button id="identification-save">保存辨识记录</button>
+      <button id="identification-list">查看辨识记录</button>
+      <label>BAM 采样计划（JSON）<textarea id="bam-plan-data">{"port":"","servo_id":1,"mass_kg":0.05,"arm_length_m":0.1,"output_path":"artifacts/bam/raw/test.json","amplitude_deg":10,"duration_s":6,"hz":100,"confirm_motion":false}</textarea></label>
+      <button id="bam-plan">生成辨识采样计划（不执行）</button>
+      <button id="bam-run" class="dangerous-start">启动 BAM 采样（双重确认）</button>
+    </section></section><section class="view-panel" id="view-deployment" data-panel="deployment" hidden>    <section class="card" id="card-policy">
+      <h2><svg class="icon" aria-hidden="true"><use href="#i-folder"/></svg>策略包检查</h2>
       <p class="muted">读取项目内 ONNX 和 manifest.json，登记 SHA-256；不加载、不部署。</p>
       <label>ONNX 路径<input id="policy-onnx" placeholder="例如 output/policy.onnx"></label>
       <label>Manifest 路径<input id="policy-manifest" placeholder="例如 output/manifest.json"></label>
       <label>策略名（多策略 manifest 必填）<input id="policy-name"></label>
       <button id="policy-inspect">检查策略包</button>
-    </section>
-    <section class="card">
-      <h2>部署前兼容性</h2>
+    </section>    <section class="card" id="card-deployment">
+      <h2><svg class="icon" aria-hidden="true"><use href="#i-upload"/></svg>部署前兼容性</h2>
       <p class="muted">使用当前已确认硬件与策略 manifest 对照运行时约定；只做预检，不部署。</p>
       <label>运行时约定（JSON）<textarea id="runtime-contract">{"obs_len":61,"action_dim":14,"control_hz":50,"action_filter":false,"servo_model":"HL-2915"}</textarea></label>
       <button id="deployment-preflight">执行部署前预检</button>
       <button id="deployment-plan">生成部署计划</button>
       <button id="deployment-execute" class="dangerous-start">部署 walk 策略（高风险）</button>
-    </section>
-    <section class="card">
-      <h2>逐级实机验收（只记录）</h2>
+    </section>    <section class="card" id="card-acceptance">
+      <h2><svg class="icon" aria-hidden="true"><use href="#i-shield"/></svg>逐级实机验收（只记录）</h2>
       <p class="muted">顺序：架空启用 → 支撑站立 → 自由站立 → 支撑迈步 → 自由行走。这里只保存人工验收证据，不会触发机器人运动。</p>
       <label>验收数据（JSON）<textarea id="acceptance-data">{"stage":"lifted_enable","operator":"","checks":[{"id":"estop","title":"实体急停可用且机器人已架空","status":"passed","evidence":[]}]}</textarea></label>
       <button id="acceptance-save">保存本级验收</button>
-    </section>
-    <section class="card">
-      <h2>来源与版本</h2>
-      <label>类型<input id="source-kind" value="training"></label>
-      <label>位置<input id="source-location" value="microduck_rl"></label>
-      <label>commit / 版本（本地 Git 可留空自动读取）<input id="source-revision" placeholder="留空自动读取实际 commit"></label>
-      <button id="source-save">登记来源</button>
-      <button id="source-list">查看已登记来源</button>
-    </section>
-    <section class="card">
-      <h2>源码与资料搜索</h2>
+    </section></section><section class="view-panel" id="view-knowledge" data-panel="knowledge" hidden>    <section class="card" id="card-search">
+      <h2><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg>源码与资料搜索</h2>
       <p class="muted">只搜索项目目录内的文本文件；跳过 Git、虚拟环境、构建目录和大文件，结果只显示相对路径、行号和脱敏摘要。</p>
       <label>关键词<input id="search-query" placeholder="例如 HL-2915、action_filter、robotd"></label>
       <button id="search-run">搜索资料</button>
@@ -235,18 +238,22 @@
       <label>证据详情 ID<input id="record-detail-id" placeholder="搜索结果会自动填入"></label>
       <button id="record-detail">读取证据详情（脱敏）</button>
       <div id="record-detail-body" class="status">尚未读取详情</div>
-    </section>
-    <section class="card">
-      <h2>当前报告</h2>
-      <button id="report">刷新报告</button>
-      <button id="retry-last-run">重试最近失败/中断探针或训练</button>
-      <button id="issue-from-latest-run">从最近失败/中断运行建问题草稿</button>
-      <label>支持包路径（留空自动生成）<input id="support-path" placeholder="例如 artifacts/support/issue-001.zip"></label>
-      <button id="support-bundle">生成脱敏支持包（需确认）</button>
-      <div id="report-body" class="status">尚未创建项目</div>
-    </section>
-  </div>
-  <script>
+    </section>    <section class="card" id="card-source">
+      <h2><svg class="icon" aria-hidden="true"><use href="#i-book"/></svg>来源与版本</h2>
+      <label>类型<input id="source-kind" value="training"></label>
+      <label>位置<input id="source-location" value="microduck_rl"></label>
+      <label>commit / 版本（本地 Git 可留空自动读取）<input id="source-revision" placeholder="留空自动读取实际 commit"></label>
+      <button id="source-save">登记来源</button>
+      <button id="source-list">查看已登记来源</button>
+    </section></section></div><aside class="context-rail"><section class="card" id="task-context"><div class="rail-kicker">TASK GUIDE / 任务指引</div><div id="task-guide"></div></section><section class="card result-card"><div class="rail-kicker">EVIDENCE / 本次操作</div><div id="result-summary" class="result-summary" role="status">操作完成后，这里会显示结果、证据范围和下一步。</div><details class="advanced"><summary>查看原始结果</summary><div id="status" class="status">等待操作</div></details></section></aside></div>
+  </main>
+</div>
+<div class="toast" id="toast" role="status" hidden><span id="toast-message"></span><button id="toast-close" aria-label="关闭提示"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button></div>
+<script src="/assets/studio.js?v=20260914-pipeline-1"></script>
+<script src="/assets/visual-studio.js?v=20260914-pipeline-1"></script>
+<script src="/assets/installation-studio.js?v=20260914-pipeline-1"></script>
+<script src="/assets/training-studio.js?v=20260914-pipeline-1"></script>
+<script>
     let projectId = localStorage.getItem('microduckStudioProjectId');
     const activeRuns = {bench: null, training: null};
     const timelineSequences = {};
@@ -255,10 +262,11 @@
     const resetActiveRuns = () => {
       activeRuns.bench = null;
       activeRuns.training = null;
+      window.Studio.syncRuns(activeRuns);
       for (const runId of Object.keys(timelineMetricSeries)) delete timelineMetricSeries[runId];
     };
     const $ = (id) => document.getElementById(id);
-    const show = (id, value) => $(id).textContent = typeof value === 'string' ? value : JSON.stringify(value, null, 2);
+    const show = (id, value) => { if (value?.project_id && value.project_id !== projectId) return; $(id).textContent = typeof value === 'string' ? value : JSON.stringify(value, null, 2); if (id === 'status') window.Studio.result(value); };
     const refreshReport = () => { if (projectId) $('report').click(); };
     const renderLiveMetric = (runId) => {
       const chart = $('run-live-chart'), select = $('run-live-metric');
@@ -294,6 +302,7 @@
         const step = Number(event.data.step);
         if (!Number.isFinite(step)) continue;
         for (const [name, raw] of Object.entries(event.data.metrics)) {
+          if (raw === null || raw === undefined || raw === '' || typeof raw === 'boolean') continue;
           const value = Number(raw);
           if (!Number.isFinite(value)) continue;
           // ponytail: 500 visible points keeps mobile redraw cheap; add server-side downsampling for longer history.
@@ -309,10 +318,12 @@
     };
     const loadRunTimeline = async (runId, append = false) => {
       if (!runId) return show('run-timeline-body', '请填写运行 ID');
+      const timelineProject = projectId;
       const after = append ? (timelineSequences[runId] || 0) : 0;
       const res = await fetch(`/api/runs/${encodeURIComponent(runId)}/events?after=${after}`);
       const data = await res.json();
       if (!res.ok) return show('run-timeline-body', data);
+      if (projectId !== timelineProject || $('run-timeline-id').value !== runId) return;
       const events = data.events || [];
       if (events.length) timelineSequences[runId] = events[events.length - 1].sequence;
       collectTimelineMetrics(runId, events, !append);
@@ -327,6 +338,7 @@
     const pollRun = async (run, slot) => {
       const runId = run.id;
       activeRuns[slot] = runId;
+      window.Studio.syncRuns(activeRuns);
       $('run-timeline-id').value = runId;
       timelineSequences[runId] = 0;
       await loadRunTimeline(runId);
@@ -343,6 +355,7 @@
         if (activeRuns[slot] === runId) show('status', `运行状态读取失败：${error.message}`);
       } finally {
         if (activeRuns[slot] === runId) activeRuns[slot] = null;
+        window.Studio.syncRuns(activeRuns);
         if (projectId === run.project_id && !['running','cancelling'].includes(run.status)) refreshReport();
       }
     };
@@ -361,6 +374,7 @@
       $('training-repo').value = valueOrEmpty(data.training?.repo);
       $('training-revision').value = valueOrEmpty(data.training?.revision);
       $('hardware-components').value = JSON.stringify(data.components || {}, null, 2);
+      window.Studio.hydrateComponents(data.components || {});
     };
     const hydrateSettings = (settings) => {
       const data = settings?.data || {};
@@ -371,16 +385,19 @@
       $('settings-target').value = target.kind || 'local';
       $('settings-wsl-distro').value = target.distro || 'Ubuntu';
       $('settings-wsl-path').value = target.path || '';
-      $('training-target').value = target.kind || 'local';
-      $('training-wsl-distro').value = target.distro || 'Ubuntu';
-      $('training-wsl-path').value = target.path || '';
+      if (!window.Studio.isDirty('training')) {
+        $('training-target').value = target.kind || 'local';
+        $('training-wsl-distro').value = target.distro || 'Ubuntu';
+        $('training-wsl-path').value = target.path || '';
+      }
+      window.Studio.syncTargets();
     };
     const loadProjects = async () => {
       const data = await (await fetch('/api/projects')).json(); const select = $('project-list');
       select.innerHTML = '<option value="">选择已有项目</option>';
-      for (const item of data.projects) { const option = document.createElement('option'); option.value = item.id; option.textContent = `${item.name} · ${item.status}`; select.appendChild(option); }
+      for (const item of data.projects) { const option = document.createElement('option'); option.value = item.id; option.textContent = item.name; select.appendChild(option); }
       if (projectId && data.projects.some(item => item.id === projectId)) { select.value = projectId; const item = data.projects.find(item => item.id === projectId); show('project', `已恢复 ${item.name}\n${item.id}`); $('report').click(); }
-      else { resetActiveRuns(); projectId = null; localStorage.removeItem('microduckStudioProjectId'); }
+      else { resetActiveRuns(); projectId = null; localStorage.removeItem('microduckStudioProjectId'); hydrateHardwareForm(null); hydrateSettings(null); window.Studio.clear(); }
     };
     const loadTrainingRecipes = async () => {
       const res = await fetch('/api/training/recipes');
@@ -391,9 +408,9 @@
     };
     $('create').onclick = async () => {
       const res = await fetch('/api/projects', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:$('name').value,root:$('root').value})});
-      const data = await res.json(); resetActiveRuns(); projectId = data.id; localStorage.setItem('microduckStudioProjectId', projectId); show('project', `已创建 ${data.name}\n${data.id}`); show('status', '项目已建立，硬件路线仍待确认。'); await loadProjects();
+      const data = await res.json(); if (!res.ok) return show('status', data); resetActiveRuns(); window.Studio.reset(); projectId = data.id; localStorage.setItem('microduckStudioProjectId', projectId); show('project', `已创建 ${data.name}\n${data.id}`); show('status', '项目已建立，硬件路线仍待确认。'); await loadProjects();
     };
-    $('project-list').onchange = (event) => { resetActiveRuns(); projectId = event.target.value || null; if (projectId) { localStorage.setItem('microduckStudioProjectId', projectId); $('report').click(); } else { localStorage.removeItem('microduckStudioProjectId'); hydrateHardwareForm(null); show('report-body', '尚未创建项目'); } show('project', projectId ? `已选择 ${projectId}` : '尚未创建项目'); };
+    $('project-list').onchange = (event) => { resetActiveRuns(); window.Studio.reset(); projectId = event.target.value || null; if (projectId) { localStorage.setItem('microduckStudioProjectId', projectId); $('report').click(); } else { localStorage.removeItem('microduckStudioProjectId'); hydrateHardwareForm(null); show('report-body', '尚未创建项目'); } show('project', projectId ? `已选择 ${projectId}` : '尚未创建项目'); };
     $('probe-ports').onclick = async () => {
       const res = await fetch('/api/serial-ports');
       const data = await res.json();
@@ -413,6 +430,7 @@
       const count = numberOrNull($('servo-count').value);
       const res = await fetch(`/api/projects/${projectId}/hardware`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({data:{servos:{model,candidates,count},controller:{model:$('controller-model').value.trim()},imu:{model:$('imu-model').value.trim()},power:{voltage_v:numberOrNull($('power-voltage').value)},printed_parts:{version:$('printed-version').value.trim()},runtime:{version:$('runtime-version').value.trim()},training:{repo:$('training-repo').value.trim(),revision:$('training-revision').value.trim()},components}})});
       show('status', await res.json());
+      if (res.ok) window.Studio.saved('hardware');
       refreshReport();
     };
     $('settings-save').onclick = async () => {
@@ -427,7 +445,7 @@
           : {kind};
       const res = await fetch(`/api/projects/${projectId}/settings`, {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({data:{visible_metrics,alert_thresholds,execution_target}})});
       show('status', await res.json());
-      if (res.ok) refreshReport();
+      if (res.ok) { window.Studio.saved('settings'); refreshReport(); }
     };
     $('probe-plan').onclick = async () => {
       if (!projectId) return show('status','请先创建项目');
@@ -795,10 +813,12 @@
       if (projectId !== requestedProjectId) return;
       const reportEvidenceRefs = [...(data.experiments || []), ...(data.issues || [])].flatMap(item => Array.isArray(item.evidence_refs) ? item.evidence_refs : []);
       if (!$('record-detail-id').value && reportEvidenceRefs[0]) $('record-detail-id').value = reportEvidenceRefs[0];
-      hydrateHardwareForm(data.hardware);
-      hydrateSettings(data.settings);
+      if (!res.ok) { window.Studio.clear(); return show('status', data); }
+      window.Studio.renderReport(data);
+      if (!window.Studio.isDirty('hardware')) hydrateHardwareForm(data.hardware);
+      if (!window.Studio.isDirty('settings')) hydrateSettings(data.settings);
       for (const run of data.runs.filter(item => item.status === 'running')) {
-        const slot = ['training_smoke','training'].includes(run.kind) ? 'training' : ['hl2915_read_only_probe','hl2915_bam_record'].includes(run.kind) ? 'bench' : null;
+        const slot = ['training_smoke','training','recipe_training'].includes(run.kind) ? 'training' : ['hl2915_read_only_probe','hl2915_bam_record'].includes(run.kind) ? 'bench' : null;
         if (slot && !activeRuns[slot]) pollRun(run, slot);
       }
       const next = data.tasks.find(t => ['ready','needs_confirmation'].includes(t.status));
@@ -910,8 +930,11 @@
       const res = await fetch(`/api/projects/${projectId}/support-bundle`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({output_path,confirm:true})});
       show('status', await res.json());
     };
-    loadProjects();
-    loadTrainingRecipes();
-  </script>
-</body>
-</html>
+    window.InstallationStudio.init();
+    window.TrainingStudio.init();
+    window.Studio.init();
+    window.VisualStudio.init();
+    loadProjects().catch(error => { window.Studio.connection(false); show('status', `项目读取失败：${error.message}`); });
+    loadTrainingRecipes().catch(error => show('status', `训练配方读取失败：${error.message}`));
+</script>
+</body></html>

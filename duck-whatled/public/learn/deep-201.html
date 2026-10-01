@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>解读 201 · 案例精读(上):把 XL330 换成 HD-1910,他们改了什么 · 什么鸭 WhatDuck</title>
+<meta name="description" content="HD-1910 迁移训练审计报告(另一台机器 /home/july 工作区的适配总结,代码事实快照 2026-09-19;原文已归档 docs/research/hd1910迁移站">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="解读 201 · 案例精读(上):把 XL330 换成 HD-1910,他们改了什么">
+<meta property="og:description" content="HD-1910 迁移训练审计报告(另一台机器 /home/july 工作区的适配总结,代码事实快照 2026-09-19;原文已归档 docs/research/hd1910迁移站">
+<meta property="og:url" content="https://duck.whatled.com/learn/deep-201">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/deep-201">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">DEEP 201 · 第十六辑 · 小白基础课 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="解读-201-案例精读上把-xl330-换成-hd-1910他们改了什么">解读 201 · 案例精读(上):把 XL330 换成 HD-1910,他们改了什么</h1>
+<blockquote>
+<p><strong>解读对象</strong>:HD-1910 迁移训练审计报告(另一台机器 <code>/home/july</code> 工作区的适配总结,代码事实快照 2026-09-19;原文已归档 <code>docs/research/hd1910迁移站立行走PPO训练.html</code>,未公开传播)<br />
+<strong>需要的前置</strong>:<a href="/learn/deep-73">解读 73</a>(换舵机方法论)、<a href="/learn/deep-79">解读 79</a>(五落点);最好先读过<a href="/learn/deep-61">解读 61–72</a> 的 HL-2915 换装专辑</p>
+</blockquote>
+<h2 id="0-这是什么案例先说清边界">0. 这是什么案例,先说清边界</h2>
+<p>有人在另一台机器的工作区里,把 Microduck 的执行器从 XL330 整体换成 HD-1910,注册了独立任务 <code>Mjlab-Velocity-Flat-HD1910-MicroDuck</code>,跑通了 smoke、8 小时长训练、ONNX 导出和回放评测,并留下一份完整审计报告。<strong>注意边界</strong>:训练日志、checkpoint 在那台机器上,我们没有原始产物——本文所有数字都是<strong>报告陈述</strong>,不是我们复现的结果。报告自己也说得很清楚:"仿真链路已跑通,真机仍需台架验证"。</p>
+<p>这与我们高度相关:HD-1910 与我们购入的 HL-1910 同族(飞特磁编码、规格书同源),与我们已到货 2 只的 HL-2915 同厂。<strong>它是一次比我们早出发的换舵机实战</strong>,方法论和教训都值得精读。</p>
+<h2 id="1-系统观换舵机只动后两层">1. 系统观:换舵机只动"后两层"</h2>
+<p>把整个系统拆成三层,换舵机的工作量立刻清晰:</p>
+<pre><code class="language-text">┌─────────────────────────────────────────────┐
+│ PPO:学习方法(网络/超参/损失)   → 不动      │
+├─────────────────────────────────────────────┤
+│ 物理模型:质量/惯量/执行器/延迟  → 全部要改  │
+├─────────────────────────────────────────────┤
+│ 运行时:把动作准确发给真机        → 换协议栈 │
+└─────────────────────────────────────────────┘
+</code></pre>
+<p>报告最有价值的立场是:<strong>PPO 不需要针对新舵机重新调参</strong>——整个 RL 配置就一行深拷贝:</p>
+<pre><code class="language-python">MicroduckHd1910RlCfg = deepcopy(MicroduckRlCfg)
+experiment_name = &quot;velocity_hd1910&quot;
+run_name        = &quot;velocity_hd1910_preliminary&quot;
+</code></pre>
+<p>但要准确理解:这不是"旧策略直接能用",而是<strong>同一套学习方法,在新的动力学模型上重新学一套权重</strong>。算法不变,学出来的东西全变。</p>
+<h2 id="2-适配五原则报告的原话值得抄">2. 适配五原则(报告的原话,值得抄)</h2>
+<ol>
+<li><strong>最大复用</strong>:直接调用现有 <code>make_microduck_velocity_env_cfg</code>,不复制奖励、观测、课程或 PPO 主体;</li>
+<li><strong>策略契约不变</strong>:关节名、顺序、HOME 位、14 动作、61 维观测、ONNX 接口全部冻结;</li>
+<li><strong>差异下沉到物理层</strong>:重量、电气参数、固件控制律、延迟,全放在 robot/actuator 配置里;</li>
+<li><strong>未知量用随机化包络</strong>:辨识前扩大摩擦和 armature 的随机范围,而不是凭空改奖励;</li>
+<li><strong>默认平台不受影响</strong>:运行时总线默认仍是 dynamixel2,新协议由配置显式选择。</li>
+</ol>
+<p>这五条与我们<a href="/learn/deep-79">解读 79</a> 的"五落点"完全同构——两个独立实践收敛到同一结构,这本身就是验证。</p>
+<h2 id="3-物理层改动一质量与惯量">3. 物理层改动(一):质量与惯量</h2>
+<p>HD-1910 单只 21 g(XL330 18 g),15 只共增重 45 g。补丁遍历 MuJoCo spec,只统计 <code>meshname == "xl330"</code> 且 <code>group == 2</code> 的可视舵机网格——<strong>不按所有 mesh 计数</strong>,因为全碰撞模型还有 group 3 的重复碰撞网格,会一次舵机增重两次;计数不为 15 直接抛错。惯量按质量比整体缩放:<code>new_inertia = old × new_mass / old_mass</code>,质心不动。</p>
+<p>这是"相似质量分布"的近似——保持张量正定,但没描述新舵机的质心偏移和外壳差异。报告明确说最终应由带 HD 装配的 CAD 导出,不应长期依赖缩放。这个诚实态度比技巧本身更值得学。</p>
+<h2 id="4-物理层改动二执行器初版参数">4. 物理层改动(二):执行器初版参数</h2>
+<p>HD 尚无摆锤辨识,先用手册值拼了初版 m1 模型(<code>preliminary_m1.json</code>),复用 BAM 的 STS3215 固件控制器:</p>
+<table>
+<thead>
+<tr>
+<th>字段</th>
+<th>值</th>
+<th>来源</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>kt</td>
+<td>0.73575 N·m/A</td>
+<td>堵转 1.47 N·m ÷ 2 A</td>
+</tr>
+<tr>
+<td>R</td>
+<td>3.7 Ω</td>
+<td>7.4 V ÷ 2 A</td>
+</tr>
+<tr>
+<td>armature</td>
+<td>0.00224</td>
+<td><strong>估计值,未辨识</strong></td>
+</tr>
+<tr>
+<td>friction_base / viscous</td>
+<td>0.015 / 0.005</td>
+<td>估计</td>
+</tr>
+<tr>
+<td>max_velocity</td>
+<td>11.833 rad/s</td>
+<td>113 RPM 换算</td>
+</tr>
+<tr>
+<td>固件 P 映射</td>
+<td>运行时 200 × 0.16 = STS P 32</td>
+<td>控制律换算</td>
+</tr>
+<tr>
+<td>命令延迟</td>
+<td>2–6 ticks</td>
+<td>初始包络,未实测</td>
+</tr>
+<tr>
+<td>vin</td>
+<td>6.6–8.2 V</td>
+<td>下界比 XL330 略提高</td>
+</tr>
+</tbody>
+</table>
+<p>对比 XL330 的 m6(含负载相关、方向相关、Stribeck 项),m1 只有基础电机 + 库仑/黏性摩擦。报告用加粗字体承认:<strong>扩大随机化只能覆盖不确定性,不能替代真实辨识</strong>——这正是我们<a href="/learn/deep-55">解读 55–57</a> 单摆台架流程要补的课。</p>
+<h2 id="5-运行时改动同一个-trait另一个协议栈">5. 运行时改动:同一个 trait,另一个协议栈</h2>
+<p>真机侧新增 <code>FeetechIo</code> 实现既有 <code>RobotIo</code> trait,启动时按配置在 DynamixelIo/FeetechIo 之间二选一;选完后,策略、观测拼装、安全状态机、跌倒检测<strong>共用同一套代码</strong>,不产生 HD 专用分叉。配置层面三件事:<code>protocol = "feetech-sts"</code> 显式选择;<code>feetech_p_scale = 0.16</code>(运行时 Kp 200 映射 STS P 32,limp 50 → 8,最后 clamp 到 1–254);<code>feetech_direction</code> 恰好 15 项 ±1,顺序严格对齐关节名——代码不会猜方向。</p>
+<h2 id="你带走的收获">你带走的收获</h2>
+<ul>
+<li>换舵机 = 换"物理模型 + 协议栈"两层,PPO 作为学习方法原封不动——但要重新训练权重。</li>
+<li>独立任务 ID + 独立参数目录,而不是复制整套训练代码:新旧路线并存,互不污染。</li>
+<li>质量补丁要按可视网格计数并断言数量,防止碰撞网格造成双重计重。</li>
+<li>"配置里写了"和"训练时实际启用了"是两回事——下篇有一个现成的反面案例。</li>
+<li>估计参数 + 扩大随机化是合法的初版策略,但报告从头到尾没有把估计值说成实测值。</li>
+</ul>
+<h2 id="延伸">延伸</h2>
+<ul>
+<li>结果怎么读、哪些不能照搬:<a href="/learn/deep-202">解读 202</a></li>
+<li>我们的换舵机方法论:<a href="/learn/deep-73">解读 73</a>、<a href="/learn/deep-79">解读 79</a></li>
+<li>本地报告原文:<code>docs/research/hd1910迁移站立行走PPO训练.html</code></li>
+</ul>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

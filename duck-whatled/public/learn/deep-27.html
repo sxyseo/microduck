@@ -125,7 +125,7 @@
 <h1 id="解读-27-standup-配置起身的课程设计">解读 27 · standup 配置:起身的课程设计</h1>
 <blockquote>
 <p><strong>解读对象</strong>:<code>microduck-replica/upstream/microduck_rl/src/mjlab_microduck/tasks/microduck_standup_env_cfg.py</code>(1159 行)<br />
-<strong>需要的前置</strong>:<a href="/learn/deep-24">解读 24</a>(velocity 的 reward 栈)、<a href="README.md">总纲</a></p>
+<strong>需要的前置</strong>:<a href="/learn/deep-24">解读 24</a>(velocity 的 reward 栈)、<a href="/learn/deep">总纲</a></p>
 </blockquote>
 <h2 id="在做什么">在做什么</h2>
 <p>这个文件定义「从坐姿关键帧 gently 站起来」的任务:reset 在坐姿(躯干高度 <code>SIT_Z = 0.060</code>,microduck_standup_env_cfg.py:88),目标是站姿(<code>STAND_Z = 0.115</code>,:94,注释强调这是仿真实测的自然平衡高度,旧值 0.120 比机械可达高 5 mm,逼出过还债式的后仰)。策略从 t=0 就只追一个固定目标——没有轨迹路标、没有阶段时钟,起身的路径让策略自己发现。课程(curriculum,即按训练迭代分阶段改参数的机制)不是用来切分动作的,而是用来<strong>编排难度和惩罚的出场顺序</strong>。</p>

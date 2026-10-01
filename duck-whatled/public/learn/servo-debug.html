@@ -125,7 +125,7 @@
 <h1 id="macos-舵机调试id-设置与图纸查看手册">macOS 舵机调试、ID 设置与图纸查看手册</h1>
 <blockquote>
 <p>回答三个问题：① Mac 上怎么调试舵机？② 怎么给舵机设置 ID？③ 各类图纸/电路图用什么软件看？<br />
-前置：<a href="新手学习文档.md">新手学习文档</a>（概念）、<a href="进阶学习文档-训练仿真与部署.md">进阶篇</a>（训练与部署）。<br />
+前置：<a href="/learn/newbie">新手学习文档</a>（概念）、<a href="/learn/advanced">进阶篇</a>（训练与部署）。<br />
 本手册只讲 macOS 实操，所有路径都对应你工作区里的真实文件。</p>
 </blockquote>
 <hr />
@@ -196,7 +196,7 @@
 # 解析不了就去路由器后台查 IP，用 ssh 用户名@192.168.x.x
 </code></pre>
 <h3 id="13-接线改线前永远先断电">1.3 接线（改线前永远先断电）</h3>
-<p>照 <a href="../microduck-replica/rl-series/scripts/pi_sg90_bench.py">pi_sg90_bench.py</a> 头注释：</p>
+<p>照 <a href="https://github.com/sxyseo/microduck-replica/blob/master/rl-series/scripts/pi_sg90_bench.py">pi_sg90_bench.py</a> 头注释：</p>
 <pre><code>SG90 橙线(信号) → GPIO 17 / 27 / 22 / 23 / 24（BCM 编号，物理引脚见 pinout.xyz）
 SG90 红线(电源) → 外接 5V≥3A 电源正极     ⚠️ 绝不要接 Pi 的 5V！
 SG90 棕线(地)   → 外接电源负极，并且和 Pi 的 GND 至少连一根线（共地！）
@@ -244,7 +244,7 @@ python3 pi_sg90_bench.py 4   # ④ 开环漂移：命令 90° 后手指捏住输
 </tr>
 </tbody>
 </table>
-<p>来源：<a href="../microduck-replica/docs/电控采购清单.md">电控采购清单</a>（含淘宝实链）、<a href="../microduck-build-tutorial/README.md">Microduck-build-tutorial BOM</a>。</p>
+<p>来源：<a href="https://github.com/sxyseo/microduck-replica/blob/master/docs/电控采购清单.md">电控采购清单</a>（含淘宝实链）、<a href="https://github.com/sxyseo/Microduck-build-tutorial/blob/main/README.md">Microduck-build-tutorial BOM</a>。</p>
 <p><strong>Feetech 舵机 + 没有图形软件的三个替代</strong>（按省事排序）：<br />
 1. <strong>Python SDK</strong>：Feetech 官方 SCServo SDK（GitHub 上有 Python 版），Mac 终端直接跑，扫 ID、改 ID、读角度几行代码的事；<br />
 2. <strong>在 Pi 上跑</strong>：把调试板插 Pi，用 SDK/串口调试，Mac ssh 过去——和 SG90 台架同一套工作流；<br />
@@ -285,6 +285,28 @@ ls /dev/tty.usb*
 <li>出现了就别用 <code>screen</code> 命令去调 1Mbps——macOS 的 <code>screen</code> 波特率上限不够，<strong>总线调试一律用 Wizard 或 Python（pyserial 支持 1Mbps）</strong>。</li>
 </ul>
 <hr />
+<h2 id="2b-飞特官方调试软件与-web-版urt2fe-urt-1-用户看这里">2b. 飞特官方调试软件与 Web 版（URT2/FE-URT-1 用户看这里）</h2>
+<ul>
+<li><strong>官方软件页</strong>：<a href="https://www.feetechrc.com/software.html">https://www.feetechrc.com/software.html</a>（国际站）或 <a href="https://www.feetech.cn/software.html">https://www.feetech.cn/software.html</a>（中文站）——提供 FD1.9.8.3 / FD1.9.8.2（离线版，Windows）、<strong>"FD上位软件下载"</strong> 资源包（内含各平台版本，macOS 版即从这里取；Hugging Face LeRobot 文档也确认了 macOS 版 FD 的存在）。</li>
+<li><strong>"Servo Web" 网页版</strong>：官网页面没有公开直链——在"FD上位软件下载"资源包内，或直接向飞特客服索取（报舵机型号 HL-2915-C001 + 调试板 URT2 即可）。Web 版基于 Chrome 的 Web Serial,用 Chrome/Edge 打开、macOS 授权串口即可,免安装。</li>
+<li><strong>注意</strong>：FD 离线版 zip 多为 Windows 程序;macOS 上最省事的路线是 Web 版,或直接用本项目现成的 <code>microduck-replica/rl-series/scripts/hl2915_bench.py</code>（pyserial 原生,六课脚本,HL-2915 专用寄存器已内置,见解读 63）。</li>
+<li><strong>本项目网页版调试台</strong>:https://duck.whatled.com/tools/servo-debug-web —— Chrome/Edge 打开,Web Serial 直连 URT2:<strong>支持 HL-2915 与 HL-1910(型号选择器自适应电压警告与保护默认值)</strong>:遥测仪表、位置滑杆与限幅、P/D/I 增益、行程/保护 EEPROM 读写、急停,免安装、跨平台。</li>
+</ul>
+<h2 id="2c-urt2-接线与-12v-电源适配实测流程">2c. URT2 接线与 12V 电源适配（实测流程）</h2>
+<p><strong>电源判断</strong>:12V 2A(24W)适配器对台架<strong>够用</strong>——HL-2915 额定 ~500mA、堵转 ~1.5A,单只舵机 2A 兜得住;两只同时大力动作会超,台架阶段一次跑一只。整机 15+ 只舵机不能用 2A 适配器(那是电池的事)。</p>
+<p><strong>接线五步(不用猜丝印)</strong>:<br />
+1. 断电,万用表蜂鸣档认地:一支表笔接 USB 外壳/白色舵机座的 G 针,另一支逐个碰蓝色端子 4 个螺丝——响的是 G(通常两个相连);<br />
+2. 丝印带 V(或 V2)的是电源正极;丝印 <strong>S 是 TTL 信号,绝不接电源</strong>;<br />
+3. 12V+ → V,12V− → G;已插在端子上的未知 2P 插头先拔下确认丝印再回插;<br />
+4. 上电,直流 20V 档量白色舵机座 V–G:读到 12.0V 左右、极性正确才插舵机;<br />
+5. 板上拨动开关 = 电源来源选择,打向外部电源一侧(以丝印为准);接反量出负电压立即断电对调。</p>
+<p><strong>上电验收</strong>:跑 <code>hl2915_bench.py 2</code> 遥测,电压应显示 ≈12.0V(之前 4.4V = 只有 USB 电平、主电源未上,位置指令不会动);然后课 3 小步幅就会动了。</p>
+<p><strong>⚠️ 上电顺序(实测踩坑)</strong>:12V <strong>热插拔</strong>会让板上电源域切换、USB 芯片复位,Mac 立刻"识别不到"——不是烧板,重插 USB 即恢复。标准顺序:<strong>先上 12V,再插 USB;断开时先拔 USB,再断 12V;不要在 USB 已连接时热插拔 12V</strong>。若想知道是否 12V 倒灌进 USB 口(会触发 Mac 端口过流保护),可在 USB 不插 Mac、12V 上电时量板侧 USB 口 VBUS 针脚——有电压即倒灌,更应坚持该顺序。</p>
+<p><strong>两个 12V 2A 的用法</strong>:一颗给舵机台架,另一颗留作备用(或后续 HAT 板点亮测试,口径另核)。</p>
+<p><strong>⚠️ 事故复盘(2026-09-14,首例)</strong>:一次按丝印接线后上 12V,URT2 的 USB 识别丢失。<br />
+教训固化三条:<strong>①板上丝印可能与实际走线不符——新板第一次上电前,必须用万用表实测端子定义</strong>(蜂鸣档认地、量 V 轨),不能只看丝印;<strong>②第一次上电在电源线里串一颗 2A 保险丝</strong>,把最坏情况的故障电流限住;<strong>③12V 只能接电源轨(V/G),S/A/B 是信号脚,打上 12V 会损坏收发器与 USB 桥</strong>。<br />
+事故判定方法(只插 USB):看板上 LED → 系统报告看 USB 枚举 → 万用表量舵机座 V–G;三步分别定位"供电输入段 / USB 桥 / 全板"损坏。<br />
+<strong>替代方案</strong>:URT2 报废期间,任何 3.3V TTL 的 USB 转串口小板(CH340/CP2102/FT232)可顶替——TXD 与 RXD 短接后接舵机 S,GND 接舵机 G,12V 直接接舵机 V/G(不经小板);串口选 dongle 的 /dev/tty.usbserial-*,1Mbps,bench 脚本与网页版调试台照常可用。</p>
 <h2 id="3-用-dynamixel-wizard-20-调试dynamixel-路线">3. 用 Dynamixel Wizard 2.0 调试（Dynamixel 路线）</h2>
 <ol>
 <li><strong>安装</strong>：ROBOTIS 官网 Support → Software → 下载 <strong>DYNAMIXEL Wizard 2.0 macOS 版</strong>（免费 dmg），拖进应用程序；</li>
@@ -373,11 +395,11 @@ ls /dev/tty.usb*
 </tr>
 </tbody>
 </table>
-<p>出处：<a href="../microduck-replica/docs/硬件规格速查.md">硬件规格速查</a>。</p>
-<p><strong>平价教程路线</strong>（Pi Zero 2W + OpenRB-150，仅作对照）：ID 1–15（1=右踝…10=左踝…11–14=头颈，15=嘴），出处见 <a href="../microduck-build-tutorial/README.md">Microduck-build-tutorial</a>。</p>
+<p>出处：<a href="https://github.com/sxyseo/microduck-replica/blob/master/docs/硬件规格速查.md">硬件规格速查</a>。</p>
+<p><strong>平价教程路线</strong>（Pi Zero 2W + OpenRB-150，仅作对照）：ID 1–15（1=右踝…10=左踝…11–14=头颈，15=嘴），出处见 <a href="https://github.com/sxyseo/Microduck-build-tutorial/blob/main/README.md">Microduck-build-tutorial</a>。</p>
 <p>装错表的后果：部署代码按 ID 找关节，表混了 = 左腿当成右腿 = 一上电就劈叉。</p>
 <h3 id="44-feetech-舵机设-id">4.4 Feetech 舵机设 ID</h3>
-<p>同样一次一只（出厂 ID 也是 1）。FD 软件里直接改 ID/波特率；Python SDK 里调 <code>WriteByte(ID, 5, new_id)</code> 一类的接口（不同 SDK 封装略有差异，照其 examples/ping 改）。飞特出厂 Return Delay 已是 0（出处：<a href="../microduck-replica/docs/电控采购清单.md">电控采购清单</a> 注释）， baud 出厂 1Mbps，要改的主要就是 ID。改完同样贴标签。</p>
+<p>同样一次一只（出厂 ID 也是 1）。FD 软件里直接改 ID/波特率；Python SDK 里调 <code>WriteByte(ID, 5, new_id)</code> 一类的接口（不同 SDK 封装略有差异，照其 examples/ping 改）。飞特出厂 Return Delay 已是 0（出处：<a href="https://github.com/sxyseo/microduck-replica/blob/master/docs/电控采购清单.md">电控采购清单</a> 注释）， baud 出厂 1Mbps，要改的主要就是 ID。改完同样贴标签。</p>
 <h3 id="45-sg90-没有-id">4.5 SG90 没有 ID</h3>
 <p>PWM 舵机每只独占一根信号线，"地址"就是它插的 GPIO 脚号（17/27/22/23/24/25）——这也是 PWM 方案 15 只舵机要拉 15 根线、总线方案只要一根线的直观区别。</p>
 <hr />
@@ -455,7 +477,7 @@ ls /dev/tty.usb*
 </tr>
 </tbody>
 </table>
-<p><strong>建议的阅读顺序</strong>（配合新手篇第 5、6 节的读图五步法）：先看 <a href="../microduck-replica/docs/硬件规格速查.md">硬件规格速查</a> 的系统框图（知道有哪些块）→ 接线表（知道每根线去哪）→ 原理图 PDF（块内怎么连）→ 嘉立创 EDA 打开工程（对照 3D 看 PCB）→ 装配爆炸图 PNG（机械侧）→ 21 页说明书（装配顺序）。</p>
+<p><strong>建议的阅读顺序</strong>（配合新手篇第 5、6 节的读图五步法）：先看 <a href="https://github.com/sxyseo/microduck-replica/blob/master/docs/硬件规格速查.md">硬件规格速查</a> 的系统框图（知道有哪些块）→ 接线表（知道每根线去哪）→ 原理图 PDF（块内怎么连）→ 嘉立创 EDA 打开工程（对照 3D 看 PCB）→ 装配爆炸图 PNG（机械侧）→ 21 页说明书（装配顺序）。</p>
 <hr />
 <h2 id="6-一个周末的实操串联">6. 一个周末的实操串联</h2>
 <p><strong>周六（SG90 日，¥0）</strong><br />

@@ -1,0 +1,2061 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>HD-1910 仿真迁移与 PPO 训练教程 · 什么鸭 WhatDuck</title>
+<meta name="description" content="从 XL330 到 HD-1910：机械与执行器参数迁移、BAM 建模、PPO 训练、横移与转向评测、ONNX 导出，以及真机验证的完整路线。">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="HD-1910 仿真迁移与 PPO 训练教程">
+<meta property="og:description" content="从 XL330 到 HD-1910：机械与执行器参数迁移、BAM 建模、PPO 训练、横移与转向评测、ONNX 导出，以及真机验证的完整路线。">
+<meta property="og:url" content="https://duck.whatled.com/learn/hd1910-tutorial">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/hd1910-tutorial">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">MANUAL 05 · HD-1910 迁移篇 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-19 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="从-xl330-到-hd-1910microduck-仿真迁移与-ppo-训练教程">从 XL330 到 HD-1910：Microduck 仿真迁移与 PPO 训练教程</h1>
+<blockquote>
+<p>从“替换参数后能训练”，走到“能解释结果、能复现实验、知道下一步验证什么”。</p>
+<p>编写日期：2026-09-19。本文整理用户提供的 HD-1910 迁移报告，并补充原理、操作顺序、评测方法和本地代码核对结果。</p>
+</blockquote>
+<h2 id="0-先明确这次迁移完成了什么">0. 先明确这次迁移完成了什么</h2>
+<p>本次案例将 Microduck 的 XL330 执行器配置替换为 HD-1910 的初步模型，在仿真中训练了一晚。<strong>基础站立和前行已完成初步仿真验证；横移、转向和真机自由行走尚未完成。</strong></p>
+<p>这里的“基础验证”有明确范围：在报告给出的短时仿真场景中，机器人能够保持支撑并产生前向移动。它还不代表长期站立不漂移、准确直线行走、各种方向都能跟踪，也不代表策略已经适合真机。</p>
+<h3 id="01-本文的三种信息来源">0.1 本文的三种信息来源</h3>
+<table>
+<thead>
+<tr>
+<th>标记</th>
+<th>含义</th>
+<th>阅读方式</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>案例记录</td>
+<td>用户提供的 HTML 报告及用户补充的训练状态</td>
+<td>说明这次实验做过什么；原始 checkpoint 和完整日志未在本次写作中独立复跑</td>
+</tr>
+<tr>
+<td>本地核对</td>
+<td>当前 <code>/Volumes/dev/dev/microduck</code> 中实际读取的代码</td>
+<td>说明当前工作区有什么；不等同于报告作者的 Linux 工作区版本</td>
+</tr>
+<tr>
+<td>教程建议</td>
+<td>为复现、排错和下一轮实验补充的方法</td>
+<td>尚未执行的实验和建议门槛，不写成已经通过的结果</td>
+</tr>
+</tbody>
+</table>
+<p>案例训练目录是 <code>/home/july/microduck_rl</code>，运行时目录是 <code>/home/july/microduck</code>。本文不会假设这两个目录存在于读者电脑上。HD-1910 专用任务和脚本是案例中的新增内容，普通上游仓库不一定包含。</p>
+<p><strong>命名约定：</strong>本文沿用报告的 <code>HD-1910</code>。工作区历史资料中的 <code>HL-1910</code>、已有实现中的 <code>HL-2915</code>，不能未经型号、后缀和厂商规格核对就认定为同一产品。后文的 HD 电压、质量、电流均是案例参数，不是对所有同名舵机的额定规格承诺。</p>
+<h3 id="02-读完后应当能够做到">0.2 读完后应当能够做到</h3>
+<ol>
+<li>说清楚更换舵机影响哪些层，哪些接口可以保留。</li>
+<li>为每个参数标明单位、来源、作用位置和验证办法。</li>
+<li>完成配置检查、小规模训练、回放、导出和独立评测。</li>
+<li>区分训练正常、仿真能力形成、部署兼容和真机验证。</li>
+<li>根据横移、转向、动作饱和等具体问题安排下一轮实验。</li>
+</ol>
+<p>本文中的操作分为“只读检查”“仿真实验”和“未来硬件阶段”。阅读或生成这份教程没有触发训练、联网发布、串口操作或机器人运动。</p>
+<h2 id="1-先认识整条控制链">1. 先认识整条控制链</h2>
+<pre><code class="language-text">速度、头部等命令
+        ↓
+传感器/仿真状态 → 拼装 61 维观测 → 观测归一化 → Actor 策略
+        ↑                                      ↓
+        │                                  14 维动作
+        │                                      ↓
+        │                            HOME + scale × action
+        │                                      ↓
+        │                         延迟、限幅、固件控制器模型
+        │                                      ↓
+        └──── 机器人运动 ← 接触与刚体动力学 ← 电机力矩与摩擦
+
+训练时：额外用 Critic、奖励和 PPO 更新神经网络权重
+部署时：用 ONNX 做推理，由 robotd 读取传感器、发出目标并处理安全状态
+</code></pre>
+<p>几个容易混淆的名词：</p>
+<table>
+<thead>
+<tr>
+<th>名词</th>
+<th>负责什么</th>
+<th>本例中的作用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>MJCF / MuJoCo</td>
+<td>身体结构、关节、质量、惯量、碰撞与动力学</td>
+<td>机器人在仿真里怎样运动</td>
+</tr>
+<tr>
+<td>BAM</td>
+<td>Better Actuator Models，执行器模型</td>
+<td>目标角度怎样经过固件、电机和摩擦变成力矩</td>
+</tr>
+<tr>
+<td>MDP</td>
+<td>状态转移、观测、动作、奖励和终止条件</td>
+<td>定义策略要学习的问题</td>
+</tr>
+<tr>
+<td>Actor</td>
+<td>根据观测输出动作的网络</td>
+<td>部署时继续使用</td>
+</tr>
+<tr>
+<td>Critic</td>
+<td>估计状态的长期回报</td>
+<td>帮助训练；本例部署不需要它</td>
+</tr>
+<tr>
+<td>PPO</td>
+<td>优化 Actor/Critic 的学习算法</td>
+<td>利用仿真采样不断更新权重</td>
+</tr>
+<tr>
+<td>ONNX</td>
+<td>导出后的推理模型</td>
+<td>把训练得到的 Actor 送入运行时</td>
+</tr>
+<tr>
+<td>Sim-to-real</td>
+<td>从仿真迁移到实物</td>
+<td>检查模型假设在现实中是否成立</td>
+</tr>
+</tbody>
+</table>
+<p>PPO 只会在它接触到的环境里学习。如果仿真中的舵机反应特别快、力矩特别大、没有实际摩擦，策略可能学到真机做不出的动作。换舵机首先要检查这个“环境中的身体”是否合理。</p>
+<h2 id="2-采用什么重构方式">2. 采用什么重构方式</h2>
+<h3 id="21-保留接口为硬件差异建立独立配置">2.1 保留接口，为硬件差异建立独立配置</h3>
+<p>本案例的基本思路值得复用：在原任务外增加 HD 配置，复用观测、命令、奖励和 PPO，先把差异集中在身体与执行器层。</p>
+<table>
+<thead>
+<tr>
+<th>层</th>
+<th>第一轮保留</th>
+<th>第一轮替换或核查</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>机械</td>
+<td>关节命名、顺序；装配等价时保留运动学</td>
+<td>舵机质量、质心、惯量、外壳与碰撞</td>
+</tr>
+<tr>
+<td>执行器</td>
+<td>BAM 接口与任务调用方式</td>
+<td>JSON 参数、固件控制律、电压、延迟、限速</td>
+</tr>
+<tr>
+<td>任务</td>
+<td>61 维观测、14 维动作、平地速度任务</td>
+<td>robot entity、有效随机化项、任务 ID</td>
+</tr>
+<tr>
+<td>PPO</td>
+<td>网络和优化器基线</td>
+<td>实验名、运行名；重新学习网络权重</td>
+</tr>
+<tr>
+<td>运行时</td>
+<td>RobotIo 上层、观测、策略与安全状态机</td>
+<td>通信协议、寄存器、单位换算、零位、方向</td>
+</tr>
+</tbody>
+</table>
+<p>“保留关节限位和 HOME”有前提：安装方向、机械零位、连杆几何和可用行程仍相容。机械结构改变后，应更新这些量并重新检查接口语义，不能为了少改代码保留错误数值。</p>
+<h3 id="22-推荐的职责划分">2.2 推荐的职责划分</h3>
+<p>以下是教程建议的结构；同名文件是否存在，以读者自己的分支为准。</p>
+<pre><code class="language-text">src/mjlab_microduck/
+  robot/
+    microduck_constants.py         XL330 基线
+    hd1910_constants.py            HD 身体、执行器与初始姿态配置
+    hd1910_params/
+      preliminary_m1.json         案例初始估计
+      parameter-provenance.json   建议新增：来源、单位、版本和适用条件
+  tasks/
+    microduck_velocity_env_cfg.py  共享速度任务
+    microduck_hd1910_env_cfg.py    HD 任务包装
+    __init__.py                    注册独立任务 ID
+  actuator/
+    friction_dr_bam.py             摩擦随机化与必要兼容处理
+scripts/
+  train_hd1910.sh                  案例训练包装入口
+tests/
+  test_hd1910_cfg.py               配置、计数、维度等检查
+</code></pre>
+<p>新增独立任务的好处是可以对同一份基础代码做 XL330/HD 对照。不要把“原版配置”直接覆盖成 HD，再让任务名仍然叫原版；否则日志和模型很容易失去硬件归属。</p>
+<h3 id="23-参数来源比参数文件名更重要">2.3 参数来源比参数文件名更重要</h3>
+<p>每个关键参数至少记录以下信息：</p>
+<table>
+<thead>
+<tr>
+<th>字段</th>
+<th>示例或用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>参数名与单位</td>
+<td><code>armature_kg_m2</code>，避免只有一个无单位数字</td>
+</tr>
+<tr>
+<td>对应硬件</td>
+<td>完整型号、版本、序列号或批次</td>
+</tr>
+<tr>
+<td>数值来源</td>
+<td>规格书、称重、台架拟合、人工估计</td>
+</tr>
+<tr>
+<td>条件</td>
+<td>电压、温度、负载、固件、P 值</td>
+</tr>
+<tr>
+<td>不确定性</td>
+<td>拟合误差、范围或“尚未测量”</td>
+</tr>
+<tr>
+<td>证据文件</td>
+<td>原始日志、规格页、CAD 导出文件及 SHA-256</td>
+</tr>
+<tr>
+<td>适用范围</td>
+<td>仅仿真初版 / 单舵机验证 / 整机验证</td>
+</tr>
+</tbody>
+</table>
+<p><code>preliminary_m1.json</code> 可以让管线开始工作，但不应因为文件被成功加载就变成“实测 HD 模型”。</p>
+<h2 id="3-准备环境与冻结基线">3. 准备环境与冻结基线</h2>
+<p><strong>本节目标：</strong>明确“在哪个仓库、什么依赖版本、哪个硬件模型”上复现实验。</p>
+<h3 id="31-先准备完整的实验材料">3.1 先准备完整的实验材料</h3>
+<p>要复现案例，除本文之外，还需要案例的 HD 专用源码、机器人资源、参数 JSON 和依赖锁文件。要复现那一晚的具体结果，还需要 checkpoint、resolved 配置、训练日志和评测脚本。</p>
+<p>只拿到 HTML 报告时，可以学习迁移方法、编写适配和准备检查；不能声称已经复现案例。</p>
+<table>
+<thead>
+<tr>
+<th>计算资源</th>
+<th>合理用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>本地开发电脑</td>
+<td>阅读、代码检查、模型检查、ONNX 检查；后端支持时做 CPU 小实验</td>
+</tr>
+<tr>
+<td>已配置 CUDA 的训练机</td>
+<td>并行环境和长训练</td>
+</tr>
+<tr>
+<td>Radxa 主控</td>
+<td>后续运行策略与总线控制，不承担本案例的大规模 PPO 训练</td>
+</tr>
+</tbody>
+</table>
+<p>上游训练入口和任务注册方法可参考 <a href="https://github.com/pollen-robotics/microduck_rl">Microduck RL 仓库</a>。GPU、依赖和 CLI 行为随版本变化；CPU smoke 在案例中成功，不代表任意上游版本、任意平台都具备同样支持。</p>
+<h3 id="32-只读确认仓库和依赖">3.2 只读确认仓库和依赖</h3>
+<p>在已进入的训练仓库根目录执行：</p>
+<pre><code class="language-bash">pwd
+git rev-parse HEAD
+git status --short
+uv --version
+uv run python -V
+uv run python -c &quot;import torch; print(torch.__version__); print(torch.cuda.is_available())&quot;
+uv run list-envs
+</code></pre>
+<p>最后一个命令用于检查当前注册的任务。如果版本没有这个入口，先看本仓库 README 和 <code>pyproject.toml</code>，不要用名称相近的其他程序代替。</p>
+<p><strong>预期结果：</strong>能够明确版本、解释工作区改动，并看到原任务；具备 HD 适配时，还应看到 <code>Mjlab-Velocity-Flat-HD1910-MicroDuck</code>。</p>
+<p><code>uv run</code> 可能按锁文件准备依赖，所以首次运行要预留安装时间和网络条件。已经能够运行的基线应保留其 <code>uv.lock</code>，避免为这次迁移顺手升级整个依赖栈。</p>
+<h3 id="33-留下可重建的快照">3.3 留下可重建的快照</h3>
+<p>建议每轮实验保存：</p>
+<pre><code class="language-text">experiment/
+  source/                 对应提交与未提交代码的快照
+  dependency-versions.txt  Python、Torch、MuJoCo、mjlab、BAM 等
+  uv.lock
+  resolved-env.json        最终环境配置，含真正启用的事件
+  resolved-agent.json      最终 PPO 配置
+  robot-assets/           MJCF、mesh、纹理和质量来源
+  actuator.json
+  provenance.json
+  checkpoints/
+  metrics/
+  videos/
+  export/
+</code></pre>
+<p>这里只定义推荐产物结构，不宣称工具已经自动生成它们。尤其不要只记录 Git commit 而漏掉未提交的 HD 参数文件。当前 Studio 的源码快照设计可作为参考，但其训练入口仍对非 XL330 执行器设有适配门槛。</p>
+<h3 id="34-跑通一个原版基线">3.4 跑通一个原版基线</h3>
+<p>先确认原版任务在当前环境能注册、构建并进入训练，再加入 HD 差异。这样，发生导入失败、GPU 初始化失败或模型资源缺失时，不会误认为是换舵机导致。</p>
+<p><strong>本节验收：</strong>基线能运行；版本、源码、资源和依赖可追踪；HD 实验有独立名称与输出目录。</p>
+<h2 id="4-机械模型先改质量再理解惯量与几何">4. 机械模型：先改质量，再理解惯量与几何</h2>
+<h3 id="41-案例的质量替换">4.1 案例的质量替换</h3>
+<p>案例采用的数值是：</p>
+<table>
+<thead>
+<tr>
+<th>项目</th>
+<th style="text-align: right;">XL330 基线</th>
+<th style="text-align: right;">HD-1910 初版</th>
+<th style="text-align: right;">差值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>单舵机质量</td>
+<td style="text-align: right;">0.018 kg</td>
+<td style="text-align: right;">0.021 kg</td>
+<td style="text-align: right;">+0.003 kg</td>
+</tr>
+<tr>
+<td>实体舵机数量</td>
+<td style="text-align: right;">15</td>
+<td style="text-align: right;">15</td>
+<td style="text-align: right;">—</td>
+</tr>
+<tr>
+<td>整机舵机增重</td>
+<td style="text-align: right;">—</td>
+<td style="text-align: right;">—</td>
+<td style="text-align: right;">+0.045 kg</td>
+</tr>
+</tbody>
+</table>
+<p>这些数值来自案例报告。采购件是否真是 21 g，要实测；线材、螺钉、舵盘或支架随之改变时，也要计入。</p>
+<p>对一个含有 <code>n</code> 个舵机的刚体，案例近似为：</p>
+<pre><code class="language-text">m_new = m_old + n × (0.021 - 0.018)
+I_new = I_old × m_new / m_old
+</code></pre>
+<p>为什么按刚体分配？同样增加 45 g，放在躯干和放在两脚，对平衡与摆腿的影响不同。</p>
+<h3 id="42-避免把同一只舵机数两遍">4.2 避免把同一只舵机数两遍</h3>
+<p>案例按可视 mesh <code>xl330</code> 且 <code>group == 2</code> 计数，跳过重复的碰撞 mesh，并要求总数恰好为 15。这个方法适合它对应的模型版本。</p>
+<p>更稳妥的长期办法是维护明确的“舵机实例 → 刚体”映射。mesh 名字、分组和导出方式会变化，不能把 <code>group == 2</code> 当作所有 MJCF 的固定规范。</p>
+<p>检查顺序：</p>
+<ol>
+<li>输出每个刚体包含哪些舵机实例。</li>
+<li>核对总数为 15，其中嘴部不进入 14 维策略动作。</li>
+<li>比较替换前后整机质量，期望本案例差值为 0.045 kg。</li>
+<li>确认重复构建模型不会累计加重。</li>
+<li>对训练实际使用的每个模型入口应用同一规则，避免 walk 已改、回放模型未改。</li>
+</ol>
+<h3 id="43-为什么同比缩放惯量只是近似">4.3 为什么同比缩放惯量只是近似</h3>
+<p>惯量描述物体对旋转加速度的抵抗。增加质量但保持原质心、把全部惯量按同一比例放大，相当于假设新增质量大致沿原分布增加。</p>
+<p>实际换舵机可能让质量集中在不同位置。更准确的处理是根据各部件质量和位置重新计算组合质心，再把每个部件的惯量旋转、平移到共同坐标系后求和。</p>
+<pre><code class="language-text">组合质心 c = Σ(m_i × c_i) / Σm_i
+
+部件关于新质心的贡献：
+I_i,new = R_i × I_i,local × R_i^T
+          + m_i × (||d_i||² × E - d_i × d_i^T)
+
+I_total = Σ I_i,new
+</code></pre>
+<p>其中 <code>d_i</code> 是部件质心到组合质心的位移，<code>E</code> 是单位矩阵。这说明“增加质量”与“修改惯量”不是任意选一个倍数就结束。</p>
+<p>除正质量、正惯量外，还应检查惯量的物理可实现性、坐标系及模型编译结果；正定不是全部条件。MJCF 字段含义以 <a href="https://mujoco.readthedocs.io/en/stable/XMLreference.html">MuJoCo XML 参考</a> 为准。</p>
+<h3 id="44-显示模型和碰撞模型要分开检查">4.4 显示模型和碰撞模型要分开检查</h3>
+<p>外观能显示，不说明碰撞正确。核查舵机壳体、腿部间距、脚底接触面和关节轴；如果安装孔位不同，还会改变运动学。</p>
+<p><strong>本节验收：</strong>质量计数正确、不重复应用；HOME 姿态无明显穿模；脚底确实接地；连杆与碰撞来源可追踪。比例缩放阶段明确标为“机械近似”。</p>
+<h2 id="5-执行器模型从目标角度到真实力矩">5. 执行器模型：从目标角度到真实力矩</h2>
+<h3 id="51-不同舵机的-p-值不能直接比较">5.1 不同舵机的 P 值不能直接比较</h3>
+<p>策略给出目标角度，舵机内部固件根据误差决定驱动强度。相同 <code>P=32</code>，在不同固件中可能对应不同的误差单位、PWM 增益、限流与目标滤波。</p>
+<p>概念上可写成：</p>
+<pre><code class="language-text">角度误差 → 固件比例增益与内部限幅 → PWM/电压
+电压与反电动势 → 电流 → 电磁力矩
+电磁力矩、齿轮摩擦、转子惯量 → 输出轴运动
+</code></pre>
+<p>这也解释了为什么“换了串口驱动，舵机能转”与“仿真执行器模型正确”是两件事。BAM 要求描述控制律、固件限制及待辨识参数；可参考 <a href="https://bam.readthedocs.io/en/latest/identification/actuator_modeling.html">BAM 执行器建模</a>。</p>
+<h3 id="52-案例初始参数表">5.2 案例初始参数表</h3>
+<p>下表用于理解实验，不是可以直接用于真机的参数推荐。</p>
+<table>
+<thead>
+<tr>
+<th>参数</th>
+<th style="text-align: right;">案例值</th>
+<th>单位或含义</th>
+<th>来源等级</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>kt</code></td>
+<td style="text-align: right;">0.73575</td>
+<td>N·m/A，等效力矩常数</td>
+<td>堵转规格估算</td>
+</tr>
+<tr>
+<td><code>R</code></td>
+<td style="text-align: right;">3.7</td>
+<td>Ω，等效电阻</td>
+<td>7.4 V / 2 A 估算</td>
+</tr>
+<tr>
+<td><code>armature</code></td>
+<td style="text-align: right;">0.00224</td>
+<td>kg·m²，折算到关节侧的附加惯量</td>
+<td>估计</td>
+</tr>
+<tr>
+<td><code>q_offset</code></td>
+<td style="text-align: right;">0.0</td>
+<td>rad</td>
+<td>初始设定</td>
+</tr>
+<tr>
+<td><code>friction_base</code></td>
+<td style="text-align: right;">0.015</td>
+<td>基础库仑摩擦项，通常为 N·m</td>
+<td>估计，按实际实现核对</td>
+</tr>
+<tr>
+<td><code>friction_viscous</code></td>
+<td style="text-align: right;">0.005</td>
+<td>黏性项，通常为 N·m·s/rad</td>
+<td>估计，按实际实现核对</td>
+</tr>
+<tr>
+<td><code>error_gain_ratio</code></td>
+<td style="text-align: right;">1.0</td>
+<td>控制误差增益修正</td>
+<td>初始设定</td>
+</tr>
+<tr>
+<td><code>max_velocity</code></td>
+<td style="text-align: right;">11.833</td>
+<td>rad/s，约 113 RPM</td>
+<td>规格换算，用作初始目标限速假设</td>
+</tr>
+<tr>
+<td><code>model</code></td>
+<td style="text-align: right;"><code>m1</code></td>
+<td>简化摩擦模型</td>
+<td>初版选择</td>
+</tr>
+<tr>
+<td><code>actuator</code></td>
+<td style="text-align: right;"><code>sts3215</code></td>
+<td>借用 STS 固件模型</td>
+<td>HD 等效性待测</td>
+</tr>
+</tbody>
+</table>
+<p>RPM 换算：<code>ω = RPM × 2π / 60</code>。113 RPM 约为 11.833 rad/s。</p>
+<p><code>q_offset</code> 还要区分用途：在 BAM 辨识中，它可表示台架装配造成的角度偏置；整机运行时的每关节编码器零位是另一份校准。不能把一次摆锤拟合出的偏置统一写入整机所有关节。</p>
+<p>需要注意：<strong>空载最大转速与固件的目标角度变化率上限不必相同。</strong> 将前者填入后者只能作为初始假设，应该通过阶跃和斜坡目标实验验证。</p>
+<h3 id="53-做一次数值自洽检查">5.3 做一次数值自洽检查</h3>
+<p>案例由堵转扭矩与电流估算 <code>kt</code>，由电压与电流估算 <code>R</code>，属于粗略建模。</p>
+<p>在简单电压电机模型且力矩/反电动势常数采用同一等效数值的假设下，空载速度上界近似为 <code>V / kt</code>。以案例的 7.4 V 和 0.73575 计算，约为 10.06 rad/s，低于另一条规格给出的 11.833 rad/s。PWM 上限和摩擦还会进一步影响速度。</p>
+<p>这不是判定产品规格错误，而是提示：测量条件、减速器效率、等效参数定义或初值组合未必一致。应让实际数据约束模型，不要强行认为从规格表算出的每个数字同时成立。</p>
+<h3 id="54-为什么-m1-可以起步但不能替代辨识">5.4 为什么 M1 可以起步，但不能替代辨识</h3>
+<p>案例从 XL330 的较复杂 M6 模型切换到 HD 的初步 M1。M1 更容易建立基线，能检查接口、采样、训练和导出是否连通。</p>
+<p>复杂模型未必自动更好：数据不足时，多参数模型也可能过拟合。建议用多负载、多轨迹数据比较候选模型，在留出日志上检查角度、速度和相位误差，再选择复杂度。</p>
+<p>特别要区分：</p>
+<ul>
+<li>拟合所用的轨迹误差小：说明对训练数据拟合得好。</li>
+<li>未参与拟合的轨迹误差也小：说明有一定泛化能力。</li>
+<li>整机行为接近：还需要结构、接触、传感器和运行时链路共同正确。</li>
+</ul>
+<p>单舵机采集与拟合的完整顺序见 <a href="https://bam.readthedocs.io/en/latest/identification/index.html">BAM 辨识流程</a>。</p>
+<h3 id="55-加载自定义-json-时防止悄悄回到-xl330">5.5 加载自定义 JSON 时防止悄悄回到 XL330</h3>
+<p>下面是<strong>配置模式示例</strong>，不是可直接运行的完整 HD 任务；需要已有 <code>base_actuator_cfg</code> 和有效 JSON 路径，字段以锁定版本为准。</p>
+<pre><code class="language-python">from dataclasses import replace
+
+hd_actuator_cfg = replace(
+    base_actuator_cfg,
+    motor_name=None,
+    model=None,
+    json_path=str(hd_json_path),
+    kp_fw=32,
+    vin_range=(6.6, 8.2),
+    delay_min_lag=2,
+    delay_max_lag=6,
+)
+</code></pre>
+<p><code>json_path</code> 与内置 <code>motor_name/model</code> 选择方式在本地 BAM 配置中互斥。加载后输出实际 actuator 类型、JSON 路径和关键数值，并检查加载器是否重新初始化、覆盖了拟合参数。</p>
+<p>报告中的 sag 字段是 <code>vin_drop_gain_range</code>；不同 BAM 版本还可能使用电阻形式的 <code>vin_drop_resistance_range</code>，两者不能仅改名字就当成等价。先读当前类的定义，再迁移数值。</p>
+<h2 id="6-时间尺度与状态重置两个容易漏掉的问题">6. 时间尺度与状态重置：两个容易漏掉的问题</h2>
+<h3 id="61-同一个step可能有三种意思">6.1 同一个“step”可能有三种意思</h3>
+<p>案例给出物理步长 0.005 s、decimation 为 4，因此：</p>
+<pre><code class="language-text">物理仿真：每秒 200 次，dt_physics = 0.005 s
+策略决策：每秒 50 次，dt_policy = 4 × 0.005 = 0.020 s
+一次 PPO rollout：每环境 24 个策略步 = 0.48 s
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>配置中的步数</th>
+<th>应确认的更新位置</th>
+<th>本案例条件下的换算</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>执行器 <code>delay_min_lag/max_lag</code></td>
+<td>物理循环还是策略循环</td>
+<td>物理步时 2–6 = 10–30 ms；策略步时 = 40–120 ms</td>
+</tr>
+<tr>
+<td>观测延迟</td>
+<td>观测管理器多久取一次样</td>
+<td>若每策略步更新，1 步 = 20 ms</td>
+</tr>
+<tr>
+<td>课程 <code>step</code></td>
+<td>环境公共步计数，还是所有并行样本数</td>
+<td>本报告使用 iteration × 24</td>
+</tr>
+</tbody>
+</table>
+<p><strong>对原报告的修订说明：</strong>报告将 2–6 步直接称为 40–120 ms。本次读取的本地 mjlab <code>ActuatorCfg</code> 明确写的是 <code>physics timesteps</code>，因此不能无条件沿用报告换算。要复现那一晚的物理延迟，必须取得当时依赖版本并确认调用点。</p>
+<p>可在训练环境做只读检查：</p>
+<pre><code class="language-bash">uv run python - &lt;&lt;'PY'
+import inspect
+from mjlab.actuator.actuator import ActuatorCfg
+print(inspect.getfile(ActuatorCfg))
+print(inspect.getsource(ActuatorCfg))
+PY
+</code></pre>
+<p>更可靠的验证是固定 lag，输入一次目标阶跃，记录“请求目标”和“实际送入固件模型的目标”的时间戳。不要只看关节开始运动的时间，因为机械响应会混入惯量与摩擦。</p>
+<h3 id="62-内部目标位置不能随便清零">6.2 内部目标位置不能随便清零</h3>
+<p>STS 类执行器可能先对内部目标 <code>q_target_smooth</code> 做速率限制。这个状态必须有正确形状，并在环境重置时正确初始化。</p>
+<p>案例为解决直接加载 JSON 的报错，创建了 <code>[num_envs, num_joints]</code> 张量并清零。这样可以消除“字段不存在”，但若 reset 后实际关节位于 HOME 非零角度，内部目标突然变成零，会引入额外的启动瞬态。</p>
+<p>本地 BAM 当前实现是在首次控制时把内部目标设为当前关节位置 <code>q</code>，部分环境 reset 时只更新对应环境。迁移时先检查依赖是否已有这套生命周期，不要重复补丁。</p>
+<p>建议验证四种情形：</p>
+<ol>
+<li>首次构建多个并行环境，张量形状和设备正确。</li>
+<li>只 reset 环境 0，其余环境状态保持连续。</li>
+<li>非零 HOME reset 后，无人工的目标跳变。</li>
+<li>同一步不重复推进有状态控制器；诊断调用不应额外改变内部状态。</li>
+</ol>
+<p><strong>本节验收：</strong>延迟统一写成毫秒并能追溯到更新步长；控制器在 reset 后没有跨环境串状态或无意的零位瞬态。</p>
+<h2 id="7-61-维观测14-维动作到底是什么">7. 61 维观测、14 维动作到底是什么</h2>
+<h3 id="71-actor-的输入">7.1 Actor 的输入</h3>
+<p>以下是案例契约，也与当前运行时的基本布局一致。每项仍需对齐单位、坐标系、正方向与顺序。</p>
+<table>
+<thead>
+<tr>
+<th>顺序</th>
+<th>内容</th>
+<th style="text-align: right;">维度</th>
+<th>主要注意事项</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>躯干角速度</td>
+<td style="text-align: right;">3</td>
+<td>rad/s，明确躯干坐标系</td>
+</tr>
+<tr>
+<td>2</td>
+<td>重力投影</td>
+<td style="text-align: right;">3</td>
+<td>与训练一致的坐标系和正负号</td>
+</tr>
+<tr>
+<td>3</td>
+<td>相对 HOME 的关节位置</td>
+<td style="text-align: right;">14</td>
+<td>rad；嘴部排除</td>
+</tr>
+<tr>
+<td>4</td>
+<td>关节速度</td>
+<td style="text-align: right;">14</td>
+<td>rad/s；不能直接填寄存器计数</td>
+</tr>
+<tr>
+<td>5</td>
+<td>上次动作</td>
+<td style="text-align: right;">14</td>
+<td>raw action 还是处理后 action，按训练语义</td>
+</tr>
+<tr>
+<td>6</td>
+<td>速度命令 <code>vx, vy, wz</code></td>
+<td style="text-align: right;">3</td>
+<td>m/s、m/s、rad/s</td>
+</tr>
+<tr>
+<td>7</td>
+<td>头颈命令</td>
+<td style="text-align: right;">4</td>
+<td>相对 HOME 的目标增量</td>
+</tr>
+<tr>
+<td>8</td>
+<td>身体位姿命令槽位</td>
+<td style="text-align: right;">6</td>
+<td>案例奖励权重为零，保留接口</td>
+</tr>
+<tr>
+<td>合计</td>
+<td></td>
+<td style="text-align: right;"><strong>61</strong></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>维度正确只证明容器大小正确。例如左右腿顺序对调，仍然是 61 维，但策略行为会完全不同。</p>
+<h3 id="72-critic-为什么有-76-维">7.2 Critic 为什么有 76 维</h3>
+<p>案例 Critic 额外使用仿真中容易获得的信息：躯干线速度、脚高、腾空时间、触地和接触力等。它帮助价值估计，不要求真机提供同样传感器。</p>
+<p>本例组成是：线速度 3、角速度 3、重力 3、关节位置 14、关节速度 14、动作 14、速度命令 3、脚高 2、腾空时间 2、触地 2、接触力 6、头命令 4、身体命令 6，总计 76。</p>
+<p>导出时要确认得到的是 Actor 推理链，不能把特权观测误加入部署输入。</p>
+<h3 id="73-动作是目标位置增量">7.3 动作是目标位置增量</h3>
+<p>案例 <code>scale=1.0</code>，使用 HOME/default 作为 offset：</p>
+<pre><code class="language-text">q_target[j] = q_home[j] + action_scale[j] × action[j]
+</code></pre>
+<p><code>action=0</code> 通常表示回到默认目标，而不是关闭力矩；14 个动作也不是 14 个电流命令。</p>
+<p>嘴部的实体舵机仍影响重量和总线映射，但不进入该策略的 14 维输出。正则排除 <code>passive_*</code> 只是候选选择方法，最终应导出并核对实际关节名称列表。</p>
+<h3 id="74-缩放裁剪与历史动作必须一起看">7.4 缩放、裁剪与历史动作必须一起看</h3>
+<p>动作链建议逐级记录：raw action、缩放后目标、位置限制后目标、速率限制后目标、编码器目标、实际位置。</p>
+<p>如果增加了 action clip，要确认训练中的上一动作观测究竟记的是哪个值。训练与运行时一边记 raw、一边记 clipped，就会产生语义差异。</p>
+<h2 id="8-在一个任务里学习站立与行走">8. 在一个任务里学习站立与行走</h2>
+<p>案例使用平地速度任务，没有把站立和行走拆成两个网络。</p>
+<table>
+<thead>
+<tr>
+<th>命令类型</th>
+<th>案例设置</th>
+<th>策略要学的行为</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>零速度</td>
+<td><code>vx=vy=wz=0</code></td>
+<td>保持支撑，尽量减少移动与转动</td>
+</tr>
+<tr>
+<td>前后移动</td>
+<td><code>vx ∈ [-0.4, 0.4]</code> m/s</td>
+<td>沿身体前后方向移动</td>
+</tr>
+<tr>
+<td>横向移动</td>
+<td><code>vy ∈ [-0.3, 0.3]</code> m/s</td>
+<td>左右移动且控制姿态</td>
+</tr>
+<tr>
+<td>转向</td>
+<td><code>wz ∈ [-1, 1]</code> rad/s</td>
+<td>跟踪偏航角速度</td>
+</tr>
+<tr>
+<td>原地转向桶</td>
+<td>15% 环境，线速度为零</td>
+<td>避免训练数据很少包含纯转向</td>
+</tr>
+<tr>
+<td>站立桶</td>
+<td>2% 随课程增加到 25%</td>
+<td>提高零命令行为的学习机会</td>
+</tr>
+</tbody>
+</table>
+<p>“命令为零”不意味着自动拥有优秀的站立策略。还需要足够的零命令样本、合适的姿态与速度奖励，以及站立专项评测。</p>
+<p>头部命令有 4 维，并随课程扩大范围；身体位姿 6 维命令在案例中保留输入，但对应 tracking 奖励为零。不能据此宣称已经训练出身体位姿控制能力。</p>
+<p>当前任务也没有教随机趴倒后的起身或跌倒恢复。倒下后 reset，是环境给了新的一次机会，不是机器人自己站了起来。</p>
+<h2 id="9-奖励函数让策略知道什么算做好">9. 奖励函数：让策略知道什么算做好</h2>
+<h3 id="91-先保留原奖励再用分项指标决定调整">9.1 先保留原奖励，再用分项指标决定调整</h3>
+<p>第一轮保持奖励不变，可以减少同时变化的因素。后续如果 HD 动力学使某种动作明显不可行，再有针对性修改。不要一边换电机、一边改网络、奖励和所有随机化范围，最后无法解释改善来自哪里。</p>
+<h3 id="92-案例奖励速查">9.2 案例奖励速查</h3>
+<table>
+<thead>
+<tr>
+<th>奖励项</th>
+<th style="text-align: right;">案例权重</th>
+<th>作用与可能冲突</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>线速度跟踪</td>
+<td style="text-align: right;">+2.0</td>
+<td>跟踪 vx/vy；与其他姿态约束平衡</td>
+</tr>
+<tr>
+<td>角速度跟踪</td>
+<td style="text-align: right;">+2.0</td>
+<td>跟踪 yaw rate</td>
+</tr>
+<tr>
+<td>躯干竖直</td>
+<td style="text-align: right;">+2.0</td>
+<td>减少持续倾斜</td>
+</tr>
+<tr>
+<td>腿部 pose</td>
+<td style="text-align: right;">+1.0</td>
+<td>约束姿态；过强可能限制侧移与转向</td>
+</tr>
+<tr>
+<td>躯干角速度</td>
+<td style="text-align: right;">-0.05</td>
+<td>减少抖动；检查是否也压制目标转向</td>
+</tr>
+<tr>
+<td>全身角动量</td>
+<td style="text-align: right;">-0.02</td>
+<td>稳定整体运动</td>
+</tr>
+<tr>
+<td>关节位置限位</td>
+<td style="text-align: right;">-1.0</td>
+<td>减少接近软限位</td>
+</tr>
+<tr>
+<td>动作变化率</td>
+<td style="text-align: right;">-0.1 → -1.0</td>
+<td>减少目标跳变；过强可能降低反应速度</td>
+</tr>
+<tr>
+<td>腾空时间</td>
+<td style="text-align: right;">+3.0</td>
+<td>鼓励合适的摆腿时段</td>
+</tr>
+<tr>
+<td>脚离地高度</td>
+<td style="text-align: right;">-2.0</td>
+<td>目标约 0.02 m</td>
+</tr>
+<tr>
+<td>摆脚高度</td>
+<td style="text-align: right;">-0.25</td>
+<td>减少拖脚或异常抬腿</td>
+</tr>
+<tr>
+<td>脚底滑动</td>
+<td style="text-align: right;">-0.1</td>
+<td>减少滑移，但应兼顾 pivot 转向</td>
+</tr>
+<tr>
+<td>自碰撞</td>
+<td style="text-align: right;">-1.0</td>
+<td>避免结构相撞</td>
+</tr>
+<tr>
+<td>头部姿态跟踪</td>
+<td style="text-align: right;">+2.0</td>
+<td>跟踪头颈命令</td>
+</tr>
+<tr>
+<td>身体位姿跟踪</td>
+<td style="text-align: right;">0</td>
+<td>案例中关闭</td>
+</tr>
+<tr>
+<td>头部长期偏置</td>
+<td style="text-align: right;">0 → +3</td>
+<td>函数值本身为负，正权重仍形成惩罚</td>
+</tr>
+</tbody>
+</table>
+<p>权重正负必须结合函数输出看。<code>head_pose_bias</code> 就是一个例子：只看 <code>+3</code> 会误以为它在奖励偏差。</p>
+<p>动作变化率通常基于相邻动作之差，目标是平滑。它不直接保证角度合法，也不等于电流、温升或机械冲击已受控。</p>
+<h3 id="93-不用总-reward-代替能力验收">9.3 不用总 reward 代替能力验收</h3>
+<p>总 reward 上升，可能来自站得更直或头跟踪更好，而侧移仍然失败。课程改变了权重和采样比例时，不同阶段的 reward 也不一定具有完全相同含义。</p>
+<p>评测应直接读取运动结果：速度误差、横向漂移、偏航误差、跌倒、动作饱和。后文会给出统一的评测矩阵。</p>
+<h2 id="10-域随机化与课程模拟变化也要证明它生效">10. 域随机化与课程：模拟变化，也要证明它生效</h2>
+<h3 id="101-案例真正改了哪些范围">10.1 案例真正改了哪些范围</h3>
+<table>
+<thead>
+<tr>
+<th>项目</th>
+<th style="text-align: right;">XL330 案例基线</th>
+<th style="text-align: right;">HD 案例</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>BAM friction scale</td>
+<td style="text-align: right;">0.9–1.1</td>
+<td style="text-align: right;">0.5–1.5</td>
+<td>报告记为已启用</td>
+</tr>
+<tr>
+<td>armature scale</td>
+<td style="text-align: right;">0.9–1.1</td>
+<td style="text-align: right;">0.6–1.4</td>
+<td>报告记为已启用</td>
+</tr>
+<tr>
+<td>Kp scale</td>
+<td style="text-align: right;">关闭</td>
+<td style="text-align: right;">包装层写 0.75–1.25</td>
+<td>基础 event 未创建，实际未启用</td>
+</tr>
+<tr>
+<td>Kd scale</td>
+<td style="text-align: right;">关闭</td>
+<td style="text-align: right;">包装层写 0.8–1.2</td>
+<td>同上</td>
+</tr>
+<tr>
+<td>电压范围</td>
+<td style="text-align: right;">6.5–8.2 V</td>
+<td style="text-align: right;">6.6–8.2 V</td>
+<td>仅案例仿真参数，不是 XL330 上电建议</td>
+</tr>
+<tr>
+<td>命令延迟</td>
+<td style="text-align: right;">3–6 步</td>
+<td style="text-align: right;">2–6 步</td>
+<td>必须按第 6 节确认时间尺度</td>
+</tr>
+</tbody>
+</table>
+<p>扩大范围表示希望策略应对更多变化，但不能保证包含真实系统，更不能把错误控制律变成正确控制律。</p>
+<p>本地 <code>FrictionDRBamActuator</code> 主要缩放速度无关的摩擦预算，黏性项保留原值。另一些 BAM 版本的内置 friction scale 定义可能不同。因此“摩擦乘 0.5–1.5”也应注明到底乘了哪些项。</p>
+<h3 id="102-继承的随机化也要记入实验配置">10.2 继承的随机化也要记入实验配置</h3>
+<p>案例还包含脚底摩擦 0.7–1.3、躯干质量/惯量约 ±5%、躯干和头部质心偏移、编码器偏置 ±0.015 rad、最多 6° 的 IMU 安装失配、输入电压与负载压降、速度推扰等。</p>
+<p><code>startup</code> 与 <code>reset</code> 的含义不同：前者可能在整个训练过程中为每个环境固定抽一次样，后者每回合重采样。并行环境很少时，startup 抽样覆盖尤其有限。</p>
+<h3 id="103-用采样结果证明启用">10.3 用采样结果证明启用</h3>
+<p>对每个随机化项做四步检查：</p>
+<ol>
+<li>配置中是否创建了 event。</li>
+<li>event 是否匹配到正确对象和参数。</li>
+<li>执行后实际张量是否变化、范围是否正确。</li>
+<li>reset 后是否回到基准再采样，避免不断累乘或累加。</li>
+</ol>
+<p>输出最小值、最大值、均值和样本数；少量样本不一定正好碰到范围端点，不要把未达到端点误判为故障。</p>
+<p>报告还指出 <code>bearing_roll</code> 实际对应右 hip-yaw link，却被放入 head CoM 列表。保留历史行为有利于复现实验，但下一版应把“历史复现”和“修正 body 列表”的结果分别记录，不能默默改掉后混在同一曲线里。</p>
+<h3 id="104-课程进度的正确读法">10.4 课程进度的正确读法</h3>
+<p>本报告采用 <code>step = iteration × 24</code>，所以：</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: right;">环境步数</th>
+<th style="text-align: right;">对应 iteration</th>
+<th>例子</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: right;">12,000</td>
+<td style="text-align: right;">500</td>
+<td>动作变化率权重开始加强</td>
+</tr>
+<tr>
+<td style="text-align: right;">14,400</td>
+<td style="text-align: right;">600</td>
+<td>头部偏置惩罚开始加入</td>
+</tr>
+<tr>
+<td style="text-align: right;">24,000</td>
+<td style="text-align: right;">1,000</td>
+<td>多项课程继续扩大</td>
+</tr>
+<tr>
+<td style="text-align: right;">36,000</td>
+<td style="text-align: right;">1,500</td>
+<td>动作平滑权重到 -1.0</td>
+</tr>
+<tr>
+<td style="text-align: right;">48,000</td>
+<td style="text-align: right;">2,000</td>
+<td>站立比例到 25%</td>
+</tr>
+</tbody>
+</table>
+<p>这里不能再乘 4096。4096 影响采集到多少条并行 transition，不一定影响课程管理器使用的公共步计数。</p>
+<p>恢复训练时要区分“继续同一课程”与“重启课程”。案例的 <code>MICRODUCK_WARM_START=1</code> 是特定分支的显式行为，不是所有 PPO 框架的通用开关。</p>
+<h2 id="11-ppo-在这里如何工作">11. PPO 在这里如何工作</h2>
+<h3 id="111-一轮训练发生了什么">11.1 一轮训练发生了什么</h3>
+<p>PPO 反复执行“采样 → 估计哪些动作更好 → 更新网络”。它通过限制一次更新改变策略的程度，提高优化的稳定性；仍然需要合适的环境、奖励和数据。算法来源见 <a href="https://arxiv.org/abs/1707.06347">PPO 原始论文</a>。</p>
+<p>以案例参数解释：</p>
+<ol>
+<li>4096 个环境各采集 24 个策略步。</li>
+<li>收集观测、动作、奖励、终止状态和价值估计。</li>
+<li>计算回报及优势估计，区分比预期好或差的动作。</li>
+<li>把这批数据分成 4 个 mini-batch，重复学习 5 个 epoch。</li>
+<li>进入下一轮采样，并按保存间隔保留 checkpoint。</li>
+</ol>
+<p>因此每轮采样量为 <code>4096 × 24 = 98,304</code> 条 transition。它们是并行仿真经验，不是同一台机器人连续运动 98,304 步。</p>
+<h3 id="112-案例网络与超参数">11.2 案例网络与超参数</h3>
+<table>
+<thead>
+<tr>
+<th>配置</th>
+<th>案例值</th>
+<th>怎样理解</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Actor</td>
+<td>61 → 512 → 256 → 128 → 14</td>
+<td>由观测到关节动作</td>
+</tr>
+<tr>
+<td>Critic</td>
+<td>76 → 512 → 256 → 128 → 1</td>
+<td>估计长期回报</td>
+</tr>
+<tr>
+<td>激活</td>
+<td>ELU</td>
+<td>网络非线性</td>
+</tr>
+<tr>
+<td>观测归一化</td>
+<td>Actor/Critic 各自使用</td>
+<td>推理时保留 Actor 的统计量</td>
+</tr>
+<tr>
+<td>动作分布</td>
+<td>Gaussian，初始 std 1.0</td>
+<td>训练探索；评测通常使用确定性输出</td>
+</tr>
+<tr>
+<td>每环境 rollout</td>
+<td>24 步</td>
+<td>本例对应 0.48 s</td>
+</tr>
+<tr>
+<td>epochs / mini-batches</td>
+<td>5 / 4</td>
+<td>每批采样数据的优化次数与切分</td>
+</tr>
+<tr>
+<td>学习率</td>
+<td>1e-3，自适应</td>
+<td>根据策略变化调整</td>
+</tr>
+<tr>
+<td>desired KL</td>
+<td>0.01</td>
+<td>自适应调节参考</td>
+</tr>
+<tr>
+<td>PPO clip</td>
+<td>0.2</td>
+<td>限制策略更新幅度的一部分</td>
+</tr>
+<tr>
+<td>value loss coef</td>
+<td>1.0</td>
+<td>价值损失权重</td>
+</tr>
+<tr>
+<td>entropy coef</td>
+<td>0.01</td>
+<td>探索项权重</td>
+</tr>
+<tr>
+<td>gamma / GAE lambda</td>
+<td>0.99 / 0.95</td>
+<td>回报与优势估计</td>
+</tr>
+<tr>
+<td>梯度范数上限</td>
+<td>1.0</td>
+<td>梯度裁剪</td>
+</tr>
+<tr>
+<td>seed</td>
+<td>42</td>
+<td>案例一次运行的随机种子</td>
+</tr>
+<tr>
+<td>checkpoint 间隔</td>
+<td>250 iterations</td>
+<td>保留中间策略</td>
+</tr>
+<tr>
+<td>最大 iterations</td>
+<td>50,000</td>
+<td>脚本上限，案例并未跑满</td>
+</tr>
+</tbody>
+</table>
+<p>没有 RNN/CNN，案例 symmetry 配置关闭。<strong>PPO 的 <code>clip=0.2</code> 是优化目标中的策略比率裁剪，不是关节动作裁剪。</strong> 它不能解决输出角度过大的问题。</p>
+<h3 id="113-为什么第一轮不急着改-ppo">11.3 为什么第一轮不急着改 PPO</h3>
+<p>本例只是深拷贝原 RL 配置并改变实验名和 run 名。这样能检验：“在新身体模型下，原配方能否学到有用行为？”</p>
+<p>当训练失败时，先排除关节顺序、力矩模型、延迟、接触、终止、奖励异常和配置未生效。只有这些都合理，而优化仍不稳定时，再用受控实验调整学习率、探索、采样长度等。</p>
+<p>改变 rollout 或环境数时，要同时检查课程进度、batch 大小和采样效率，不能认为只改了一个性能开关。</p>
+<h2 id="12-从-smoke-到一晚训练分阶段执行">12. 从 smoke 到一晚训练：分阶段执行</h2>
+<h3 id="121-先明确命令的适用条件">12.1 先明确命令的适用条件</h3>
+<p>以下命令分为“案例脚本”和“当前本地可核对的入口格式”。它们用于复现说明，本次写作没有执行训练。运行前应确认位于正确训练仓库，HD 任务已经注册，JSON/MJCF 和依赖版本已经匹配。</p>
+<p>先检查帮助：</p>
+<pre><code class="language-bash">uv run train Mjlab-Velocity-Flat-HD1910-MicroDuck --help
+uv run play Mjlab-Velocity-Flat-HD1910-MicroDuck --help
+uv run scripts/export.py Mjlab-Velocity-Flat-HD1910-MicroDuck --help
+</code></pre>
+<p>如果报 Unknown task，先补齐任务适配和注册；不要改用原版任务后还把实验记为 HD。</p>
+<h3 id="122-阶段-a配置与模型检查">12.2 阶段 A：配置与模型检查</h3>
+<p>若取得案例文件，可先执行：</p>
+<pre><code class="language-bash">uv run pytest tests/test_hd1910_cfg.py -q
+</code></pre>
+<p>案例报告记录该文件有 3 项测试通过。它们覆盖配置等工程条件，不证明步态已经学好。</p>
+<p>除此之外，建议检查：</p>
+<table>
+<thead>
+<tr>
+<th>检查</th>
+<th>预期结果</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>质量变化</td>
+<td>15 只计数、总增重 0.045 kg，基于本案例数值</td>
+</tr>
+<tr>
+<td>策略接口</td>
+<td>Actor 61、action 14，名称顺序一致</td>
+</tr>
+<tr>
+<td>执行器加载</td>
+<td>实际读取 HD JSON，无 XL330 默认回退</td>
+</tr>
+<tr>
+<td>初始姿态</td>
+<td>HOME 支撑合理，无严重穿模</td>
+</tr>
+<tr>
+<td>时间设置</td>
+<td>物理步长、decimation、延迟单位明确</td>
+</tr>
+<tr>
+<td>随机化</td>
+<td>实际事件列表与采样值符合预期</td>
+</tr>
+</tbody>
+</table>
+<h3 id="123-阶段-b小规模-smoke">12.3 阶段 B：小规模 smoke</h3>
+<p>案例包装脚本：</p>
+<pre><code class="language-bash">./scripts/train_hd1910.sh smoke
+</code></pre>
+<p>案例默认 64 环境、5 iterations。其目的只有：环境能构建、能采样、能反向更新并保存结果，且数值正常。5 iterations 不足以判断能否学会走路。</p>
+<p><strong>检查输出：</strong>没有维度错误、内部状态缺失、非有限损失；观察 reset 次数和原因；检查每个环境没有在第一步反复跌倒。</p>
+<p>报告提到 CPU/GPU smoke 均成功。读者若在 CPU 失败，应先核查后端支持和依赖，而不是立刻调整 HD 参数。</p>
+<h3 id="124-阶段-c中等规模观察行为">12.4 阶段 C：中等规模观察行为</h3>
+<p>先运行足以观察学习趋势的中等实验，例如案例脚本支持的覆盖形式：</p>
+<pre><code class="language-bash">GPU_IDS=0 NUM_ENVS=512 MAX_ITERATIONS=1000 ./scripts/train_hd1910.sh train
+</code></pre>
+<p>这组规模是教程建议，不是案例已报告的新结果。环境数按显存和吞吐调整；若减小并行环境，startup 随机化的覆盖也会改变。</p>
+<p>重点看：回合长度是否增长、跌倒是否减少、零命令是否能站、前行是否有方向性、输出是否长期饱和。第一轮出现重大异常就定位原因，避免把一个错误配置送去跑整晚。</p>
+<h3 id="125-阶段-d长训练">12.5 阶段 D：长训练</h3>
+<p>案例默认入口：</p>
+<pre><code class="language-bash">./scripts/train_hd1910.sh train
+</code></pre>
+<p>案例默认 4096 环境、最大 50,000 iterations；本次实验约 8 小时停止，保存到 <code>model_16250.pt</code>。这不是“任何 GPU 跑 8 小时都会得到同样结果”的承诺。</p>
+<p>脚本使用 <code>CUDA_VISIBLE_DEVICES</code> 配合 <code>--gpu-ids all</code>，用于解决其依赖版本中的参数解析问题。物理 GPU 被筛选后，进程内索引会重新编号；不要同时使用两套互相矛盾的设备编号。</p>
+<p>训练期间保留原始日志，并固定间隔做相同条件下的评测。不要只在最后一刻看一个视频。</p>
+<h3 id="126-暂停恢复与热启动">12.6 暂停、恢复与热启动</h3>
+<p>继续同一次优化，需要检查：网络、优化器、归一化统计量、iteration、课程状态和随机种子处理是否恢复。环境内部状态是否恢复取决于框架，不能假设 checkpoint 保存了所有仿真状态。</p>
+<p>只加载 Actor 权重再重新训练属于另一种实验。重新开始课程也会改变训练分布。把二者分别命名，例如 <code>resume-same-curriculum</code> 与 <code>warmstart-reset-curriculum</code>，记录实际恢复了哪些状态。</p>
+<p><strong>阶段验收：</strong>smoke 通过之后才进入长训练；每次长训练都能找到对应的代码、配置、模型、checkpoint 和评测结果。</p>
+<h2 id="13-怎样理解那一晚的结果">13. 怎样理解那一晚的结果</h2>
+<h3 id="131-报告中的训练记录">13.1 报告中的训练记录</h3>
+<table>
+<thead>
+<tr>
+<th>项目</th>
+<th>案例记录</th>
+<th>可以说明什么</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>运行时间</td>
+<td>约 8 小时</td>
+<td>本次训练投入</td>
+</tr>
+<tr>
+<td>保存 checkpoint</td>
+<td>iteration 16250</td>
+<td>存在一个可供评测的候选策略</td>
+</tr>
+<tr>
+<td>最终日志位置</td>
+<td>约 iteration 16384</td>
+<td>与保存点不是同一个概念</td>
+</tr>
+<tr>
+<td>最后平均 reward</td>
+<td>87.4</td>
+<td>在该奖励与统计口径下的训练结果</td>
+</tr>
+<tr>
+<td>最好平均 reward</td>
+<td>93.026，约 iteration 13817</td>
+<td>最新策略不一定具有最高训练 reward</td>
+</tr>
+<tr>
+<td>平均回合长度</td>
+<td>983.28 / 1000</td>
+<td>平均接近时间上限，但不能推出所有回合不跌倒</td>
+</tr>
+<tr>
+<td>NaN</td>
+<td>报告记录为 0</td>
+<td>仍应区分原始异常与防护处理后的统计</td>
+</tr>
+</tbody>
+</table>
+<p>报告里其他 <code>tracking metric</code> 和 <code>fall metric</code> 没有完整的聚合定义，因此本文不把这些数值直接转换成成功率或跌倒率。</p>
+<h3 id="132-分项回放数据">13.2 分项回放数据</h3>
+<table>
+<thead>
+<tr>
+<th>场景</th>
+<th>报告结果</th>
+<th>教程解读</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>64 环境 × 10 秒，频繁推扰</td>
+<td>4 falls，0 NaN，平均 tilt 5.678°</td>
+<td>有抗扰能力，但仍有失败；未定义计数口径前不能直接算 4/64 成功率</td>
+</tr>
+<tr>
+<td>32 环境 × 6 秒，无推扰</td>
+<td>0 falls；站立 drift 0.0353 m/s，yaw 0.2778 rad/s</td>
+<td>短时不倒，同时仍有平移和旋转漂移</td>
+</tr>
+<tr>
+<td>同一基准中的行走</td>
+<td>xy error 0.2535 m/s，yaw error 1.6179 rad/s</td>
+<td>多方向跟踪仍然较弱</td>
+</tr>
+<tr>
+<td>8 站立 + 8 前行，5 秒，无推扰</td>
+<td>0 falls、0 NaN</td>
+<td>支持基础短时站立与前行已形成</td>
+</tr>
+<tr>
+<td>定向站立</td>
+<td>speed 0.02112 m/s，绝对 yaw 0.16514 rad/s</td>
+<td>仍存在漂移，后者约为 9.46°/s</td>
+</tr>
+<tr>
+<td>定向前行，目标 0.2 m/s</td>
+<td>x 绝对误差 0.04501 m/s，横向速度 0.16774 m/s</td>
+<td>前向误差约目标的 22.5%，横向速度约为目标的 84%</td>
+</tr>
+</tbody>
+</table>
+<p>这些比例是根据报告数字做的算术解释。不能把绝对速度均值乘时间，直接当作真实净位移；机器人可能左右往复，必须积分带符号的世界坐标速度或读取位置轨迹。</p>
+<h3 id="133-如何准确介绍当前成果">13.3 如何准确介绍当前成果</h3>
+<p>可以这样写实验摘要：</p>
+<blockquote>
+<p>已完成 XL330 到 HD-1910 初步动力学配置的仿真迁移，并沿用原 PPO 配方训练。基础站立和前向移动在短时仿真测试中得到验证；横向漂移、偏航跟踪、扰动鲁棒性和动作饱和仍需改进。执行器与机械参数尚有估计量，真机自由行走未完成验证。</p>
+</blockquote>
+<p>这是可复用的阶段成果：已经证明管线和初步行为可行，同时清楚地留下下一阶段要解决的问题。</p>
+<h2 id="14-建立独立评测避免看起来能走">14. 建立独立评测，避免“看起来能走”</h2>
+<h3 id="141-固定评测条件">14.1 固定评测条件</h3>
+<p>训练环境经常自动切换命令、改变课程并施加推扰。正式评测应显式控制这些条件：</p>
+<ul>
+<li>固定待测 checkpoint 和对应的归一化统计量。</li>
+<li>使用确定性 Actor 输出，注明是否关闭训练探索。</li>
+<li>固定命令，不允许随机命令管理器在中途覆盖它。</li>
+<li>固定初始姿态、地面、头部命令和评测时长。</li>
+<li>明确传感器噪声、动力学随机化和推扰是否开启。</li>
+<li>保存全部尝试；跌倒后 reset 不得删除这次失败记录。</li>
+</ul>
+<p>尤其注意报告的 play 配置推扰频率比训练更高。单纯执行 <code>play</code>，不一定得到“无推扰基准”。</p>
+<h3 id="142-推荐的评测矩阵">14.2 推荐的评测矩阵</h3>
+<p>下面的时长与次数是下一轮实验建议，不是已经完成的验收。</p>
+<table>
+<thead>
+<tr>
+<th>组别</th>
+<th>目标命令 <code>(vx, vy, wz)</code></th>
+<th style="text-align: right;">每次建议时长</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>S0</td>
+<td><code>(0, 0, 0)</code></td>
+<td style="text-align: right;">30 s</td>
+<td>站立漂移与转动</td>
+</tr>
+<tr>
+<td>F1/F2/F3</td>
+<td><code>(0.05/0.10/0.20, 0, 0)</code></td>
+<td style="text-align: right;">20 s</td>
+<td>不同前进速度</td>
+</tr>
+<tr>
+<td>B1</td>
+<td><code>(-0.05, 0, 0)</code></td>
+<td style="text-align: right;">20 s</td>
+<td>后退是否退化</td>
+</tr>
+<tr>
+<td>L1/R1</td>
+<td><code>(0, ±0.05, 0)</code></td>
+<td style="text-align: right;">20 s</td>
+<td>低速横移，两侧分别评测</td>
+</tr>
+<tr>
+<td>Y1/Y2</td>
+<td><code>(0, 0, ±0.2)</code></td>
+<td style="text-align: right;">20 s</td>
+<td>两个方向原地转向</td>
+</tr>
+<tr>
+<td>T0</td>
+<td>站立 → 前行 → 停止</td>
+<td style="text-align: right;">30 s</td>
+<td>命令切换瞬态与停稳</td>
+</tr>
+<tr>
+<td>H0</td>
+<td>保持速度，改变头部命令</td>
+<td style="text-align: right;">20 s</td>
+<td>头部动作是否破坏支撑</td>
+</tr>
+<tr>
+<td>P0</td>
+<td>S0/F2 加固定推扰</td>
+<td style="text-align: right;">30 s</td>
+<td>在已定义扰动下恢复</td>
+</tr>
+</tbody>
+</table>
+<p>每个场景先用至少 3 组固定评测随机种子、每组 10 次独立尝试作为初步比较。它们不是安全认证样本量；关键是让不同候选策略面对同一组条件。另留一组不参与调参的随机种子做最后比较。</p>
+<h3 id="143-把指标定义写清楚">14.3 把指标定义写清楚</h3>
+<table>
+<thead>
+<tr>
+<th>指标</th>
+<th>建议定义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>前向 MAE</td>
+<td><code>mean(abs(vx_actual - vx_command))</code></td>
+</tr>
+<tr>
+<td>横向 MAE</td>
+<td><code>mean(abs(vy_actual - vy_command))</code></td>
+</tr>
+<tr>
+<td>偏航 MAE</td>
+<td><code>mean(abs(wz_actual - wz_command))</code></td>
+</tr>
+<tr>
+<td>站立平移速度</td>
+<td><code>mean(sqrt(vx² + vy²))</code></td>
+</tr>
+<tr>
+<td>路径偏移</td>
+<td>世界坐标中相对计划路径的偏差；不能只看身体坐标速度</td>
+</tr>
+<tr>
+<td>跌倒比例</td>
+<td>发生跌倒的尝试数 / 全部尝试数</td>
+</tr>
+<tr>
+<td>完成比例</td>
+<td>无跌倒且达到预定时长的尝试数 / 全部尝试数</td>
+</tr>
+<tr>
+<td>raw action p95/max</td>
+<td>每关节分别统计，并报告聚合方式</td>
+</tr>
+<tr>
+<td>饱和比例</td>
+<td>实际触发某级限幅的样本比例，逐级统计</td>
+</tr>
+<tr>
+<td>时序</td>
+<td>控制周期均值、p95/p99、最大值及超时次数</td>
+</tr>
+</tbody>
+</table>
+<p>跌倒判据应沿用并记录环境的明确条件，如倾角、躯干高度或非法接触。<code>time_out</code> 与跌倒终止分开。报告均值时同时给样本数和分布，避免均值掩盖某个关节或某一方向的失败。</p>
+<p>过渡阶段可单独统计，稳态指标可排除预先约定的起始窗口；但被排除窗口内的跌倒和异常仍计入全程失败统计。提前结束的坏轨迹不能因为“数据不足”就不进入汇总。</p>
+<h3 id="144-一个可独立练习的统计示例">14.4 一个可独立练习的统计示例</h3>
+<p>下面只演示单段轨迹的速度误差计算，可在安装 NumPy 的 Python 环境直接运行。输入明确为<strong>身体坐标系</strong>线速度、同一时间轴的命令，以及 rad/s 的 yaw rate；不能用于替代完整 episode 评测器。</p>
+<pre><code class="language-python">import numpy as np
+
+def tracking_metrics(v_xy, yaw_rate, command):
+    v_xy = np.asarray(v_xy, dtype=float)
+    yaw_rate = np.asarray(yaw_rate, dtype=float)
+    command = np.asarray(command, dtype=float)
+    if v_xy.ndim != 2 or v_xy.shape[1] != 2 or len(v_xy) == 0:
+        raise ValueError(&quot;v_xy must have non-empty shape [T, 2]&quot;)
+    if yaw_rate.shape != (len(v_xy),) or command.shape != (len(v_xy), 3):
+        raise ValueError(&quot;yaw_rate/command must share the same T&quot;)
+    if not all(np.isfinite(x).all() for x in (v_xy, yaw_rate, command)):
+        raise ValueError(&quot;Non-finite data: record a failed evaluation; do not drop rows&quot;)
+    error = v_xy - command[:, :2]
+    return {
+        &quot;vx_mae_mps&quot;: float(np.abs(error[:, 0]).mean()),
+        &quot;vy_mae_mps&quot;: float(np.abs(error[:, 1]).mean()),
+        &quot;yaw_mae_radps&quot;: float(np.abs(yaw_rate - command[:, 2]).mean()),
+    }
+
+result = tracking_metrics(
+    [[0.18, 0.02], [0.22, -0.02]],
+    [0.01, -0.01],
+    [[0.20, 0.0, 0.0], [0.20, 0.0, 0.0]],
+)
+assert np.isclose(result[&quot;vx_mae_mps&quot;], 0.02)
+assert np.isclose(result[&quot;vy_mae_mps&quot;], 0.02)
+assert np.isclose(result[&quot;yaw_mae_radps&quot;], 0.01)
+print(result)
+</code></pre>
+<p>预期输出三项误差约为 <code>0.02、0.02、0.01</code>。这些是人为构造的小例子，不是 HD 训练结果。真实日志还需要时间戳对齐、不等间隔加权、终止原因、尝试 ID 和完成率统计。</p>
+<h3 id="145-如何选择-checkpoint">14.5 如何选择 checkpoint</h3>
+<p>先排除数值异常、严重动作饱和和关键场景失败的候选，再比较站立、前行和下一阶段目标。对当前项目，优先选站立与前行可靠的候选，比追逐一个总 reward 峰值更符合阶段目标。</p>
+<p>报告的 reward 峰值在 iteration 13817，但默认每 250 次才保存一次，<strong>不保证存在 <code>model_13817.pt</code></strong>。应列出实际文件，选择峰值附近存在的 checkpoint 及最新 checkpoint，在同一矩阵下比较。</p>
+<h2 id="15-导出-onnx-后还要验证什么">15. 导出 ONNX 后，还要验证什么</h2>
+<h3 id="151-保留观测归一化">15.1 保留观测归一化</h3>
+<p>Actor 训练时看到的往往是归一化观测。只导出网络主体、漏掉统计量，就会使真机把原始数值喂给一个期待另一种尺度的网络。</p>
+<p>当前本地 Microduck 导出实现包含 <code>actor(normalizer(obs))</code>。因此应使用对应分支的导出入口，并检查结果；不要因为模型形状正确就认定导出完整。</p>
+<h3 id="152-导出命令">15.2 导出命令</h3>
+<p>先进入具有 HD 任务的训练仓库。以下本地 checkpoint 格式已经在当前本地导出参数定义中核对，案例分支执行前仍需看 <code>--help</code>：</p>
+<pre><code class="language-bash">TASK_ID='Mjlab-Velocity-Flat-HD1910-MicroDuck'
+CHECKPOINT_PATH='/absolute/path/to/model_16250.pt'
+
+uv run scripts/export.py &quot;$TASK_ID&quot; \
+  --checkpoint-file &quot;$CHECKPOINT_PATH&quot; \
+  --onnx-file hd1910_model_16250.onnx
+</code></pre>
+<p><code>CHECKPOINT_PATH</code> 是占位路径，必须改为真实文件。案例还提供了 W&amp;B 形式：</p>
+<pre><code class="language-bash">WANDB_RUN='entity/project/run_id'
+uv run scripts/export.py &quot;$TASK_ID&quot; --wandb-run-path &quot;$WANDB_RUN&quot;
+</code></pre>
+<p>W&amp;B 形式需要真实 run 和访问条件；路径本身不是产物存在的证据。本节不会发布模型。</p>
+<h3 id="153-第一层格式维度和有限输出">15.3 第一层：格式、维度和有限输出</h3>
+<p>在导出文件所在目录、具有 ONNX 依赖的环境执行：</p>
+<pre><code class="language-bash">uv run python - &lt;&lt;'PY'
+import numpy as np
+import onnx
+import onnxruntime as ort
+
+path = 'hd1910_model_16250.onnx'
+model = onnx.load(path)
+onnx.checker.check_model(model)
+session = ort.InferenceSession(path, providers=['CPUExecutionProvider'])
+inputs, outputs = session.get_inputs(), session.get_outputs()
+assert len(inputs) == 1 and inputs[0].shape == [1, 61], inputs
+assert len(outputs) == 1 and outputs[0].shape == [1, 14], outputs
+x = np.zeros((1, 61), dtype=np.float32)
+y = session.run(None, {inputs[0].name: x})[0]
+assert np.isfinite(y).all(), y
+print('Format and finite-output check passed; this is not a gait test.')
+print('Metadata keys:', sorted(p.key for p in model.metadata_props))
+PY
+</code></pre>
+<p>零向量只是格式测试输入，不是合法站立观测，也不能拿它控制真机。严格固定 batch 是本案例的部署约定；其他导出形式应按自己的运行时合同核对。</p>
+<h3 id="154-第二层pytorch-与-onnx-数值一致性">15.4 第二层：PyTorch 与 ONNX 数值一致性</h3>
+<p>保存一批实际 rollout 的<strong>原始观测</strong>，分别送入“确定性 Actor + 相同 normalizer”和 ONNX。比较每关节最大绝对误差、均值误差，并覆盖站立、前行和转向样本。</p>
+<p>不要一边使用随机采样动作、一边使用均值动作。也不要给 ONNX 预先归一化一次，再由内置 normalizer 归一化第二次。</p>
+<p>容差按数据类型和运行时确定；例如先以 <code>1e-5</code> 作为 float32 一致性检查的调查起点，超过时定位原因，而不是把这个值当作任何后端都必须达到的安全标准。</p>
+<h3 id="155-第三层用-onnx-做闭环回放">15.5 第三层：用 ONNX 做闭环回放</h3>
+<p>在同一 HD 动力学和同一观测处理下，用 ONNX 真正闭环控制仿真，再跑第 14 节矩阵。必要时再做独立 MuJoCo CPU 路径比较。</p>
+<p>常见错误是训练用了 HD JSON，但回放脚本又加载默认 XL330 BAM。必须在回放日志中打印实际硬件配置及哈希。漂亮的视频无法证明它使用了正确执行器。</p>
+<p>导出包建议包含：模型、配置、关节顺序、HOME、action scale、控制频率、执行器参数哈希、训练提交、评测条件和结果。</p>
+<p><strong>当前本地限制：</strong><code>manifest</code> 中有些硬件描述字段仅用于展示；不能以为填写 <code>robot.servos=hd1910</code> 就自动获得硬件兼容性拦截。字段作用见本地 <code>docs/policy-manifest.md</code>，应明确区分现有校验与未来希望增加的校验。</p>
+<h2 id="16-横移与转向尚未完成该怎样改进">16. 横移与转向尚未完成，该怎样改进</h2>
+<h3 id="161-按可定位的顺序排查">16.1 按可定位的顺序排查</h3>
+<table>
+<thead>
+<tr>
+<th>顺序</th>
+<th>检查</th>
+<th>为什么先做</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>命令、实测速度的坐标系和正负号</td>
+<td>错误坐标会把正确动作评成错误，也会给错误奖励</td>
+</tr>
+<tr>
+<td>2</td>
+<td>左右关节顺序、HOME、方向与限位</td>
+<td>机械或映射不对称会制造单侧偏移</td>
+</tr>
+<tr>
+<td>3</td>
+<td>原地转向与纯横移是否被真正采样</td>
+<td>随机组合命令不能代替足够的专项样本</td>
+</tr>
+<tr>
+<td>4</td>
+<td>动作/目标/力矩饱和、速率限制</td>
+<td>想转但执行器做不到，与没学会是不同问题</td>
+</tr>
+<tr>
+<td>5</td>
+<td>脚底摩擦、碰撞、髋关节自由度</td>
+<td>接触条件决定转向和侧移是否可行</td>
+</tr>
+<tr>
+<td>6</td>
+<td>pose、竖直、滑移、动作平滑等奖励冲突</td>
+<td>过强约束可能压制有效动作</td>
+</tr>
+<tr>
+<td>7</td>
+<td>执行器响应、延迟与随机化难度</td>
+<td>模型过慢或初期随机化过宽可能妨碍学习</td>
+</tr>
+<tr>
+<td>8</td>
+<td>PPO 超参数与训练量</td>
+<td>前面的条件正确后，才更容易解释优化问题</td>
+</tr>
+</tbody>
+</table>
+<h3 id="162-用对照实验逐步修正">16.2 用对照实验逐步修正</h3>
+<p>建议给每轮实验写一句假设，例如：“纯转向样本不足导致原地转向误差偏高。”只修改命令采样比例，其余保持一致，评测时同时检查站立和直行是否退化。</p>
+<table>
+<thead>
+<tr>
+<th>实验</th>
+<th>改动</th>
+<th>观察重点</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>E0</td>
+<td>原始 HD 案例配置</td>
+<td>固定参考点</td>
+</tr>
+<tr>
+<td>E1</td>
+<td>校正关节、单位、时间或 body 列表等确定性问题</td>
+<td>配置正确性与行为变化</td>
+</tr>
+<tr>
+<td>E2</td>
+<td>增加低速纯横移/纯转向样本</td>
+<td>对应 MAE 与跌倒是否改善</td>
+</tr>
+<tr>
+<td>E3</td>
+<td>针对证据调整一个冲突奖励</td>
+<td>是否获得改善且不损害站立</td>
+</tr>
+<tr>
+<td>E4</td>
+<td>用实测 BAM 替换估计模型</td>
+<td>跨参数评测和响应一致性</td>
+</tr>
+<tr>
+<td>E5</td>
+<td>逐步扩展命令和随机化范围</td>
+<td>鲁棒性与其他能力退化</td>
+</tr>
+</tbody>
+</table>
+<p>这是实验框架，不是必须严格线性执行的固定配方。确定性实现错误应优先修复；算法或奖励调参应保留对照，并在可能时用多个训练 seed 验证改善不是偶然。</p>
+<h3 id="163-对动作峰值建立专门记录">16.3 对动作峰值建立专门记录</h3>
+<p>案例 raw action p95 约 6.759、最大约 13.37。若这些是单关节绝对输出，且 <code>scale=1</code> 直接映射为 rad 增量，就远超许多正常关节动作的量级；但没有原始统计代码前，不能排除它是向量范数或其他聚合值。</p>
+<p>因此先核查统计定义，再逐关节记录：</p>
+<pre><code class="language-text">关节名 → raw p95/max → 目标角度范围 → 位置限幅比例
+       → 速率限幅比例 → 电机饱和比例 → 实际角度/速度
+</code></pre>
+<p>需要增加动作或目标限制时，把相同处理引入训练和回放；它改变了策略实际控制的环境，需要重新训练或微调并重新评测。不能只改运行时就认为动作问题已解决。</p>
+<h2 id="17-从估计参数走向实测-bam">17. 从估计参数走向实测 BAM</h2>
+<p>这是下一阶段的方法说明，不包含自动驱动舵机的命令。硬件采集应在型号、电压窗口、接线、限流、机械固定和停止机制确认后进行。</p>
+<h3 id="171-采集前先定义问题">17.1 采集前先定义问题</h3>
+<table>
+<thead>
+<tr>
+<th>想确认什么</th>
+<th>合适的数据</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>固件 P 值如何影响响应</td>
+<td>多组已知 P 值的小幅阶跃</td>
+</tr>
+<tr>
+<td>内部目标是否限速</td>
+<td>不同幅度阶跃、斜坡目标</td>
+</tr>
+<tr>
+<td>摩擦与反驱特性</td>
+<td>正反方向、低速和不同负载轨迹</td>
+</tr>
+<tr>
+<td>负载与惯量影响</td>
+<td>已知摆长与质量的多组轨迹</td>
+</tr>
+<tr>
+<td>电压变化影响</td>
+<td>型号允许范围内的多个供电条件</td>
+</tr>
+<tr>
+<td>通信与运动延迟</td>
+<td>同一时钟的请求、发送、接收和响应时间戳</td>
+</tr>
+</tbody>
+</table>
+<p>案例提出 6.6、7.4、8.2 V 三个点，这里仅作为报告计划保留；是否能用于实物，必须先核对完整型号规格。不要为了复制表格而给未知舵机上电，也不要把舵机电源接到 Radxa 的 5 V 输入。</p>
+<h3 id="172-日志必须包含实验条件">17.2 日志必须包含实验条件</h3>
+<p>至少保留：舵机身份、固件、台架几何、负载质量、零位、P/I/D、目标序列、实测位置/速度、电压、温度、采样时间和错误计数。可测电流则记录其单位与换算依据。</p>
+<p>不同采集工具的时间戳不一定同源。错误对齐会使模型用虚假的惯量或摩擦去补偿通信延迟。</p>
+<h3 id="173-分训练集与验证集">17.3 分训练集与验证集</h3>
+<p>按完整轨迹或实验条件划分，避免把同一条轨迹的相邻点随机分到两边。先拟合简单模型，检查残差，再决定是否增加负载相关或非线性摩擦项。</p>
+<p>验证时关注：角度误差、速度误差、相位差、方向不对称和未见过负载下的表现。残差与速度或方向明显相关时，可以指引下一步模型改进。</p>
+<p>参数若长期停在允许范围边界，应检查边界是否不合理、数据是否缺少激励或模型是否漏掉关键机制。具体拟合入口与版本参数见 <a href="https://bam.readthedocs.io/en/latest/identification/fitting.html">BAM Fitting 文档</a>。</p>
+<h3 id="174-避免重复补偿延迟与惯量">17.4 避免重复补偿延迟与惯量</h3>
+<p>如果拟合流程已经估计通信延迟，整机仿真又额外加入同一份延迟，就会重复计算。应区分台架通信延迟、整机通信延迟、固件内部滤波与物理响应，写成同一张时间预算表。</p>
+<p>相似地，刚体结构惯量与 BAM 的转子折算惯量应有明确边界，避免对同一质量或转子贡献重复计入。</p>
+<h2 id="18-真机部署需要另一个闭环">18. 真机部署需要另一个闭环</h2>
+<h3 id="181-把能通讯和能安全闭环分开">18.1 把“能通讯”和“能安全闭环”分开</h3>
+<p>协议层至少要核查：型号识别、寄存器表、字节序、符号表示、位置分辨率、速度单位、电流单位、工作模式、状态返回级别、ID、零位和方向。</p>
+<p>案例写位置单位为 <code>2π/4095</code>，速度也采用对应换算；当前 HL-2915 实现使用自己的位置校准与 <code>0.732 RPM/count</code> 的速度定义。<strong>两套数值不能跨型号直接复用。</strong> 对 12 位编码器，4095 是最大码值还是整圈刻度分母，也要结合手册和已知角度实验确认。</p>
+<p>单舵机验证后，再测试全总线读写周期、丢包、过期数据、断电/重启状态和温升。50 Hz 的周期只有 20 ms；案例串口超时 30 ms，一次超时就可能超过一个策略周期，需要统计异常情况下的周期与处理方式。</p>
+<h3 id="182-imu-有两条不同路线">18.2 IMU 有两条不同路线</h3>
+<table>
+<thead>
+<tr>
+<th>路线</th>
+<th>实现方式</th>
+<th>需要验证</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>案例方案</td>
+<td>IMU 和舵机都走 Feetech v1，在地址 56 读取长度 15 的块</td>
+<td>ID 200 的兼容固件、数据布局与真实时序；案例固件尚未交付</td>
+</tr>
+<tr>
+<td>当前本地 HL-2915 代码</td>
+<td>v2 读取 IMU，v1 读取舵机</td>
+<td>同一物理总线上混合协议的设备行为、时序与容错</td>
+</tr>
+</tbody>
+</table>
+<p>所以“必须重写 IMU 固件”是案例架构的前提，不是任何替换舵机方案的必然要求。当前代码的存在也不等于混合协议已经经过整机硬件验证。</p>
+<h3 id="183-分阶段提高运动权限">18.3 分阶段提高运动权限</h3>
+<table>
+<thead>
+<tr>
+<th>阶段</th>
+<th>做什么</th>
+<th>进入下一阶段前需要的证据</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>H0</td>
+<td>只读身份、寄存器与传感器</td>
+<td>型号、单位、状态、IMU 坐标与数据时效正确</td>
+</tr>
+<tr>
+<td>H1</td>
+<td>单关节固定台架、小幅动作</td>
+<td>零位、方向、限位、停止与响应可控</td>
+</tr>
+<tr>
+<td>H2</td>
+<td>整机支撑下对齐 HOME 和目标链</td>
+<td>15 个实体映射正确、14 维策略目标正确</td>
+</tr>
+<tr>
+<td>H3</td>
+<td>支撑条件下零命令策略</td>
+<td>无异常跳变，时序、温升、电流和数据新鲜度符合预设条件</td>
+</tr>
+<tr>
+<td>H4</td>
+<td>有保护的低速前行</td>
+<td>可重复启动、停止和故障退出</td>
+</tr>
+<tr>
+<td>H5</td>
+<td>在完成前置验证后评估自由行走</td>
+<td>多次独立试验记录，而非单段成功视频</td>
+</tr>
+</tbody>
+</table>
+<p>各阶段的电流、温度、速度和时间阈值应来自硬件规格及实测，本文不把仿真参数包装为真机阈值。保持 <code>robotd</code> 作为电机写入和安全状态管理的唯一实时入口。</p>
+<h2 id="19-常见问题与定位方法">19. 常见问题与定位方法</h2>
+<table>
+<thead>
+<tr>
+<th>现象</th>
+<th>优先查哪里</th>
+<th>下一步</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Unknown HD task</td>
+<td>任务注册、源码版本、安装路径</td>
+<td>打印 registry，确认加载的是当前分支</td>
+</tr>
+<tr>
+<td>参数 JSON 找不到</td>
+<td>工作目录、绝对路径、产物快照</td>
+<td>打印解析后的路径与 SHA-256</td>
+</tr>
+<tr>
+<td>JSON 有 HD 数值，运行仍像 XL330</td>
+<td>内置参数优先级、加载器初始化</td>
+<td>输出实际 actuator 和加载后的参数</td>
+</tr>
+<tr>
+<td><code>q_target_smooth</code> 缺失/形状错误</td>
+<td>BAM 版本、构造和 reset 生命周期</td>
+<td>检查向量化与部分环境重置</td>
+</tr>
+<tr>
+<td>训练第一步就跌倒</td>
+<td>HOME、脚接触、动力学、初始状态</td>
+<td>先零动作/已知目标回放，观察是否可支撑</td>
+</tr>
+<tr>
+<td>episode 很长但不走</td>
+<td>命令未生效、奖励冲突、动作饱和</td>
+<td>固定前行命令，看实际 vx/vy 和目标链</td>
+</tr>
+<tr>
+<td>能前进但斜着走</td>
+<td>左右映射、速度坐标、摩擦、采样</td>
+<td>分左右/正反方向评测</td>
+</tr>
+<tr>
+<td>原地转向时滑得很远</td>
+<td>足底接触、滑移奖励、动作约束</td>
+<td>看世界坐标轨迹和触地状态</td>
+</tr>
+<tr>
+<td>改了随机化范围没有变化</td>
+<td>event 未创建、对象名没匹配</td>
+<td>输出真正启用的事件和采样张量</td>
+</tr>
+<tr>
+<td>reset 后发生冲击</td>
+<td>内部目标清零、上次动作、历史观测</td>
+<td>对齐 reset 前后全部控制状态</td>
+</tr>
+<tr>
+<td>ONNX 能加载但闭环异常</td>
+<td>normalizer、关节顺序、HOME、执行器回退</td>
+<td>先逐样本数值比较，再闭环回放</td>
+</tr>
+<tr>
+<td>无 NaN 但行为突变</td>
+<td>防护是否把异常替换成零</td>
+<td>单独记录原始 NaN 与替换/终止次数</td>
+</tr>
+<tr>
+<td>最新模型反而更差</td>
+<td>课程变化、随机性、过度优化、评价偏差</td>
+<td>对多个实际保存点运行固定评测矩阵</td>
+</tr>
+</tbody>
+</table>
+<p>NaN 防护应阻止异常扩散，也应保留原因。把非有限奖励替换成零以后，日志显示“零 NaN”只能描述处理后的数据，不能证明上游没有异常。</p>
+<h2 id="20-新手按六个练习完成一次学习闭环">20. 新手按六个练习完成一次学习闭环</h2>
+<p>这些练习按成果排序，不承诺固定天数。</p>
+<table>
+<thead>
+<tr>
+<th>练习</th>
+<th>任务</th>
+<th>交付物</th>
+<th>完成标准</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1：读懂接口</td>
+<td>手算 61/76/14 维，画出控制链</td>
+<td>一页接口说明</td>
+<td>能解释 raw action、HOME 与目标角度</td>
+</tr>
+<tr>
+<td>2：整理差异</td>
+<td>建立 XL330/HD 参数和来源表</td>
+<td>参数台账</td>
+<td>每个数字有单位、来源与用途</td>
+</tr>
+<tr>
+<td>3：检查身体</td>
+<td>检查质量、惯量、关节和碰撞</td>
+<td>模型检查记录</td>
+<td>15 只计数、45 g 差值、HOME 和碰撞合理</td>
+</tr>
+<tr>
+<td>4：运行小实验</td>
+<td>原版基线 → HD 配置检查 → smoke</td>
+<td>配置与日志快照</td>
+<td>能进入 PPO 并解释 reset 与数值状态</td>
+</tr>
+<tr>
+<td>5：训练与评测</td>
+<td>一组受控训练，多个保存点评测</td>
+<td>指标表和全部尝试记录</td>
+<td>能区分不跌倒与准确跟踪</td>
+</tr>
+<tr>
+<td>6：导出与复盘</td>
+<td>ONNX 三层检查，写下一轮假设</td>
+<td>模型包与实验结论</td>
+<td>结果可追溯，下一轮只改有依据的因素</td>
+</tr>
+</tbody>
+</table>
+<p>当前案例已经为练习 4–6 提供了一份参考，但复现者仍要在自己的环境产生证据。</p>
+<h2 id="21-实验记录模板">21. 实验记录模板</h2>
+<p>复制下面的 Markdown，为每次训练单独填写。<code>待填</code> 表示尚未提供证据，不能在汇总中自动算作通过。</p>
+<pre><code class="language-markdown"># HD-1910 实验记录
+
+- 实验 ID：待填
+- 实验目的与单一假设：待填
+- 日期 / 操作者：待填
+- 训练仓库 commit / dirty：待填
+- 源码快照与依赖锁文件：待填
+- GPU / Python / Torch / MuJoCo / mjlab / BAM：待填
+- 完整舵机型号与规格来源：待填
+- MJCF / mesh / BAM JSON 的 SHA-256：待填
+- 参数来源等级：估计 / 规格推导 / 台架拟合
+- task ID / seed / envs / iterations：待填
+- physics dt / decimation / policy Hz：待填
+- 执行器延迟步数 / 步单位 / 毫秒值：待填
+- 实际启用的随机化及采样记录：待填
+- 课程状态及恢复方式：待填
+- checkpoint 文件与哈希：待填
+- 本次相对基线的唯一或必要改动：待填
+
+## 评测条件
+- 确定性输出 / 头命令 / 噪声 / 随机化 / 推扰：待填
+- 初始状态 / 时长 / 评测 seed / 尝试次数：待填
+- 跌倒定义与 time_out 区分：待填
+- 速度坐标系与指标聚合定义：待填
+
+## 结果
+| 场景 | 完成/总尝试 | 跌倒尝试 | vx MAE | vy MAE | yaw MAE | 逐关节饱和 | 证据 |
+|---|---|---|---|---|---|---|---|
+| 站立 | 待填 | 待填 | 待填 | 待填 | 待填 | 待填 | 待填 |
+| 前行 | 待填 | 待填 | 待填 | 待填 | 待填 | 待填 | 待填 |
+| 横移左/右 | 待填 | 待填 | 待填 | 待填 | 待填 | 待填 | 待填 |
+| 转向左/右 | 待填 | 待填 | 待填 | 待填 | 待填 | 待填 | 待填 |
+
+- 原始 NaN/Inf / 防护触发次数：待填
+- ONNX 格式 / 数值一致性 / 闭环回放：待填
+- 原假设：被支持 / 被否定 / 证据不足
+- 仍未完成的能力：待填
+- 下一轮改动与理由：待填
+- 真机状态：未验证 / 已完成的具体阶段与证据
+</code></pre>
+<h2 id="22-完成度清单与后续顺序">22. 完成度清单与后续顺序</h2>
+<h3 id="221-当前案例的位置">22.1 当前案例的位置</h3>
+<table>
+<thead>
+<tr>
+<th>层级</th>
+<th>当前结论</th>
+<th>依据边界</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>工程管线</td>
+<td>报告记录注册、训练、导出和回放已连通</td>
+<td>本次未取得原始分支与产物独立复跑</td>
+</tr>
+<tr>
+<td>初步仿真行为</td>
+<td>基础站立和前行已验证</td>
+<td>短时测试，仍有漂移</td>
+</tr>
+<tr>
+<td>完整速度控制</td>
+<td>未完成</td>
+<td>横移和转向误差仍明显</td>
+</tr>
+<tr>
+<td>HD 动力学精度</td>
+<td>未完成</td>
+<td>质量/惯量近似，执行器含估计参数</td>
+</tr>
+<tr>
+<td>真机部署闭环</td>
+<td>未完成</td>
+<td>通信、IMU、标定、时序、热与运动仍待验证</td>
+</tr>
+<tr>
+<td>真机自由行走</td>
+<td>未完成</td>
+<td>不能由仿真成功直接推出</td>
+</tr>
+</tbody>
+</table>
+<h3 id="222-下一阶段先做什么">22.2 下一阶段先做什么</h3>
+<ol>
+<li><strong>整理那一晚的完整实验包。</strong> 找到实际 HD 分支、依赖、参数、checkpoint 和评测脚本。</li>
+<li><strong>核对确定性问题。</strong> 优先解决延迟时间尺度、状态重置、单位换算、关节映射和无效随机化。</li>
+<li><strong>重评现有候选。</strong> 用固定矩阵比较已保存的模型，选出当前最可靠的站立/前行基线。</li>
+<li><strong>用数据改进横移与转向。</strong> 先确认采样和约束，再做奖励或 PPO 对照实验。</li>
+<li><strong>补实测执行器与机械模型。</strong> 在合法电压和受控台架条件下采集，保留验证集。</li>
+<li><strong>完成 ONNX 一致性与 HD 闭环回放后，进入分阶段真机验证。</strong></li>
+</ol>
+<p>对当前案例，最值得保留的是独立硬件配置、稳定策略接口和分层证据。这套方法也能用于后续其他替换舵机，但每个型号都要重新确认控制律、参数来源和机械条件。</p>
+<h2 id="附录-a案例差异速查">附录 A：案例差异速查</h2>
+<table>
+<thead>
+<tr>
+<th>类别</th>
+<th>案例改变</th>
+<th>第一轮保留</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>身体</td>
+<td>每只 +3 g、总 +45 g、惯量同比缩放</td>
+<td>运动学、HOME、限位、原 mesh</td>
+</tr>
+<tr>
+<td>执行器</td>
+<td>XL330 M6 → HD 估计 M1 / STS 控制模型</td>
+<td>BAM 调用接口</td>
+</tr>
+<tr>
+<td>固件增益</td>
+<td>训练 Kp 200 → 32；运行时提出 0.16 映射</td>
+<td>上层增益调用形式</td>
+</tr>
+<tr>
+<td>电压</td>
+<td>仿真下界 6.5 → 6.6 V</td>
+<td>上界 8.2 V、压降建模思路</td>
+</tr>
+<tr>
+<td>延迟</td>
+<td>3–6 → 2–6 步</td>
+<td>必须核对实际时间单位</td>
+</tr>
+<tr>
+<td>随机化</td>
+<td>friction 0.5–1.5，armature 0.6–1.4</td>
+<td>其他基础事件；Kp/Kd 实际未启用</td>
+</tr>
+<tr>
+<td>任务</td>
+<td>HD task ID 与 robot entity</td>
+<td>61 维 Actor、76 维 Critic、14 动作</td>
+</tr>
+<tr>
+<td>PPO</td>
+<td>实验名、运行名</td>
+<td>网络、学习率、clip、epochs 等基线</td>
+</tr>
+<tr>
+<td>部署</td>
+<td>Feetech 后端方案与校准</td>
+<td>RobotIo 上层、观测和安全控制结构</td>
+</tr>
+</tbody>
+</table>
+<h2 id="附录-b证据来源与版本提示">附录 B：证据来源与版本提示</h2>
+<h3 id="b1-用户提供的原始材料">B.1 用户提供的原始材料</h3>
+<ul>
+<li>文件：<code>hd1910迁移站立行走PPO训练(1).html</code>。</li>
+<li>原始标题：《从 XL330 到 HD-1910：训练、PPO 与部署适配完整梳理》。</li>
+<li>报告日期：2026-09-19；训练路径 <code>/home/july/microduck_rl</code>。</li>
+<li>本次读取的原文件 SHA-256：<code>28702a93085c882dfa49dc2e4c4c4deedb973f37e51547c86cdbbfa21999662a</code>。</li>
+<li>用户补充：替换后训练一晚，基础站立和前行已在仿真验证，横移、转向和真机自由行走尚未完成。</li>
+</ul>
+<p>报告描述的 3 项训练配置测试、Rust 测试数量、checkpoint、reward 与回放数据均以“案例记录”方式引用，本次未重新执行或独立确认这些实验结果。</p>
+<h3 id="b2-本次核对的本地文件">B.2 本次核对的本地文件</h3>
+<p>以下路径相对当前 <code>/Volumes/dev/dev/microduck</code> 根目录，用于定位版本差异，不表示其他电脑具备相同文件。</p>
+<table>
+<thead>
+<tr>
+<th>文件</th>
+<th>核对事项</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>duck-control/src/obs.rs</code></td>
+<td>61/14 契约、观测布局、上一动作语义</td>
+</tr>
+<tr>
+<td><code>duck-control/src/hl2915.rs</code></td>
+<td>HL-2915 单位、校准、v2 IMU + v1 舵机读取</td>
+</tr>
+<tr>
+<td><code>tools/microduck_learning/hl2915_bam_adapter.py</code></td>
+<td>HL-2915 专用配置，不能直接当作 HD 参数</td>
+</tr>
+<tr>
+<td><code>bam/bam/feetech/actuator.py</code></td>
+<td>STS 内部目标按当前 q 初始化和部分 reset</td>
+</tr>
+<tr>
+<td><code>bam/bam/mjlab.py</code></td>
+<td>自定义 JSON、延迟说明、状态与版本字段</td>
+</tr>
+<tr>
+<td><code>microduck-replica/upstream/microduck_rl/.venv/lib/python3.12/site-packages/mjlab/actuator/actuator.py</code></td>
+<td>当前安装版本的执行器延迟使用物理步</td>
+</tr>
+<tr>
+<td><code>microduck-replica/upstream/microduck_rl/src/mjlab_microduck/actuator/friction_dr_bam.py</code></td>
+<td>摩擦随机化的具体作用项</td>
+</tr>
+<tr>
+<td><code>microduck-replica/upstream/microduck_rl/src/mjlab_microduck/export.py</code></td>
+<td>本地导出参数与 normalizer</td>
+</tr>
+<tr>
+<td><code>microduck-studio/microduck_studio/training_pipeline.py</code></td>
+<td>当前非 XL330 的任务适配门槛</td>
+</tr>
+<tr>
+<td><code>docs/policy-manifest.md</code></td>
+<td>manifest 字段的校验与展示边界</td>
+</tr>
+</tbody>
+</table>
+<h3 id="b3-官方与一手参考">B.3 官方与一手参考</h3>
+<ul>
+<li><a href="https://github.com/pollen-robotics/microduck_rl">Microduck RL</a>：任务、训练与导出入口；HD 专用扩展仍以案例分支为准。</li>
+<li><a href="https://arxiv.org/abs/1707.06347">PPO 原始论文</a>：采样与策略优化方法。</li>
+<li><a href="https://bam.readthedocs.io/en/latest/identification/actuator_modeling.html">BAM 执行器建模</a>：控制律与待辨识参数。</li>
+<li><a href="https://bam.readthedocs.io/en/latest/identification/index.html">BAM 辨识流程</a>：台架、采集与拟合的关系。</li>
+<li><a href="https://bam.readthedocs.io/en/latest/identification/fitting.html">BAM 拟合文档</a>：拟合与验证工具说明。</li>
+<li><a href="https://mujoco.readthedocs.io/en/stable/XMLreference.html">MuJoCo XML 参考</a>：刚体、惯量、关节和碰撞字段。</li>
+</ul>
+<p>在线文档可能继续更新。复现实验依赖锁定的源码与依赖版本；发现本文与运行代码不同，应记录差异并核对实际行为。</p>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

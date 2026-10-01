@@ -125,7 +125,7 @@
 <h1 id="解读-28-sitstand-配置坐下与站立的对称性">解读 28 · sitstand 配置:坐下与站立的对称性</h1>
 <blockquote>
 <p><strong>解读对象</strong>:<code>microduck-replica/upstream/microduck_rl/src/mjlab_microduck/tasks/microduck_sitstand_env_cfg.py</code>(929 行)<br />
-<strong>需要的前置</strong>:<a href="/learn/deep-27">解读 27</a>(standup 的单方向课程)、<a href="README.md">总纲</a></p>
+<strong>需要的前置</strong>:<a href="/learn/deep-27">解读 27</a>(standup 的单方向课程)、<a href="/learn/deep">总纲</a></p>
 </blockquote>
 <h2 id="在做什么">在做什么</h2>
 <p>27 篇的 standup 只会站起来;这个文件把坐与站合成<strong>一个策略、两个方向</strong>:命令槽 twist 的第一维被征用为姿势标志——<code>cmd = [sit_flag, 0, 0]</code>,0=站、1=坐,全零即部署时的怠速态(microduck_sitstand_env_cfg.py:1-8)。命令由 <code>SitStandCommandCfg</code>(:576)以停留时间 <code>POSTURE_DWELL_S = (3.5, 6.5)</code> 秒(:87)为周期重采样翻转,12 秒的一集(<code>EPISODE_LENGTH_S = 12.0</code>,:83)至少含一次完整「坐→歇→起→歇」循环。reset 状态(50% 站 / 50% 坐)与命令独立,四个组合(坐下、站起、保持坐、保持站)都被等概率训练(:619)。</p>

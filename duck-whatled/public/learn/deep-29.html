@@ -125,7 +125,7 @@
 <h1 id="解读-29-spin-与-roulade特技动作的任务设计">解读 29 · spin 与 roulade:特技动作的任务设计</h1>
 <blockquote>
 <p><strong>解读对象</strong>:<code>tasks/microduck_spin_env_cfg.py</code>(485 行)、<code>tasks/microduck_roulade_env_cfg.py</code>(772 行)<br />
-<strong>需要的前置</strong>:<a href="/learn/deep-27">解读 27</a>(发现期不上税)、<a href="/learn/deep-31">解读 31</a>(镜像损失)、<a href="README.md">总纲</a></p>
+<strong>需要的前置</strong>:<a href="/learn/deep-27">解读 27</a>(发现期不上税)、<a href="/learn/deep-31">解读 31</a>(镜像损失)、<a href="/learn/deep">总纲</a></p>
 </blockquote>
 <h2 id="在做什么">在做什么</h2>
 <p>两个「表演型」任务,代表两种截然不同的评价函数写法。spin(microduck_spin_env_cfg.py)让装着四个被动滚轮的机器人原地自转约一圈:命令槽被 <code>GroundPickPhaseCommand</code> 占用,输出 <code>[cos 2πφ, sin 2πφ, 0]</code> 相位编码(:381),<code>randomize_phase=False</code> 保证每集都从站立、相位 0 开始——和真机上按按钮的时机一致(:379-380)。roulade(microduck_roulade_env_cfg.py)是前滚翻:站立出发,从平头顶滚过去,再站起来;策略切换即触发,没有相位钟。</p>

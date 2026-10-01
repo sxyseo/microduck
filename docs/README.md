@@ -18,6 +18,7 @@ docs give the reasoning and point at it.
 | [`Microduck Studio`](../microduck-studio/README.md) | 本地复刻工作台：硬件档案、只读探针、证据、训练 smoke 和部署前检查。 |
 | [`低成本舵机替换决策表.md`](低成本舵机替换决策表.md) | 完成 HL-2915 基线后，如何评估更便宜舵机的替换风险。 |
 | [`BAM与URDF全流程小白教程.md`](BAM与URDF全流程小白教程.md) | 从关节命名、URDF、采集、BAM 处理到训练的入门路线。 |
+| [`HD1910仿真迁移与PPO训练教程.md`](HD1910仿真迁移与PPO训练教程.md) · [离线阅读版](HD1910仿真迁移与PPO训练教程.html) | XL330 → HD-1910 的参数迁移、PPO 训练、分项评测、ONNX 导出与后续真机验证。 |
 | [`cheatsheet.md`](robot/cheatsheet.md) | Every `robotctl` command. |
 | [`pair-a-gamepad.md`](robot/pair-a-gamepad.md) | Once per pad: pairing mode, `pad pair`, and what to do when it will not bond. |
 | [`cheatsheet-dev.md`](robot/cheatsheet-dev.md) | The commands that need a dev board: branch builds, candidates, dev pushes. |

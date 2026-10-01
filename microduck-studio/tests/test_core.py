@@ -161,7 +161,7 @@ def test_frontend_hl2915_examples_do_not_claim_old_voltage_or_passed_data():
 def test_frontend_resumes_persisted_long_running_jobs_from_report():
     html = (Path(__file__).parents[1] / "web" / "index.html").read_text(encoding="utf-8")
 
-    assert "['training_smoke','training'].includes(run.kind)" in html
+    assert "['training_smoke','training','recipe_training'].includes(run.kind)" in html
     assert "['hl2915_read_only_probe','hl2915_bam_record'].includes(run.kind)" in html
     assert "if (slot && !activeRuns[slot]) pollRun(run, slot);" in html
 

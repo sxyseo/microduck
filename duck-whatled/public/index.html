@@ -9,7 +9,7 @@
 <meta property="og:site_name" content="什么鸭 WhatDuck">
 <meta property="og:title" content="什么鸭 WhatDuck · Microduck 复刻进度记录">
 <meta property="og:description" content="从 47 个公开 STL 出发，非官方 1:1 复刻一只 Microduck：阶段路线图、RL 训练、物料与预算，全程公开。">
-<meta property="og:image" content="https://duck.whatled.com/photos/first-parts.jpg">
+<meta property="og:image" content="https://duck.whatled.com/photos/first-assembly.jpg">
 <meta property="og:url" content="https://duck.whatled.com/">
 <meta name="theme-color" content="#f6f1e7">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
@@ -89,7 +89,7 @@
   .tape{position:absolute;width:92px;height:26px;background:rgba(240,180,41,.42);border-left:1px dashed rgba(33,26,17,.2);border-right:1px dashed rgba(33,26,17,.2);backdrop-filter:blur(1px)}
   .tape.tl{top:-13px;left:26px;transform:rotate(-5deg)}
   .tape.tr{top:-13px;right:26px;transform:rotate(4deg)}
-  .hero-note{background:var(--paper2);border:1.5px solid var(--line);border-radius:12px;padding:22px 22px 18px;position:relative;margin:30px 0 0 auto;max-width:620px}
+  .hero-note{background:var(--paper2);border:1.5px solid var(--line);border-radius:12px;padding:22px 22px 18px;position:relative;margin:30px auto 0;max-width:620px}
   .hero-note::before{content:"NOTE";position:absolute;top:-9px;left:16px;font-family:var(--mono);font-size:10px;letter-spacing:.2em;background:var(--orange);color:var(--paper);padding:2px 8px;border-radius:3px}
   .hero-note h3{font-size:15px;margin-bottom:10px}
   .hero-note p{font-size:13.5px;color:var(--ink-soft);line-height:1.8}
@@ -301,9 +301,9 @@
       <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
     </a>
     <div class="topbar-right">
-      <span class="stamp">更新 · 2026-09-11 · D7/30</span>
+      <span class="stamp">更新 · 2026-09-13 · D9/30</span>
       <a class="gh-link" href="/learn/course">公开课 · 30 课</a>
-      <a class="gh-link" href="/learn/deep" style="border-color:var(--orange-deep);color:var(--orange-deep)">深度解读 · 200 篇</a>
+      <a class="gh-link" href="/learn/deep" style="border-color:var(--orange-deep);color:var(--orange-deep)">深度解读 · 203 篇</a>
       <a class="gh-link" href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">GitHub ↗</a>
     </div>
   </nav>
@@ -316,23 +316,23 @@
     <p class="hero-sub">从 Pollen Robotics 公开的 <strong>47 个 STL 零件</strong>与仿真模型出发，逆向出装配、电控与软件，再用 <strong>30 天冲刺</strong>把它真正造出来。只用于个人学习与研究，过程全部公开。</p>
     <div class="btn-row">
       <a class="btn btn-solid" href="#progress">查看当前进度 ↓</a>
-      <a class="btn btn-ghost" href="/learn/deep">深度解读 · 200 篇</a>
+      <a class="btn btn-ghost" href="/learn/deep">深度解读 · 203 篇</a>
       <a class="btn btn-ghost" href="#learn">学习手册 · 4 份</a>
       <a class="btn btn-ghost" href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">复刻仓库 ↗</a>
     </div>
     <div class="chips mono">
-      <span class="chip">30 天冲刺 · <b>第 7 天</b> / 30</span>
-      <span class="chip">外壳打印 <b>¥99 已完成</b></span>
+      <span class="chip">30 天冲刺 · <b>第 9 天</b> / 30</span>
+      <span class="chip">首版外壳 <b>已到货 · 组装 ✓</b></span>
       <span class="chip">expE 步态重训 · <b>50k</b> 迭代目标</span>
-      <span class="chip">执行器 · <b>国产飞特</b> HL-1910-C001 ×15</span>
-      <span class="chip">已投入 <b>¥1,898</b> · 舵机待到货</span>
+      <span class="chip">执行器 · <b>国产飞特</b> HL-1910-C001 ×17</span>
+      <span class="chip">URT2 ✓ · HAT ✓ · 轴承 ×14 ✓ · 1910 发货中</span>
     </div>
 
     <div class="hero-grid">
       <figure class="photo-card reveal">
         <span class="tape tl"></span><span class="tape tr"></span>
-        <img src="/photos/first-parts.jpg" alt="Microduck 官方整机实拍：四只不同配色的成品鸭" width="1424" height="748">
-        <figcaption><span>Microduck 官方整机实拍 · 复刻参考</span><span>REF-001</span></figcaption>
+        <img src="/photos/first-assembly.jpg" alt="第一版 3D 打印外壳的整机装配实拍" width="900" height="1200">
+        <figcaption><span>首版外壳 · 整机装配完成 · 2026-09-13</span><span>ASM-001</span></figcaption>
       </figure>
       <aside class="hero-note reveal">
         <h3>这只鸭子是什么？</h3>
@@ -354,16 +354,16 @@
   <!-- ================= PROGRESS ================= -->
   <section class="block" id="progress">
     <div class="sec-head reveal"><span class="sec-index mono">[01]</span><h2>当前位置</h2><span class="rule"></span></div>
-    <p class="sec-desc reveal">冲刺于 <span class="mono">2026-09-05</span> 发令，今天第 7 天。逆向反推收口后<b>打印、电控、RL 训练三线并行</b>，本周又把散落的经验收拢成<a href="#learn">四份学习手册</a>，就等飞特舵机到货。</p>
+    <p class="sec-desc reveal">冲刺于 <span class="mono">2026-09-05</span> 发令，今天第 9 天。<b>首版 3D 打印外壳已到货并完成整机装配</b>，HL-2915-C001 ×2 到货（台架辨识可开练），本周还把经验收拢成<a href="#learn">四份学习手册</a>与 <a href="/learn/deep">200 篇深读</a>。</p>
 
     <div class="overall reveal">
       <div>
-        <h3>综合进度 · 约 <b>35%</b>（站长自估）</h3>
-        <div class="bar"><i data-w="35%"></i></div>
+        <h3>综合进度 · 约 <b>40%</b>（站长自估）</h3>
+        <div class="bar"><i data-w="40%"></i></div>
         <p class="bar-label mono">逆向反推 100% ─ 打印与定标 ◐ ─ 电控设计 ◐ ─ RL 训练 ◐ ─ 采购已下单 ─ 联调装配 ─ 整机行走</p>
       </div>
       <div class="big-pct">
-        <div class="pct">35<small style="font-size:22px">%</small></div>
+        <div class="pct">40<small style="font-size:22px">%</small></div>
         <small>REPLICATION PROGRESS</small>
       </div>
     </div>
@@ -376,13 +376,13 @@
       </div>
       <div class="stage doing reveal">
         <span class="s-no mono">STAGE 02</span><h4>电控设计</h4>
-        <p>主控锁定 Radxa ZERO 3W（获独立拆解验证）；Robot HAT 官方开源可直接打样；imu_to_dxl 自绘板待画。</p>
+        <p>主控锁定 Radxa ZERO 3W（获独立拆解验证）；<b>Robot HAT C1 已到货（¥130），待点亮自测</b>；imu_to_dxl 自绘板待画。</p>
         <span class="pill doing mono">进行中</span>
       </div>
       <div class="stage doing reveal">
         <span class="s-no mono">STAGE 03</span><h4>打印与定标</h4>
-        <p>30 种 / 41 件可打印性体检 100% 通过；外壳已实际打印（代打 ¥99）；孔径补偿待测试片定标。</p>
-        <span class="pill doing mono">外壳 ✓ · ¥99</span>
+        <p>30 种 / 41 件体检 100% 通过；首版外壳到货并完成整机骨架装配（09-13 实拍）；孔径补偿待测试片定标。</p>
+        <span class="pill doing mono">✓ 首版组装 · 09-13</span>
       </div>
       <div class="stage doing reveal">
         <span class="s-no mono">STAGE 04</span><h4>RL 训练</h4>
@@ -391,13 +391,13 @@
       </div>
       <div class="stage doing reveal">
         <span class="s-no mono">STAGE 05</span><h4>采购到货</h4>
-        <p>三笔已实付：飞特 HL-1910-C001 ×15 ¥1,500、Radxa ZERO 3W ¥299、外壳打印 ¥99；到货后先做单只安全读写 + BAM 单摆辨识。</p>
-        <span class="pill doing mono">已购 3 笔 · 待到货</span>
+        <p>09-13 <b>HL-2915-C001 ×2 到货</b>；原 15 只订单取消，重购 HL-1910-C001 ×17（¥1,700，发货中）；<b>HAT 板 ✓、轴承 ×14 ✓、URT2 调试板 ✓ 陆续到货</b>——台架六课的硬件全部齐了。</p>
+        <span class="pill doing mono">台架硬件齐 ✓ · 开跑</span>
       </div>
       <div class="stage reveal">
         <span class="s-no mono">STAGE 06</span><h4>联调装配</h4>
-        <p>第 3 周（D15–21）：一次 sync_read 读回 16 台设备、躯干装配、Radxa 刷机跑通官方 Rust 运行时。</p>
-        <span class="pill wait mono">排队 · W3</span>
+        <p>整机骨架装配已提前完成（09-13）；待电控：一次 sync_read 读回 16 台设备、Radxa 刷机跑通官方 Rust 运行时。</p>
+        <span class="pill doing mono">骨架 ✓ · 待电控</span>
       </div>
       <div class="stage reveal">
         <span class="s-no mono">STAGE 07</span><h4>整机行走</h4>
@@ -414,9 +414,9 @@
     <div class="sprint reveal">
       <div class="sprint-head">
         <h3>30 天冲刺 · 脚印进度</h3>
-        <span class="mono">2026-09-05 → 10-04 · DAY 7</span>
+        <span class="mono">2026-09-05 → 10-04 · DAY 9</span>
       </div>
-      <div class="footprints" id="footprints" aria-label="30 天冲刺进度：已完成 7 天"></div>
+      <div class="footprints" id="footprints" aria-label="30 天冲刺进度：已完成 9 天"></div>
       <div class="sprint-weeks">
         <div class="wk"><span class="mono">W1 · D1–7</span><b>打样启动 + 定标</b>测试片、imu_to_dxl 开画、长货期件下单</div>
         <div class="wk"><span class="mono">W2 · D8–14</span><b>批量打印 + 回板</b>41 件打印、PCB 点亮、真实 IMU 数据</div>
@@ -465,15 +465,16 @@
     <div class="bom-grid">
       <div class="bom-card reveal">
         <span class="g-no mono">GRP-A</span><h4>执行器（国产替代）</h4>
-        <div class="bom-item"><span class="n">飞特 HL-1910-C001 ×15<small>Feetech 国产 · 替代官方 XL330-M288 · 实付 ¥1,500</small></span><span class="st hot mono">已购 · 待到货</span></div>
-        <div class="bom-item"><span class="n">BAM 执行器辨识<small>单摆台架 → 采集 → M1–M6 拟合 → 验证</small></span><span class="st hot mono">指南在手 · 待到货实操</span></div>
+        <div class="bom-item"><span class="n">飞特 HL-1910-C001 ×17<small>Feetech 国产 · 替代官方 XL330-M288 · 原订单 ×15 取消重购 · 实付 ¥1,700</small></span><span class="st hot mono">已付 · 待到货</span></div>
+        <div class="bom-item"><span class="n">飞特 HL-2915-C001 ×2<small>换装路线先头部队 · 09-13 到货 · 台架六课待实操</small></span><span class="st hot mono">✓ 已到货</span></div>
+        <div class="bom-item"><span class="n">BAM 执行器辨识<small>单摆台架 → 采集 → M1–M6 拟合 → 验证</small></span><span class="st hot mono">舵机已到 · 待实操</span></div>
         <div class="bom-item"><span class="n">半双工转接板 + UBEC<small>HLS TTL 接口电平/针序待核对</small></span><span class="st mono">方案就绪 · 待核对</span></div>
         <div class="bom-item"><span class="n">USB 调试板<small>¥45</small></span><span class="st mono">已列入</span></div>
       </div>
       <div class="bom-card reveal">
         <span class="g-no mono">GRP-B</span><h4>主控与电路</h4>
         <div class="bom-item"><span class="n">Radxa ZERO 3W<small>RK3566 · 拆解验证 · 实付 ¥299</small></span><span class="st hot mono">已购 ✓</span></div>
-        <div class="bom-item"><span class="n">Robot HAT C1<small>官方开源 · 可直接打样</small></span><span class="st mono">打样待决定</span></div>
+        <div class="bom-item"><span class="n">Robot HAT C1<small>官方开源设计 · ¥130 · 已到货</small></span><span class="st hot mono">✓ 已到货 · 待点亮</span></div>
         <div class="bom-item"><span class="n">imu_to_dxl 自绘板<small>固件协议测试 6/6 通过</small></span><span class="st hot mono">设计包就绪 · 待画板</span></div>
       </div>
       <div class="bom-card reveal">
@@ -481,7 +482,7 @@
         <div class="bom-item"><span class="n">打印件 30 种 / 41 件<small>PLA 299 g + TPU 26 g</small></span><span class="st hot mono">体检 100% ✓</span></div>
         <div class="bom-item"><span class="n">外壳打印<small>代打 · 实付 ¥99</small></span><span class="st hot mono">已打 ✓</span></div>
         <div class="bom-item"><span class="n">M2 紧固件 + 热熔螺母<small>≈¥81</small></span><span class="st mono">已列入</span></div>
-        <div class="bom-item"><span class="n">轴承 ×14<small>规格反推完成 · ≈¥40</small></span><span class="st mono">已列入</span></div>
+        <div class="bom-item"><span class="n">轴承 ×14<small>Ø22×16×4 ×11 + Ø15×10×3 ×3 · 已到货</small></span><span class="st hot mono">✓ 已到货</span></div>
       </div>
       <div class="bom-card reveal">
         <span class="g-no mono">GRP-D</span><h4>感知</h4>
@@ -510,13 +511,13 @@
   <!-- ================= BUDGET ================= -->
   <section class="block">
     <div class="sec-head reveal"><span class="sec-index mono">[04]</span><h2>这只鸭子要花多少钱</h2><span class="rule"></span></div>
-    <p class="sec-desc reveal">自 <span class="mono">2026-09-06</span> 起实付记账：<b>舵机、主控、外壳打印三笔已付 ¥1,898</b>；其余仍为 BOM 估价。不含已有的 3D 打印机与工具。</p>
+    <p class="sec-desc reveal">自 <span class="mono">2026-09-06</span> 起实付记账：<b>舵机（重购 ×17）、主控、外壳、HAT 板已付 ¥2,228,轴承 ×14 已到货（估价 ≈¥40）</b>；其余仍为 BOM 估价。不含已有的 3D 打印机与工具。</p>
     <div class="budget">
       <div class="cost-rows">
         <div class="cost major reveal">
-          <div class="c-head"><b>舵机 飞特 HL-1910-C001 ×15</b><span class="mono">¥1,500 · <span class="pay paid">已付 ✓</span></span></div>
+          <div class="c-head"><b>舵机 飞特 HL-1910-C001 ×17</b><span class="mono">¥1,700 · <span class="pay paid">已付 ✓</span></span></div>
           <div class="c-bar"><i data-w="100%"></i></div>
-          <p class="cost-sub mono">国产 Feetech 替代 XL330（报价 ≈¥2,580）· 全场大头已落地</p>
+          <p class="cost-sub mono">原 ×15 订单取消重购 ×17（¥100/只）· 替代 XL330（报价 ≈¥2,580）· 多 2 只备件</p>
         </div>
         <div class="cost reveal">
           <div class="c-head"><b>主控 Radxa ZERO 3W</b><span class="mono">¥299 · <span class="pay paid">已付 ✓</span></span></div>
@@ -529,20 +530,25 @@
           <p class="cost-sub mono">按重计价 · TPU 软件补打另计 ¥30–50</p>
         </div>
         <div class="cost pending reveal">
-          <div class="c-head"><b>其余电子（相机 / ToF / 电池 / 打样…）</b><span class="mono">≈¥320–370 · <span class="pay todo">待购</span></span></div>
-          <div class="c-bar"><i data-w="22%"></i></div>
-          <p class="cost-sub mono">ToF ¥70 · 相机 ¥32.8 · 电池 ¥72 · 转接板+UBEC ¥47 · 打样 ¥55–100 · 调试板 ¥45</p>
+          <div class="c-head"><b>Robot HAT C1 板</b><span class="mono">¥130 · <span class="pay paid">已付 ✓</span></span></div>
+          <div class="c-bar"><i data-w="100%"></i></div>
+          <p class="cost-sub mono">官方开源设计打样 · 已到货 · 待点亮自测</p>
         </div>
         <div class="cost pending reveal">
-          <div class="c-head"><b>机械（轴承 / M2 紧固件 / 耗材）</b><span class="mono">≈¥260–350 · <span class="pay todo">待购</span></span></div>
+          <div class="c-head"><b>其余电子（相机 / ToF / 电池 / 打样…）</b><span class="mono">≈¥265–310 · <span class="pay todo">待购</span></span></div>
+          <div class="c-bar"><i data-w="18%"></i></div>
+          <p class="cost-sub mono">ToF ¥70 · 相机 ¥32.8 · 电池 ¥72 · 转接板+UBEC ¥47 · imu_to_dxl 打样 ¥55–100 · 调试板 ¥45</p>
+        </div>
+        <div class="cost pending reveal">
+          <div class="c-head"><b>机械（轴承 ✓ / M2 紧固件 / 耗材）</b><span class="mono">≈¥220–310 · <span class="pay todo">余待购</span></span></div>
           <div class="c-bar"><i data-w="20%"></i></div>
-          <p class="cost-sub mono">轴承 14 只 ≈¥40 · M2 套装+热熔螺母 ≈¥81 · 耗材 ¥140–230</p>
+          <p class="cost-sub mono">轴承 ×14 已到货（BOM 估价 ≈¥40）· 余 M2 套装+热熔螺母 ≈¥81 · 耗材 ¥140–230</p>
         </div>
       </div>
       <aside class="budget-side reveal">
         <span class="t mono">SPENT SO FAR · 已实付</span>
-        <div class="sum mono">¥1,898</div>
-        <p class="alt">总预估降至 <b>≈¥2,460</b>（原估 ¥3,500–4,500，舵机实价拉低下调）。<br>对照官方整机 <b>$399 ≈ ¥2,900</b>——照这个节奏，自制有机会比官方还便宜。</p>
+        <div class="sum mono">≈¥2,268</div>
+        <p class="alt">总预估上调至 <b>≈¥2,700–2,800</b>(多购 2 只备件 + HAT 板;原估 ¥3,500–4,500)。<br>对照官方整机 <b>$399 ≈ ¥2,900</b>——自制仍有机会比官方便宜。</p>
         <blockquote>"没打印机就代打，别为一只鸭子专门买 ¥2,500 的打印机。"</blockquote>
       </aside>
     </div>
@@ -557,15 +563,15 @@
         <ul class="todo">
           <li><span class="no mono">T-01</span><span>打印孔径测试片，回填公差补偿<small>决定全部 41 件是否直接开打</small></span></li>
           <li><span class="no mono">T-02</span><span>imu_to_dxl 画板 → 打样 → 自测<small>设计包已就绪，固件协议 6/6 通过</small></span></li>
-          <li><span class="no mono">T-03</span><span>决定 Robot HAT 板是否打样<small>官方已开源，纠结的是版本与成本</small></span></li>
-          <li><span class="no mono">T-04</span><span>盯舵机物流；到货先做单只安全读写<small>确认 C001 版本、固件，±5° 低速试跑</small></span></li>
-          <li><span class="no mono">T-05</span><span>搭 BAM 单摆台架，完成 HL 通讯适配<small>向厂家索取寄存器表 / SDK / TTL 接线定义</small></span></li>
+          <li><span class="no mono">T-03</span><span>Robot HAT 点亮自测<small>板已到货;上电跑官方测试,核对 5V 与总线电平</small></span></li>
+          <li><span class="no mono">T-04</span><span>✓ 台架点亮 + 大摆动完美跟踪(四目标误差 +0)<small><a href="/learn/deep-203">解读 203</a> 含完整调参序列(上电→P=16→REBOOT 清锁) · 下一步课 4 拷机 + 课 6 阶跃 · <a href="/tools/servo-debug-web" style="color:var(--yellow)">网页版调试台 ↗</a></small></span></li>
+          <li><span class="no mono">T-05</span><span>给首版装配做配合复核<small>实测尺寸链，闭环解读 51 的「待验证」项</small></span></li>
         </ul>
       </div>
       <div class="risk-card reveal">
         <h3><span class="dot"></span>风险台账</h3>
         <ul class="risk">
-          <li><b>换执行器 = 策略自训。</b>官方 9 个 ONNX 策略绑定 XL330 动力学，已切国产飞特 HL 系列后降级为参考；行走策略将基于 BAM 辨识参数自训——单摆台架 → 采集 → M1–M6 拟合 → 验证 → 移植仿真，再训练（辨识指南已在手）。</li>
+          <li><b>换执行器 = 策略自训。</b>官方 9 个 ONNX 策略绑定 XL330 动力学，已切国产飞特 HL 系列后降级为参考；行走策略将基于 BAM 辨识参数自训——单摆台架 → 采集 → M1–M6 拟合 → 验证 → 移植仿真，再训练（舵机已到 2 只，台架可开搭）。</li>
           <li><b>仿真 STL ≠ 工程件。</b>打印公差未定标前，批量打印有整批报废风险，测试片是 7 天内的头等大事。</li>
           <li><b>供电冲突。</b>舵机 2S 直供与逻辑 5 V 的路径还未最终敲定，上电前必须闭环。</li>
         </ul>
@@ -576,7 +582,7 @@
   <!-- ================= LEARN ================= -->
   <section class="block" id="learn">
     <div class="sec-head reveal"><span class="sec-index mono">[06]</span><h2>学习手册 · 把踩过的坑写成路标</h2><span class="rule"></span></div>
-    <p class="sec-desc reveal">四份<b>学习手册</b>、一门<b>从零开始的 30 课公开课</b>、<b>60 篇源码与硬件深度解读</b>、一篇<b>实体 AI 创业调研</b>，全部免费在线读。另附社区三维图纸库与平价复刻路线。</p>
+    <p class="sec-desc reveal">五份<b>学习手册</b>、一门<b>从零开始的 30 课公开课</b>、<b>202 篇源码与硬件深度解读</b>、一篇<b>实体 AI 创业调研</b>，全部免费在线读。另附社区三维图纸库与平价复刻路线。</p>
     <div class="learn-grid">
       <a class="learn-card featured reveal" href="/learn/course">
         <span class="l-no">COURSE · 系列公开课<span class="d">30 课</span></span>
@@ -585,7 +591,7 @@
         <span class="l-go">进入课程 →</span>
       </a>
       <a class="learn-card featured reveal" href="/learn/deep">
-        <span class="l-no">DEEP-DIVE · 深度解读<span class="d">200 篇</span></span>
+        <span class="l-no">DEEP-DIVE · 深度解读<span class="d">203 篇</span></span>
         <h4>深读 Microduck<br>代码 · 结构 · 电路 · 舵机</h4>
         <p>逐文件、逐函数拆解真实工程：Rust 控制栈、训练配置、结构、电路、舵机执行器，HL-2915 换装全流程，通用换舵机与电压改造方法论，外加小白电气/机械/Rust 基础课。</p>
         <span class="l-go">开始深读 →</span>
@@ -606,6 +612,12 @@
         <span class="l-no">MANUAL 03 · 训练篇<span class="d">09-10</span></span>
         <h4>训练参数调整<br>与新动作开发指南</h4>
         <p>61 维输入、14 维输出是不能随便动的契约；按目标查文件改参数；单变量 A/B；从走路一步一步做出跑步。</p>
+        <span class="l-go">在线阅读 →</span>
+      </a>
+      <a class="learn-card reveal" href="/learn/hd1910-tutorial">
+        <span class="l-no">MANUAL 05 · HD-1910 迁移篇<span class="d">09-19</span></span>
+        <h4>从 XL330 到 HD-1910<br>仿真迁移与 PPO 训练</h4>
+        <p>把机械与执行器参数、BAM、PPO、横移与转向评测、ONNX 导出和真机验证串成一条可复现实验路线。</p>
         <span class="l-go">在线阅读 →</span>
       </a>
       <a class="learn-card reveal" href="/learn/servo-debug">
@@ -646,7 +658,7 @@
         </div>
         <div>
           <h5 class="mono">DATA SOURCE · 数据来源</h5>
-          <p class="src mono">PROGRESS.md · BOM.md · 构建日志.md · 实验总表 experiment-log.csv · 实付记账 2026-09-07<br>飞特 HL 系列尺寸图 (HD-1910M-C001) · BAM 辨识实操指南 · 学习手册 ×4 (2026-09-10/11)<br>SolidWorks 图纸：机械行者Robo (2026-09-09)<br>更新于 2026-09-11 · duck.whatled.com</p>
+          <p class="src mono">PROGRESS.md · BOM.md · 构建日志.md · 实验总表 experiment-log.csv · 实付记账 2026-09-07<br>首版外壳到货 + 整机装配 09-13（实拍 ASM-001） · HL-2915-C001 ×2 到货 09-13<br>飞特 HL 系列尺寸图 (HD-1910M-C001) · BAM 辨识实操指南 · 学习手册 ×4 (2026-09-10/11)<br>SolidWorks 图纸：机械行者Robo (2026-09-09)<br>更新于 2026-09-13 · duck.whatled.com</p>
         </div>
       </div>
       <div class="copy">
@@ -664,7 +676,7 @@
     for (var d = 1; d <= 30; d++) {
       var s = document.createElementNS('http://www.w3.org/2000/svg','svg');
       s.setAttribute('viewBox','0 0 24 28');
-      s.setAttribute('class','fp' + (d <= 7 ? ' walked' : '') + (d === 7 ? ' today' : ''));
+      s.setAttribute('class','fp' + (d <= 9 ? ' walked' : '') + (d === 9 ? ' today' : ''));
       var u = document.createElementNS('http://www.w3.org/2000/svg','use');
       u.setAttribute('href','#foot');
       u.setAttribute('fill','currentColor');
