@@ -57,6 +57,15 @@ use futures::StreamExt;
 /// Generous, because BLE discovery is genuinely slow and a robot advertises at whatever interval
 /// BlueZ chose. Shorter than this and a laptop that was simply unlucky reports "no robot".
 const SCAN_TIME: Duration = Duration::from_secs(8);
+/// How much longer a scan listens once a robot has been heard without its name.
+///
+/// The name is only in the scan response, a second exchange a central can miss on its own
+/// ([`nothing_found`] has the byte budget), so a robot can be heard with its service UUID and no name.
+/// `scan` then lists it as `(no name)` and `--name` cannot match it — and the next run names it,
+/// because the OS keeps the name once it has one. Seen on macOS and Linux alike, and too rarely to
+/// pin down: `advwatch` has only ever measured the name arriving with the first packet. So the scan
+/// waits for the name rather than reporting the half it has, and costs nothing when the name came.
+const NAME_GRACE: Duration = Duration::from_secs(4);
 /// How often the scan results are re-read while waiting.
 ///
 /// A single snapshot after a fixed sleep is what this used to do, and it failed intermittently:
@@ -65,6 +74,14 @@ const SCAN_TIME: Duration = Duration::from_secs(8);
 /// answered fine on the next attempt. Polling until something appears also makes the common case
 /// finish in well under a second instead of always paying `SCAN_TIME`.
 const SCAN_POLL: Duration = Duration::from_millis(250);
+
+/// How long to keep scanning for a robot's extended advertisement once its legacy one has arrived.
+///
+/// A connection from the legacy advertisement fails on most Linux laptops (`btd`'s `advertise`
+/// explains why), so connecting the moment the legacy one is seen would throw the scan away. Seven
+/// to ten of `btd`'s advertising intervals; a robot from before the twin existed pays this once per
+/// command and is then connected to as before.
+const TWIN_GRACE: Duration = Duration::from_secs(1);
 
 /// How long to wait with **nothing at all arriving** before giving up on a request.
 ///
@@ -138,6 +155,8 @@ struct Seen {
     /// What the robot broadcast about its place on the network — see [`Address`], and `duck_ble::adv`
     /// for why four bytes of IPv4 and not the SSID too.
     address: Address,
+    /// Whether this is the extended twin of a robot's legacy advertisement — see [`one_per_robot`].
+    extended: bool,
 }
 
 /// What a device said about its IPv4 address, which is three answers rather than two.
@@ -357,6 +376,29 @@ fn resolve_pin(flag: Option<String>, var: Option<String>) -> String {
         .unwrap_or_else(|| DEFAULT_PIN.to_owned())
 }
 
+/// The candidates with each robot's legacy advertisement dropped where its extended twin was seen.
+///
+/// `btd` advertises twice from two random addresses (`duck_ble::adv` says why), so without this one
+/// robot is two candidates with the same name, and [`choose`] refuses that as a collision. The twin is
+/// the one kept because it is the one a Linux laptop can connect through.
+///
+/// Paired on name *and* address rather than name alone: two robots that share a name are the
+/// collision `choose` exists to refuse, and they cannot share a LAN address.
+fn one_per_robot<T>(found: Vec<(T, String, Address, bool)>) -> Vec<(T, String)> {
+    let twins: Vec<(String, Address)> = found
+        .iter()
+        .filter(|(_, _, _, extended)| *extended)
+        .map(|(_, name, address, _)| (name.clone(), *address))
+        .collect();
+    found
+        .into_iter()
+        .filter(|(_, name, address, extended)| {
+            *extended || !twins.iter().any(|(n, a)| n == name && a == address)
+        })
+        .map(|(candidate, name, _, _)| (candidate, name))
+        .collect()
+}
+
 /// Which of the candidates to talk to, given what was asked for.
 ///
 /// Generic over the payload so the rule can be tested: a `Peripheral` cannot be constructed off a
@@ -420,8 +462,8 @@ fn choose<T>(found: Vec<(T, String)>, target: &Target) -> Result<(T, String), St
 /// Deliver a resolved address the way the command asked for it.
 ///
 /// **`ip` prints the address and nothing else**, because the tool's split is diagnostics on stderr
-/// and data on stdout: `ssh radxa@$(duckctl ip)` only works if that is the whole of what stdout
-/// carries. Every note this command emits goes to stderr for the same reason.
+/// and data on stdout: `ssh microduck@$(duckctl ip)` only works if that is the whole of what
+/// stdout carries. Every note this command emits goes to stderr for the same reason.
 fn deliver(command: &Command, address: &str) -> Result<(), Box<dyn std::error::Error>> {
     match command {
         Command::Ip => {
@@ -457,15 +499,15 @@ fn deliver(command: &Command, address: &str) -> Result<(), Box<dyn std::error::E
 }
 
 /// Which account `ssh` and `scp` log into: the flag, else a non-empty `DUCK_BOARD_USER`, else
-/// `radxa`.
+/// `microduck`.
 ///
 /// Empty is unset — `DUCK_BOARD_USER= duckctl ssh` reads as "not set", the same rule `DUCK_ROBOT`
 /// follows, because a variable emptied to switch it off must not become an ssh login of `@host`.
-/// `radxa` is the image's account and `dev-push.sh`'s default for the same variable.
+/// `microduck` is the image's account and `dev-push.sh`'s default for the same variable.
 fn ssh_user(flag: Option<&str>, env: Option<String>) -> String {
     flag.map(str::to_owned)
         .or_else(|| env.filter(|user| !user.trim().is_empty()))
-        .unwrap_or_else(|| "radxa".to_owned())
+        .unwrap_or_else(|| "microduck".to_owned())
 }
 
 /// `ssh`'s arguments: `user@address`, then whatever is to run there.
@@ -696,6 +738,23 @@ fn lists_others(verbose: bool, robots: usize) -> bool {
 /// What `scan` prints: the robots, and — per [`lists_others`] — everything else.
 async fn listing(seen: &[Seen], verbose: bool, target: &Target) -> String {
     let (robots, others): (Vec<&Seen>, Vec<&Seen>) = seen.iter().partition(|d| d.duck);
+    // One line per robot rather than per advertisement.
+    let robots: Vec<&Seen> = one_per_robot(
+        robots
+            .into_iter()
+            .map(|d| {
+                (
+                    d,
+                    d.local_name.clone().unwrap_or_default(),
+                    d.address,
+                    d.extended,
+                )
+            })
+            .collect(),
+    )
+    .into_iter()
+    .map(|(d, _)| d)
+    .collect();
     // Kept before `device_list` consumes the vector, since they decide the blocks below.
     let found = robots.len();
     let silent = robots
@@ -896,7 +955,7 @@ enum Command {
     Scan,
     /// The robot's IPv4 address on stdout, and nothing else.
     ///
-    /// `ssh radxa@$(duckctl ip)`. Read from the advertisement `btd` already broadcasts, so no
+    /// `ssh microduck@$(duckctl ip)`. Read from the advertisement `btd` already broadcasts, so no
     /// connection is made, no bond is needed and no PIN can be wrong — and it costs about a second
     /// rather than the tens `wifi status` does. A robot that is bonded to this machine and has
     /// stopped advertising the service to it is asked over BLE instead, which is slower and always
@@ -911,9 +970,9 @@ enum Command {
     ///
     /// The user is `--user`, else `DUCK_BOARD_USER` from the environment — the same variable
     /// `scripts/dev-push.sh` reads, so a laptop set up for pushing is set up for this — else
-    /// `radxa`, the image's default account.
+    /// `microduck`, the image's default account.
     Ssh {
-        /// The account on the robot. Without it, `DUCK_BOARD_USER`; without that, `radxa`.
+        /// The account on the robot. Without it, `DUCK_BOARD_USER`; without that, `microduck`.
         #[arg(long, value_name = "USER")]
         user: Option<String>,
         /// A command to run on the robot instead of opening a shell. Put it after `--`.
@@ -937,9 +996,9 @@ enum Command {
     /// and `--` ends them for anything after that this tool would otherwise read as its own. A
     /// local file that really is named `:foo` is `./:foo`.
     ///
-    /// The user resolves the way `ssh`'s does: `--user`, else `DUCK_BOARD_USER`, else `radxa`.
+    /// The user resolves the way `ssh`'s does: `--user`, else `DUCK_BOARD_USER`, else `microduck`.
     Scp {
-        /// The account on the robot. Without it, `DUCK_BOARD_USER`; without that, `radxa`.
+        /// The account on the robot. Without it, `DUCK_BOARD_USER`; without that, `microduck`.
         #[arg(long, value_name = "USER")]
         user: Option<String>,
         /// What to copy, `scp`-style, with a leading `:` for a path on the robot.
@@ -1419,11 +1478,16 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
     // The advertised service UUID is an *optimisation*, not the identity check — and treating it as
     // the latter broke as soon as the Mac bonded with the robot. The authoritative test is whether
     // it serves our characteristic, which is only knowable after connecting.
-    let mut advertised: Vec<(Peripheral, String)> = Vec::new();
+    let mut advertised: Vec<(Peripheral, String)>;
+    // Before [`one_per_robot`] collapses each robot's two advertisements into one.
+    let mut advertised_raw: Vec<(Peripheral, String, Address, bool)> = Vec::new();
+    let mut addresses_raw: Vec<(Address, String, Address, bool)> = Vec::new();
+    // When something worth connecting to first arrived, which starts [`TWIN_GRACE`].
+    let mut first_worth: Option<Instant> = None;
     // What each robot said about its address, beside the name it said it under — the two fields
     // `choose` needs, so `ip` inherits the collision rule every other command follows rather than
     // picking whichever robot the radio reported first.
-    let mut addresses: Vec<(Address, String)> = Vec::new();
+    let mut addresses: Vec<(Address, String)>;
     let mut named: Vec<(Peripheral, String)> = Vec::new();
     let mut connected: Vec<(Peripheral, String)> = Vec::new();
     // Everything the Mac reported, kept only so a failure can say what was in range. `configd`
@@ -1433,8 +1497,8 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
     let deadline = Instant::now() + SCAN_TIME;
 
     loop {
-        advertised.clear();
-        addresses.clear();
+        advertised_raw.clear();
+        addresses_raw.clear();
         named.clear();
         connected.clear();
         // Cleared with the tiers, and rebuilt from the same sweep: `peripherals()` reports
@@ -1453,8 +1517,9 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
 
             let duck = properties.services.contains(&SERVICE_UUID);
             let address = Address::read(&properties, duck);
+            let extended = duck && adv::is_extended(&properties.manufacturer_data);
             if duck {
-                addresses.push((address, name.clone()));
+                addresses_raw.push((address, name.clone(), address, extended));
             }
             seen.push(Seen {
                 peripheral: peripheral.clone(),
@@ -1463,6 +1528,7 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
                 services: properties.services.len(),
                 duck,
                 address,
+                extended,
             });
 
             if list_only {
@@ -1473,7 +1539,7 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
             }
 
             if duck {
-                advertised.push((peripheral, name));
+                advertised_raw.push((peripheral, name, address, extended));
             } else if target.wanted().is_some_and(|w| answers_to(&name, w)) {
                 named.push((peripheral, name));
             } else if target.wanted().is_none() && peripheral.is_connected().await? {
@@ -1485,12 +1551,32 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
 
+        // Whether the candidate already includes an extended twin, before the collapse hides which
+        // one survived. Without one, a legacy advertisement gets [`TWIN_GRACE`] for its twin to
+        // arrive; a bonded robot found by name alone has no twin to wait for.
+        let twin_seen = advertised_raw.iter().any(|(_, name, _, extended)| {
+            *extended
+                && target
+                    .wanted()
+                    .is_none_or(|wanted| answers_to(name, wanted))
+        });
+        advertised = one_per_robot(advertised_raw.clone());
+        addresses = one_per_robot(addresses_raw.clone());
+
         // A listing is the exception, and runs the deadline out: stopping at the first robot would
         // report one and hide the second, which is the only question worth asking in a room with
         // three of them.
-        if (!list_only && worth_connecting(&advertised, &named, &connected, &target))
-            || Instant::now() >= deadline
-        {
+        let worth = !list_only && worth_connecting(&advertised, &named, &connected, &target);
+        if worth && first_worth.is_none() {
+            first_worth = Some(Instant::now());
+        }
+        let settled = twin_seen
+            || advertised.is_empty()
+            || first_worth.is_some_and(|first| first.elapsed() >= TWIN_GRACE);
+        // Past the deadline only while a robot is still nameless, and then for [`NAME_GRACE`].
+        let nameless = seen.iter().any(|d| d.duck && d.local_name.is_none());
+        let now = Instant::now();
+        if (worth && settled) || (now >= deadline && (!nameless || now >= deadline + NAME_GRACE)) {
             break;
         }
         tokio::time::sleep(SCAN_POLL).await;
@@ -1588,7 +1674,9 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
          something else already holds it — the phone app, or another `duckctl` — because a robot \
          serving one central advertises non-connectably and is listed without being reachable. \
          Otherwise: if macOS shows it as paired, forget it there and retry; `sudo pkill \
-         bluetoothd` also clears a half-finished bond.",
+         bluetoothd` also clears a half-finished bond. On Linux, a robot whose release predates its \
+         extended advertisement fails here every time against most Intel controllers \
+         (`le-connection-abort-by-local`); update it from a Mac.",
         CONNECT_TIMEOUT,
         peripheral.connect(),
     )
@@ -2633,6 +2721,42 @@ mod tests {
         assert!(error.contains("set-name"), "the way out: {error}");
     }
 
+    /// A robot's two advertisements are one candidate, and the one kept is the extended twin.
+    #[test]
+    fn a_robots_twin_advertisements_are_one_candidate() {
+        let here = Address::At(Ipv4Addr::new(192, 168, 1, 42));
+        let found = vec![
+            ("legacy", "duck-c51b".to_owned(), here, false),
+            ("extended", "duck-c51b".to_owned(), here, true),
+        ];
+        assert_eq!(
+            one_per_robot(found),
+            vec![("extended", "duck-c51b".to_owned())]
+        );
+    }
+
+    /// Two robots under one name stay two, so `choose` still refuses them — a shared name is not a
+    /// shared robot, and only a shared address too pairs them.
+    #[test]
+    fn two_robots_under_one_name_are_not_twins() {
+        let one = Address::At(Ipv4Addr::new(192, 168, 1, 42));
+        let other = Address::At(Ipv4Addr::new(192, 168, 1, 43));
+        let found = vec![
+            ("a", "radxa-zero3".to_owned(), one, false),
+            ("b", "radxa-zero3".to_owned(), other, true),
+        ];
+        assert_eq!(one_per_robot(found).len(), 2);
+        let target = Target {
+            name: Some("radxa-zero3".to_owned()),
+            from_env: false,
+        };
+        let found = vec![
+            ("a", "radxa-zero3".to_owned(), one, true),
+            ("b", "radxa-zero3".to_owned(), other, true),
+        ];
+        choose(one_per_robot(found), &target).expect_err("still a collision");
+    }
+
     /// A collision on a name from the environment says so. This is the failure where provenance
     /// matters most: nothing on the command line named the robot, and the message is about which of
     /// two the command would otherwise have written to.
@@ -3048,20 +3172,30 @@ mod tests {
         assert_eq!(user, &None);
         assert_eq!(
             ssh_argv(&ssh_user(user.as_deref(), None), "192.168.10.136", command),
-            ["radxa@192.168.10.136", "sudo", "robotctl", "pad", "pair"]
+            [
+                "microduck@192.168.10.136",
+                "sudo",
+                "robotctl",
+                "pad",
+                "pair"
+            ]
         );
 
         assert_eq!(ssh_user(Some("pierre"), Some("antoine".into())), "pierre");
         assert_eq!(ssh_user(None, Some("antoine".into())), "antoine");
-        assert_eq!(ssh_user(None, Some("".into())), "radxa");
-        assert_eq!(ssh_user(None, None), "radxa");
+        assert_eq!(ssh_user(None, Some("".into())), "microduck");
+        assert_eq!(ssh_user(None, None), "microduck");
     }
 
     /// A leading `:` is the robot, in either operand, and everything else reaches `scp` as typed.
     #[test]
     fn scp_points_colon_paths_at_the_robot_and_leaves_the_rest_alone() {
-        let up = scp_argv("radxa", "192.168.10.136", &paths(&["report.md", ":/tmp/"]));
-        assert_eq!(up, ["report.md", "radxa@192.168.10.136:/tmp/"]);
+        let up = scp_argv(
+            "microduck",
+            "192.168.10.136",
+            &paths(&["report.md", ":/tmp/"]),
+        );
+        assert_eq!(up, ["report.md", "microduck@192.168.10.136:/tmp/"]);
 
         let down = scp_argv(
             "pierre",
@@ -3072,8 +3206,12 @@ mod tests {
 
         // Flags, several sources, and a bare `:` for the home directory — all of it passes
         // through, because the rewrite only ever looks at the first character.
-        let many = scp_argv("radxa", "192.168.10.136", &paths(&["-r", "a", "b:c", ":"]));
-        assert_eq!(many, ["-r", "a", "b:c", "radxa@192.168.10.136:"]);
+        let many = scp_argv(
+            "microduck",
+            "192.168.10.136",
+            &paths(&["-r", "a", "b:c", ":"]),
+        );
+        assert_eq!(many, ["-r", "a", "b:c", "microduck@192.168.10.136:"]);
     }
 
     /// The two refusals `scp`'s own usage error could not have explained: a copy that names no
