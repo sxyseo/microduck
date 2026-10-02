@@ -1,13 +1,13 @@
 # 解读 98 · bus.rs(一):`transact` 帧层
 
-> **解读对象**:`duck-control/src/bus.rs`(708 行)
+> **解读对象**:`duck-control/src/bus.rs`(787 行)
 > **需要的前置**:[解读 01](01-总线调度.md)(总线调度导览)、[解读 53](53-舵机协议.md)(寄存器对照)
 
 导览见解读 01,本篇逐函数下钻。先交代一个名字:仓库里并没有叫 `transact` 的函数,"帧层"指的是一次总线事务的收发与解码,它住在 `RobotIo::read`/`write` 与 rustypot 的 `sync_read_raw_data`/`sync_write_goal_position` 里(`io.rs:58` 把这类失败统一叫 "bus transaction failed")。
 
 ## 1. 把串口包成协议控制器:`open_controller` 与 `open`
 
-签名(bus.rs:400):`fn open_controller(port: &str, baud: u32) -> Result<Xl330Controller>`。三步各管一事(bus.rs:401-410):`serialport::new(port, baud).timeout(READ_TIMEOUT).open()` 打开串口,超时取 `READ_TIMEOUT = 30 ms`(bus.rs:52)——健康的 16 设备读远快于此,设上限是让"缺一台设备"变成有界卡顿,而不是挂在串口驱动默认超时上;然后 `Xl330Controller::new().with_protocol_v2().with_serial_port(serial)` 包成 Dynamixel 协议 2 控制器。`DynamixelIo::open`(bus.rs:117)再定发言名单:`ids` 第 0 位是 IMU 板 `IMU_DXL_ID = 200`(model.rs:78),后面按 `JOINT_IDS` 顺序跟 15 个关节(bus.rs:120-122)——应答块回来的顺序就是这份名单的顺序,所以 `blocks[0]` 永远是 IMU。`port` 字符串也单独留一份(bus.rs:104-106):rustypot 独占串口句柄、不支持原地改波特率,换速度只能整个重开(见解读 99 的 `reopen`)。
+签名(bus.rs:473):`fn open_controller(port: &str, baud: u32, fast_sync_read: bool) -> Result<Xl330Controller>`。三步各管一事:`serialport::new(port, baud).timeout(READ_TIMEOUT).open()` 打开串口,超时取 `READ_TIMEOUT = 30 ms`(bus.rs:52)——健康的 16 设备读远快于此,设上限是让"缺一台设备"变成有界卡顿,而不是挂在串口驱动默认超时上;然后 `Xl330Controller::new().with_protocol_v2().with_serial_port(serial)` 包成 Dynamixel 协议 2 控制器;`fast_sync_read` 为真时再挂 `with_fast_sync_read()`——**此后所有 `sync_read_*` 走协议 2.0 指令 0x8A**(fast sync read):16 个设备的应答块追加进同一个广播状态包,每台设备省一个包头和一次总线周转(`return_delay_time`,正是寄存器自检要钉低的那个值),tick 的合并读、`slow_sensors`、`present_positions` 全部自动覆盖。它有固件前提——XL330 需 v46+,imu_to_dxl 板(id 200)也要实现 0x8A——而代码**不做探测**(答不出 0x8A 与没上电无法区分),所以这是一个人转的开关而不是开机猜测:`robotd.toml` 的 `bus.fast_sync_read`,默认开;关掉后开总线时打一行 warning。它仍是 all-or-nothing:所有块装在同一个状态包里,一台不应答则整笔读超时——与普通 sync read 里"一只舵机哑了"的失败形态相同,tick 对丢读的恢复路径也一样。`DynamixelIo::open`(bus.rs:143)把开关随端口一起传进来,再定发言名单:`ids` 第 0 位是 IMU 板 `IMU_DXL_ID = 200`(model.rs:78),后面按 `JOINT_IDS` 顺序跟 15 个关节(bus.rs:120-122)——应答块回来的顺序就是这份名单的顺序,所以 `blocks[0]` 永远是 IMU。`port` 字符串也单独留一份(bus.rs:104-106):rustypot 独占串口句柄、不支持原地改波特率,换速度只能整个重开(见解读 99 的 `reopen`)。
 
 ## 2. `read`:12 字节块的逐字节解码
 

@@ -7,7 +7,7 @@
 
 ## 1. `slow_sensors`:一秒一笔的第二本账
 
-签名(bus.rs:541):`fn slow_sensors(&mut self) -> Result<SlowSensors>`。一笔 `sync_read_raw_data(&JOINT_IDS, 144, 3)`(bus.rs:544)同时拿回 15 个舵机的输入电压(`u16`,每计数 0.1 V,bus.rs:48)与温度。循环里有个容易看漏的过滤:`if v > 0.0 { volts.push(v) }`(bus.rs:568-570)——答出 0 的设备不许进平均,否则一块正常的电池会被坏读数稀释成"半没电";全空则 `volts.is_empty()` 直接报 ShortRead(bus.rs:574-580)。返回的电压是 15 个读数的平均(bus.rs:582),温度不是——理由在注释里(bus.rs:531-534):同一块电池,平均是降噪;"一个发热的关节"才是要看的信号,均值会把它藏掉。另外(bus.rs:536-540):rustypot 的 sync_read 等齐所有 ID,一台不应答则**整笔失败**——慢速读是 all-or-nothing,调用方应保留上个样本,别把一次失手当新闻。
+签名(bus.rs:541):`fn slow_sensors(&mut self) -> Result<SlowSensors>`。一笔 `sync_read_raw_data(&JOINT_IDS, 144, 3)`(bus.rs:544)同时拿回 15 个舵机的输入电压(`u16`,每计数 0.1 V,bus.rs:48)与温度。循环里有个容易看漏的过滤:`if v > 0.0 { volts.push(v) }`(bus.rs:568-570)——答出 0 的设备不许进平均,否则一块正常的电池会被坏读数稀释成"半没电";全空则 `volts.is_empty()` 直接报 ShortRead(bus.rs:574-580)。返回的电压是 15 个读数的平均(bus.rs:582),温度不是——理由在注释里(bus.rs:531-534):同一块电池,平均是降噪;"一个发热的关节"才是要看的信号,均值会把它藏掉。另外(bus.rs:536-540):rustypot 的 sync_read 等齐所有 ID,一台不应答则**整笔失败**——慢速读是 all-or-nothing,调用方应保留上个样本,别把一次失手当新闻。(这条在默认的 0x8A 快速读下同样成立:所有块装进同一个广播状态包,缺一台即整笔超时,机制见[解读 98](98-busrs一transact帧层.md) §1。)
 
 ## 2. `StaleImuTracker::observe`:给"重复的答案"计数
 

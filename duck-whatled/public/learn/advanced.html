@@ -285,11 +285,11 @@ cargo test --workspace
 #    刷之前在界面里填好 WiFi + 用户名密码（省掉串口线）
 
 # ② 加入你的 ssh key（后续全自动流程靠它）
-ssh-copy-id radxa@192.168.1.42        # 换成板子实际 IP
+ssh-copy-id microduck@192.168.1.42        # 换成板子实际 IP
 
 # ③ 一键装机：发 dev key、装系统依赖、编译部署 daemon、重启、健康检查
 export DUCK_TOKEN=ghp_xxx             # 仓库若已公开可省
-./scripts/provision-board.sh --pause-btd-on-pair --name my-duck radxa@192.168.1.42
+./scripts/provision-board.sh --pause-btd-on-pair --name my-duck microduck@192.168.1.42
 
 # ④ 验证
 robotctl health
@@ -304,16 +304,16 @@ cargo install cargo-zigbuild --locked &amp;&amp; brew install zig    # 方案 A
 # 开发板需要团队 dev 私钥在 ~/.duck-keys/team.dev.key
 
 # 日常：改代码 → 一条命令
-scripts/dev-push.sh radxa@192.168.1.42
+scripts/dev-push.sh microduck@192.168.1.42
 # 它做：交叉编译 → 打包 → 用 dev key 签名 → scp 到板子 → 走健康门安装 → 等守护进程报新版本
 </code></pre>
 <p>注意：dev-push 装的是 <strong>daemon</strong>（控制程序）。它和"装模型"是两条通道——这正是官方刻意设计的：改步态不需要重发 daemon，修 daemon 也不用重新下载 6MB 权重。</p>
 <h3 id="35-安装你自己训练的-onnx终点站">3.5 安装你自己训练的 ONNX（终点站）</h3>
 <pre><code class="language-bash"># 把导出的 onnx 拷上板（scp 就行）
-scp walk.onnx radxa@192.168.1.42:/home/radxa/
+scp walk.onnx microduck@192.168.1.42:/home/microduck/
 
 # 加载到 walk 槽位 —— 就是这一条：
-sudo robotctl policy load walk /home/radxa/walk.onnx
+sudo robotctl policy load walk /home/microduck/walk.onnx
 # 机器人会先回 HOME 姿态、加载、继续驱动；形状不对会被 robotd 拒绝
 
 # 查看/恢复

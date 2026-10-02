@@ -131,8 +131,8 @@
 <h2 id="1-装配与第一次上电">1. 装配与第一次上电</h2>
 <p>装配顺序里有个容易被略过的动作:每只舵机装完<strong>先手掰全行程听有没有碰壳</strong>——ID 和标定在台架阶段就做完了,此刻唯一还能免费发现的故障是机械干涉。第一次上电的姿势也有规定:<strong>只接总线不装腿(或吊装)</strong>,然后 <code>robotctl health</code> → <code>robotctl monitor</code>,确认 16 个读块全回(教程口径:15 舵机+各自遥测;注意官方路线里第 16 个读块来自挂在总线上的 imu_to_dxl,HL 路线 IMU 已走 I²C,总线上只剩 15 只——这一口径差验收时要心里有数)。<code>robotctl health</code> 真能当闸门用:robotctl 源码注明它在不健康或不可达时以非零码退出,"so it can gate a script"。</p>
 <h2 id="2-部署三条命令">2. 部署:三条命令</h2>
-<pre><code class="language-bash">scp alpha_walking.onnx radxa@&lt;IP&gt;:/home/radxa/
-sudo robotctl policy load walk /home/radxa/alpha_walking.onnx
+<pre><code class="language-bash">scp alpha_walking.onnx microduck@&lt;IP&gt;:/home/microduck/
+sudo robotctl policy load walk /home/microduck/alpha_walking.onnx
 robotctl policy list
 </code></pre>
 <p><code>policy load</code> 是官方 CLI 的真实子命令(<code>docs/进阶学习文档-训练仿真与部署.md</code> §3 同款)。robotctl 源码里还有一条值得知道的语义:"a load that fails anyway leaves the policy that was running"——加载失败不会留下一个空转的机器人。维度不对的策略在这之前就会被拦:manifest 的 <code>incompatibility()</code> 只强制 obs/action/型号(见<a href="/learn/deep-69">解读 69</a>),教程 §10 速查表"policy load 被拒"一行给出的动作就是先跑 <code>inspect_onnx.py</code> 验 61/14,再对 manifest schema。</p>

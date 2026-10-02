@@ -54,7 +54,7 @@ ONNX 是一种**模型的通用交付格式**:不管用什么框架训练,最后
 1. **文件可追溯**:文件名写清出自哪个 run,别用 `output.onnx` 这种转眼不认识的名字;
 2. **形状核对**:61 进 14 出。`robotd`(板子上的控制守护进程)会拒绝一切形状不对的 ONNX——这是安全网,不是障碍;
 3. **先跑要部署的那个文件**:`uv run scripts/infer_policy.py --walking <你的文件.onnx>`——必须是"真正要上板的那一个"。它用 50Hz 控制 + BAM 执行器复演部署路径;
-4. **真机加载有仪式**:scp 上板后 `sudo robotctl policy load walk /home/radxa/walk.onnx`——先回 HOME 姿态、再加载、继续驱动;`policy list` 看 7 个槽位,`policy reset walk` 恢复官方策略。
+4. **真机加载有仪式**:scp 上板后 `sudo robotctl policy load walk /home/microduck/walk.onnx`——先回 HOME 姿态、再加载、继续驱动;`policy list` 看 7 个槽位,`policy reset walk` 恢复官方策略。
 
 上了真机也别撒手:按指南 13.6 节测试金字塔一级一级来,从单舵机台架、悬空低增益,到软垫站立、低速直行(第 20 课细讲)。
 

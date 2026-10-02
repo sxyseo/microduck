@@ -141,12 +141,12 @@
 <ol>
 <li><strong>WiFi</strong>——在烧录界面里填,板子开机自动联网,省掉接串口线救急;</li>
 <li><strong>用户名密码</strong>——同上,免得对着一块没有屏幕的板子猜"到底进系统没";</li>
-<li><strong>ssh key</strong>——<code>ssh-copy-id radxa@192.168.1.42</code>(IP 换成你板子的)。ssh key 是一对"锁和钥匙":公钥留在板子上,私钥在你电脑里,以后登录免密码,后面的全自动流程也靠这扇门。</li>
+<li><strong>ssh key</strong>——<code>ssh-copy-id microduck@192.168.1.42</code>(IP 换成你板子的;<strong>默认用户名是 <code>microduck</code></strong>,刷卡时用什么这里就写什么)。ssh key 是一对"锁和钥匙":公钥留在板子上,私钥在你电脑里,以后登录免密码,后面的全自动流程也靠这扇门。</li>
 </ol>
 <p>这三件事一次填对,后面全是坦途;漏一件,就要给无屏板子接串口线排查。</p>
 <h2 id="3-一键装机provision-boardsh">3. 一键装机:provision-board.sh</h2>
 <p>一条命令把空白板子变成开发板:</p>
-<pre><code class="language-bash">./scripts/provision-board.sh --pause-btd-on-pair --name my-duck radxa@192.168.1.42
+<pre><code class="language-bash">./scripts/provision-board.sh --pause-btd-on-pair --name my-duck microduck@192.168.1.42
 </code></pre>
 <p>它依次完成:发 dev key → 装系统依赖 → 编译并部署 daemon → 重启 → 健康检查。(仓库未公开时需先 <code>export DUCK_TOKEN</code>,公开可省。)</p>
 <p>注意 <code>--pause-btd-on-pair</code> 不是仪式感:板载 aic8800 无线芯片在手柄<strong>首次配对</strong>时需要它,漏了你会得到一只"怎么都查不出原因的配不上的手柄"(详见 <code>docs/robot/install-dev.md</code>)。</p>
@@ -158,9 +158,10 @@ grep -c 'DEV BOARD' /var/lib/robot/provision.log  # 输出 1 = dev key 装好了
 <p>一次性准备(二选一):装交叉编译工具 <code>cargo-zigbuild + zig</code>(方案 A),或者什么都不装、命令加 <code>--docker</code>(方案 B,需要 Docker 在跑)。<strong>交叉编译</strong>就是在 Mac 上编译出 ARM 板子能跑的程序——中央厨房出餐,餐车直接端。</p>
 <p>另外,团队 dev 私钥要放在 <code>~/.duck-keys/team.dev.key</code>:板子只认用它签过名的包,这是防陌生程序跑上真机的门卫。</p>
 <p>之后每天的开发就是一条命令:</p>
-<pre><code class="language-bash">scripts/dev-push.sh radxa@192.168.1.42
+<pre><code class="language-bash">scripts/dev-push.sh microduck@192.168.1.42   # 默认用户就是 microduck,也可只写 IP
 </code></pre>
 <p>它串起六步:交叉编译 → 打包 → 用 dev key 签名 → scp 到板子 → 过健康门安装 → 等守护进程报出新版本。你只管改代码,推上去等版本号。</p>
+<p>上了板子看日志也不用再 <code>sudo journalctl</code>:<code>robotctl logs</code> 就是一条免 sudo 的日志尾部,专门给"推完之后看一眼它说了什么"用。</p>
 <p>还有个容易误解的设计:dev-push 装的是 <strong>daemon</strong>(常驻的控制程序),和"装模型"是<strong>两条通道</strong>——改步态不用重发 daemon,修 daemon 也不用重新下载 6MB 权重。脑子归脑子,小脑归小脑。</p>
 <h2 id="5-动手练习15-分钟">5. 动手练习(15 分钟)</h2>
 <ol>

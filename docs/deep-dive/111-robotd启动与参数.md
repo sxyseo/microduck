@@ -19,7 +19,7 @@
 
 ## 4. 打开总线、收养新舵机与 `init`
 
-`open_bus_for`(:1297-1343)第一行定日志节奏:`loud = attempt == 0 || attempt.is_multiple_of(30)`(:1299,常量在 :1425)——守一夜的板子约 30 秒一行。后端分派(:1301-1311):Dynamixel 走 `DynamixelIo::open`;HL-2915 走 `Hl2915RobotIo::open(port, &DEFAULT_HL2915_IDS, IMU_DXL_ID, FeetechCalibration::default(), 30ms)`(见解读 109)。收养是 Dynamixel 独占的(:1323-1327),出厂探测要重开串口到 57 600 波特。`adopt_missing_servo`(:1356-1404)是决策树:ping 全员;不缺→继续;**15 只全缺**→"不是换舵机,只是没上电"(:1371-1375);恰好缺一只→`replacement_target` 定顶替者、`adopt_replacement` 收养;缺多只→分不清谁顶替谁,等人类。最后 `prepare()` 校验寄存器,`Ok(0)` 报"本来就对",`Ok(n)` 报"修正了 n 项"(:1328-1331)。`run_init`(:1031-1062)与守护进程同一条开总线路径,然后 `set_torque(true)`、`set_gain`、`interpolate_to` 到 home 位。增益必须在斜率**之前**写(:1043-1052):`position_p_gain` 是 RAM 寄存器,进程死了值还在,上次摔倒留下的 `gain_limp`(50)会让 init 用三分之一刚度拉起机器人。
+`open_bus_for`(:1297-1343)第一行定日志节奏:`loud = attempt == 0 || attempt.is_multiple_of(30)`(:1299,常量在 :1425)——守一夜的板子约 30 秒一行。后端分派(:1301-1311):Dynamixel 走 `DynamixelIo::open(port, fast_sync_read)`——0.15 起默认启用 0x8A 快速同步读(固件前提与开关见[解读 98](98-busrs一transact帧层.md) §1;`bus.fast_sync_read` 关着且该行该大声时会打一行 warning,"关了快速读"与"板子慢"从此分得清);HL-2915 走 `Hl2915RobotIo::open(port, &DEFAULT_HL2915_IDS, IMU_DXL_ID, FeetechCalibration::default(), 30ms)`(见解读 109)。收养是 Dynamixel 独占的(:1323-1327),出厂探测要重开串口到 57 600 波特。`adopt_missing_servo`(:1356-1404)是决策树:ping 全员;不缺→继续;**15 只全缺**→"不是换舵机,只是没上电"(:1371-1375);恰好缺一只→`replacement_target` 定顶替者、`adopt_replacement` 收养;缺多只→分不清谁顶替谁,等人类。最后 `prepare()` 校验寄存器,`Ok(0)` 报 "motor bus ready",`Ok(n)` 报"修正了 n 项"(:1330-1336)。`run_init`(:1031-1062)与守护进程同一条开总线路径,然后 `set_torque(true)`、`set_gain`、`interpolate_to` 到 home 位。增益必须在斜率**之前**写(:1043-1052):`position_p_gain` 是 RAM 寄存器,进程死了值还在,上次摔倒留下的 `gain_limp`(50)会让 init 用三分之一刚度拉起机器人。
 
 ## 你带走的收获
 

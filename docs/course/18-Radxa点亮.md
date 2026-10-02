@@ -23,7 +23,7 @@
 
 1. **WiFi**——在烧录界面里填,板子开机自动联网,省掉接串口线救急;
 2. **用户名密码**——同上,免得对着一块没有屏幕的板子猜"到底进系统没";
-3. **ssh key**——`ssh-copy-id radxa@192.168.1.42`(IP 换成你板子的)。ssh key 是一对"锁和钥匙":公钥留在板子上,私钥在你电脑里,以后登录免密码,后面的全自动流程也靠这扇门。
+3. **ssh key**——`ssh-copy-id microduck@192.168.1.42`(IP 换成你板子的;**默认用户名是 `microduck`**,刷卡时用什么这里就写什么)。ssh key 是一对"锁和钥匙":公钥留在板子上,私钥在你电脑里,以后登录免密码,后面的全自动流程也靠这扇门。
 
 这三件事一次填对,后面全是坦途;漏一件,就要给无屏板子接串口线排查。
 
@@ -32,7 +32,7 @@
 一条命令把空白板子变成开发板:
 
 ```bash
-./scripts/provision-board.sh --pause-btd-on-pair --name my-duck radxa@192.168.1.42
+./scripts/provision-board.sh --pause-btd-on-pair --name my-duck microduck@192.168.1.42
 ```
 
 它依次完成:发 dev key → 装系统依赖 → 编译并部署 daemon → 重启 → 健康检查。(仓库未公开时需先 `export DUCK_TOKEN`,公开可省。)
@@ -55,10 +55,12 @@ grep -c 'DEV BOARD' /var/lib/robot/provision.log  # 输出 1 = dev key 装好了
 之后每天的开发就是一条命令:
 
 ```bash
-scripts/dev-push.sh radxa@192.168.1.42
+scripts/dev-push.sh microduck@192.168.1.42   # 默认用户就是 microduck,也可只写 IP
 ```
 
 它串起六步:交叉编译 → 打包 → 用 dev key 签名 → scp 到板子 → 过健康门安装 → 等守护进程报出新版本。你只管改代码,推上去等版本号。
+
+上了板子看日志也不用再 `sudo journalctl`:`robotctl logs` 就是一条免 sudo 的日志尾部,专门给"推完之后看一眼它说了什么"用。
 
 还有个容易误解的设计:dev-push 装的是 **daemon**(常驻的控制程序),和"装模型"是**两条通道**——改步态不用重发 daemon,修 daemon 也不用重新下载 6MB 权重。脑子归脑子,小脑归小脑。
 

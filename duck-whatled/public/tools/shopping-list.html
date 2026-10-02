@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>完整购买清单 · 什么鸭 WhatDuck</title>
+<meta name="description" content="Microduck 复刻完整购买清单:已购打钩含实付、待购带淘宝搜索链接与验收规格,供其他复刻者直接参考。">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<style>
+  :root{--bg:#14100c;--panel:#1e1812;--panel2:#26201a;--ink:#f2ead9;--soft:#a89a85;--line:#3a3226;
+        --orange:#ff7a1a;--yellow:#f0b429;--green:#7ddb6a;--red:#ff5a4e;--mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:var(--bg);color:var(--ink);font:15px/1.7 -apple-system,"PingFang SC","Microsoft YaHei",sans-serif;padding:18px;max-width:1060px;margin:0 auto}
+  h1{font-size:22px;margin-bottom:4px}h1 .duck{color:var(--orange)}
+  .sub{color:var(--soft);font-size:13px;margin-bottom:14px}
+  .sub a{color:var(--yellow);text-decoration:none}
+  h2{font-size:16px;margin:26px 0 10px;padding-top:14px;border-top:1px solid var(--line)}
+  h2 .tag{font-family:var(--mono);font-size:12px;color:var(--orange);margin-right:8px}
+  table{width:100%;border-collapse:collapse;font-size:13.5px;margin:8px 0 14px}
+  th,td{border:1px solid var(--line);padding:7px 10px;text-align:left;vertical-align:top}
+  th{background:var(--panel2);font-weight:700;white-space:nowrap}
+  td .q{color:var(--yellow);text-decoration:none;font-weight:700;border-bottom:1px dashed rgba(240,180,41,.4)}
+  td .q:hover{border-bottom-style:solid}
+  td small{display:block;color:var(--soft);font-size:12px;margin-top:3px}
+  .ck{font-family:var(--mono);color:var(--green);font-weight:800}
+  .wt{font-family:var(--mono);color:var(--soft)}
+  .sum{background:var(--panel);border:1px solid var(--orange);border-radius:10px;padding:12px 16px;margin:14px 0;font-family:var(--mono);font-size:14px}
+  .sum b{color:var(--orange);font-size:18px}
+  .note{color:var(--soft);font-size:12.5px;margin:6px 0}
+  a.back{color:var(--yellow);text-decoration:none;font-family:var(--mono);font-size:13px}
+  code{font-family:var(--mono);font-size:.9em;background:var(--panel2);padding:1px 5px;border-radius:4px}
+</style>
+</head>
+<body>
+<h1><span class="duck">▲</span> Microduck 复刻 · 完整购买清单</h1>
+<p class="sub">已购打钩含实付 · 待购带搜索链接与验收规格 · 供其他复刻者直接参考 · 2026-10-02 · <a class="back" href="/">← 首页</a> · <a class="back" href="/#progress">进度</a> · <a class="back" href="/learn/course">公开课</a></p>
+
+<div class="sum">
+  已实付 ≈<b>¥2,764</b>(12+ 笔) · 待购 ≈<b>¥250–310</b> · 预计整机总成本 <b>≈¥3,000–3,100</b>
+  (含工具 ≈¥120 与首版报废外壳 ¥99;纯硬件 ≈¥2,600)<br>
+  对照官方整机 <b>$399 ≈ ¥2,900</b>——自制略贵或持平,代价是重训工作量,收获是全过程可控可学。
+</div>
+
+<h2><span class="tag">✅ 已购</span>核心电子(已到货,实付明细)</h2>
+<table>
+  <tr><th style="width:200px">项</th><th>说明</th><th style="width:90px">实付</th></tr>
+  <tr><td><span class="ck">✅</span> 飞特 HL-1910-C001 ×17</td><td>执行器主力,替代官方 XL330(省约 ¥1,000)<small>发货中;台架验收流程见<a class="q" href="/learn/deep-203">解读 203</a></small></td><td>¥1,591</td></tr>
+  <tr><td><span class="ck">✅</span> 飞特 HL-2915-C001 ×2</td><td>先头部队:台架验证 + 软件适配<small>一只验收通过,一只故障售后中——判定方法见解读 203</small></td><td>¥200</td></tr>
+  <tr><td><span class="ck">✅</span> Radxa ZERO 3W</td><td>主控 RK3566,与官方同款零移植<small>不带排线;排线见待购 CSI</small></td><td>¥299</td></tr>
+  <tr><td><span class="ck">✅</span> Robot HAT C1</td><td>官方开源设计打样板;含 BMI088 IMU</td><td>¥130</td></tr>
+  <tr><td><span class="ck">✅</span> imu_to_dxl 自绘板</td><td>全网无公开工程的 IMU 转接板,嘉立创打样 + 元件<small>到手待焊接</small></td><td>¥97</td></tr>
+  <tr><td><span class="ck">✅</span> URT2 调试板</td><td>飞特舵机 USB 调试板,台架必备<small>配合网页调试台<a class="q" href="/tools/servo-debug-web">servo-debug-web</a> 使用</small></td><td>¥48</td></tr>
+  <tr><td><span class="ck">✅</span> 读卡器</td><td>Radxa 系统卡烧写用</td><td>¥17</td></tr>
+  <tr><td><span class="ck">✅</span> 半双工转接板(TTL 驱动板)</td><td>UART→半双工 TTL;最终装进鸭子体内连主控与总线<small>注意与 USB 调试板(URT2)是两种东西:URT2 接电脑调试,转接板装机</small></td><td>≈¥25</td></tr>
+</table>
+
+<h2><span class="tag">✅ 已购</span>结构件</h2>
+<table>
+  <tr><th style="width:200px">项</th><th>说明</th><th style="width:90px">实付</th></tr>
+  <tr><td><span class="ck">✅</span> 外壳 v1(代打)</td><td><s>首版,结构不对报废</s>——报废也是验证成本,别心疼</td><td>¥99</td></tr>
+  <tr><td><span class="ck">✅</span> 外壳 v2(修正版)</td><td>修正结构后重打,已到货装配</td><td>¥120</td></tr>
+  <tr><td><span class="ck">✅</span> CNC 加强件</td><td>结构强度增强</td><td>¥45</td></tr>
+  <tr><td><span class="ck">✅</span> 轴承 ×14</td><td>Ø22×16×4 ×11 + Ø15×10×3 ×3<small>搜索「轴承 16x22x4 薄壁」「10x15x3」,P0 公差足够;参考 [taobao 539024647147 / 670727787832]</small></td><td>¥41</td></tr>
+</table>
+
+<h2><span class="tag">✅ 已购</span>工具(一次性投资,长期复用)</h2>
+<table>
+  <tr><td><span class="ck">✅</span> 万用表 / 电烙铁 / 焊锡膏 / 排针 / 绝热高温胶带</td><td>调试与焊接全套基础工具</td><td>¥51.7</td></tr>
+  <tr><td><span class="ck">✅</span> 12V 适配器 ×2</td><td>小米 24W + YUNTAME 24W,台架供电<small>单舵机足够;整机不行(那用电池)</small></td><td>已有</td></tr>
+</table>
+
+<h2><span class="tag">⬜ 待购 · 必须</span>到手后整机组装材料齐(≈¥200)</h2>
+<table>
+  <tr><th style="width:110px">项</th><th style="width:210px">搜索链接(点击直达)</th><th>验收规格(买前逐条核对)</th><th style="width:80px">约价</th></tr>
+  <tr>
+    <td><span class="wt">⬜</span> <b>电池</b></td>
+    <td><a class="q" target="_blank" href="https://s.taobao.com/list?q=唯卓仕+NP-F550">淘宝「唯卓仕 NP-F550」</a></td>
+    <td>NP-F550/F570 规格(38.4×20.6×70.8mm,<b>⚠ F970 装不进</b>);7.4V 2S;≥2200mAh;带充电口。<b>续航 ≈1 小时/块(整机平均电流 ≈2.5A),建议备 2 块轮换</b></td>
+    <td>¥53/块</td>
+  </tr>
+  <tr>
+    <td><span class="wt">⬜</span> <b>供电扣板</b></td>
+    <td><a class="q" target="_blank" href="https://s.taobao.com/list?q=NP-F+电池扣板+Type-C">淘宝「NP-F 电池扣板 Type-C」</a></td>
+    <td>NP-F 卡口;<b>输出为电池原电压 7.4V 直出</b>(裸线或 DC5521;别买只出 5V 的)</td>
+    <td>¥19</td>
+  </tr>
+  <tr>
+    <td><span class="wt">⬜</span> <b>UBEC</b></td>
+    <td><a class="q" target="_blank" href="https://s.taobao.com/list?q=UBEC+5V+3A">淘宝「UBEC 5V 3A」</a></td>
+    <td>输入覆盖 2S(6–8.4V)→ 输出 5V≥3A;<b>必须开关式</b>(线性稳压压差不够)。<b>为什么必须:电池 7.4V 直接给舵机总线,但 Radxa 主控要稳定 5V≥3A——没有它主控点不了</b></td>
+    <td>≈¥25</td>
+  </tr>
+  <tr>
+    <td><span class="wt">⬜</span> <b>M2 螺丝</b></td>
+    <td><a class="q" target="_blank" href="https://s.taobao.com/list?q=M2+内六角螺钉+DIN912+304不锈钢+组合">淘宝「M2 内六角螺钉 DIN912 304不锈钢 组合装」</a></td>
+    <td><b>必须含 M2</b>(很多套装最小只到 M3,看清 SKU);规格覆盖 ×4/×6/×8/×12;另配 M2 螺母 ≥50<small>参考实购:广州信邦 600pcs ¥26.8 [taobao 842110292995]</small></td>
+    <td>¥23–27</td>
+  </tr>
+  <tr>
+    <td><span class="wt">⬜</span> <b>热熔螺母</b></td>
+    <td><a class="q" target="_blank" href="https://s.taobao.com/list?q=M2+热熔螺母+铜嵌件+滚花">淘宝「M2 热熔螺母 铜嵌件 滚花」</a></td>
+    <td>铜、双通道滚花、M2×外径~4.6×长~4.8mm(M2+M3 混装更划算)<small>参考实购:榕誉微 400pcs ¥22 [taobao 1000673642588]</small></td>
+    <td>¥22</td>
+  </tr>
+  <tr>
+    <td><span class="wt">⬜</span> 热熔压头</td>
+    <td><a class="q" target="_blank" href="https://s.taobao.com/list?q=热熔螺母+压头+M2+936">淘宝「热熔螺母 压头 M2 936/T12」</a></td>
+    <td>与你烙铁发热芯型号匹配</td>
+    <td>¥13</td>
+  </tr>
+  <tr>
+    <td><span class="wt">⬜</span> 乐泰 243</td>
+    <td><a class="q" target="_blank" href="https://s.taobao.com/list?q=乐泰+243">淘宝「乐泰 243」</a></td>
+    <td>汉高官方店;中强度可拆卸;10ml</td>
+    <td>¥19</td>
+  </tr>
+</table>
+
+<h2><span class="tag">⬜ 待购 · 建议</span>感知与补打</h2>
+<table>
+  <tr><th style="width:110px">项</th><th style="width:210px">搜索链接</th><th>验收规格</th><th style="width:80px">约价</th></tr>
+  <tr>
+    <td><span class="wt">⬜</span> <b>相机</b></td>
+    <td><a class="q" target="_blank" href="https://s.taobao.com/list?q=IMX219+摄像头+树莓派">淘宝「IMX219 摄像头 树莓派」</a></td>
+    <td>传感器必须 <b>IMX219</b>(800 万,非 OV5647);15pin 1.0mm 排针座版。<b>为什么锁死 IMX219:Radxa 的设备树 overlay(radxa-zero3-rpi-camera-v2)与 ISP 配置(SENSOR=imx219)只认这颗传感器——换高分辨率型号要重写内核设备树 + ISP 管线,且头部仅留 13mm 相机位</b><small>出处:电控采购清单 §三;参考实购:DECXIN ¥32.8 [tmall 775872575316]</small></td>
+    <td>¥33</td>
+  </tr>
+  <tr>
+    <td><span class="wt">⬜</span> CSI 排线</td>
+    <td><a class="q" target="_blank" href="https://s.taobao.com/list?q=15pin+转+22pin+CSI+排线">淘宝「15pin 转 22pin CSI 排线」</a></td>
+    <td>15P 1.0mm → 22P 0.5mm,金手指对插;长度 <b>4–15cm 买最短</b></td>
+    <td>¥2–5</td>
+  </tr>
+  <tr>
+    <td><span class="wt">⬜</span> TPU 补打</td>
+    <td><a class="q" target="_blank" href="https://www.jlc-3dp.cn/">嘉立创三维上传 STL</a></td>
+    <td>材料 <b>TPU 95A</b>、填充 ≥30%、壁 ≥3 圈;文件 <code>jaw_soft_软下巴.stl</code> + <code>soft_mouth_top_软嘴顶部.stl</code>(共 26g;不影响行走,影响叼取)</td>
+    <td>¥30–50</td>
+  </tr>
+</table>
+
+<h2><span class="tag">⬜ 待购 · 可后</span>避障(走路阶段不需要)</h2>
+<table>
+  <tr><td><span class="wt">⬜</span> <b>ToF</b></td><td><a class="q" target="_blank" href="https://s.taobao.com/list?q=VL53L8CX+模组">淘宝「VL53L8CX 模组」</a></td><td>型号<b>逐字核对</b>:VL53L8CX(VL53L5CX 也可);<b>8×8 多区</b>;Qwiic/JST-SH 4P;<b>⚠ VL53L0X(单点)和 VL53L7CX 都不认</b></td><td>¥70–80</td></tr>
+</table>
+
+<h2><span class="tag">⏳ 等舵机到货</span>连接线(先别下单)</h2>
+<table>
+  <tr><td><span class="wt">⏳</span> 舵机连接线 ×15</td>
+  <td>等 HL-1910 到货确认插头</td>
+  <td>3P <b>5264-2.5mm</b>(以到货实插为准;若是 XH2.54/PH2.0 就按实际买);<b>10/15/20cm 各 5 条</b>,26AWG+;30cm 以上不要(盒内盘线+扎带解决余量)。舵机包装盒通常自带 1 条短线,先拆开看。</td>
+  <td>~¥15</td></tr>
+</table>
+
+<h2><span class="tag">✅ 自制</span>imu_to_dxl 板(唯一自绘电路)</h2>
+<table>
+  <tr><td><span class="ck">✅</span> 打样 + 元件</td><td>立创 EDA 照连接表(<code>docs/imu_to_dxl-设计包/原理图连接表.md</code>)绘制;打样参数 <b>2 层 / 1.6mm / HASL / 5 片</b>(jlc.com ¥25–40);元件 14 种按 BOM 下单(¥30–60)。<b>特别核对:C6 输入电容 10µF ≥25V 0805 X7R</b>(挂电池总线,10V 件会超压)</td><td>¥97</td></tr>
+</table>
+
+<p class="note" style="margin-top:16px">数据出处:<code>microduck-replica/docs/物料清单-进度快照.md</code>(搜索词+验收规格式)、<code>电控采购清单.md</code>、<code>机械采购清单.md</code>。价格随市场波动,下单前自行核价;链接失效时按搜索词重搜——<b>规格不会漂移,链接会</b>。</p>
+<p class="sub" style="margin-top:10px"><a class="back" href="/">← 返回首页</a> · <a class="back" href="/learn/course">公开课</a> · <a class="back" href="/learn/deep">深读系列</a> · © 2026 WHATDUCK · 非官方个人学习与研究项目</p>
+</body>
+</html>
