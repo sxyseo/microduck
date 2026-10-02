@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "status": "pending",
+  "gates": [
+    {
+      "gate": "S0/S1/S2 servo IDs",
+      "status": "pending",
+      "evidence": "没有两只舵机的探针验证 JSON",
+      "next": "先生成 servo-a-id1-validation.json 和 servo-b-id2-validation.json"
+    },
+    {
+      "gate": "S3 bench CSV",
+      "status": "pending",
+      "evidence": "没有 CSV 摘要",
+      "next": "cargo +1.89.0 run -p duck-control --bin hl2915_record -- COMx 1 2 --seconds 600 --output artifacts/hl2915-bench.csv --hz 50"
+    },
+    {
+      "gate": "S4 Radxa",
+      "status": "pending",
+      "evidence": "没有板卡报告",
+      "next": "python tools/microduck_learning/board_readonly_report.py --json-out artifacts/board-readonly-report.json"
+    },
+    {
+      "gate": "S5 IMU/mixed",
+      "status": "pending",
+      "evidence": "没有混合协议日志",
+      "next": "cargo +1.89.0 run -p duck-control --bin hl2915_mixed_probe -- COMx 1 2 --watch-seconds 60"
+    },
+    {
+      "gate": "S6 camera/HAT media",
+      "status": "pending",
+      "evidence": "没有板卡报告；没有 HAT I²C/录放音功能 smoke JSON；没有实际摄像头采集/编码 smoke JSON",
+      "next": "python tools/microduck_learning/board_readonly_report.py --json-out artifacts/board-readonly-report.json；在 Radxa 执行 python tools/microduck_learning/hat_smoke.py --run --confirm-official-hat --confirm-audible --json-out artifacts/hat-smoke.json；在 Radxa 执行 python tools/microduck_learning/media_smoke.py --run --json-out artifacts/media-smoke.json"
+    },
+    {
+      "gate": "BAM data",
+      "status": "pending",
+      "evidence": "没有 BAM 原始 JSON",
+      "next": "先完成 S3，再用 hl2915_bam_record 做受限摆锤采样"
+    },
+    {
+      "gate": "BAM model",
+      "status": "pending",
+      "evidence": "没有拟合后的 HL-2915 参数合同",
+      "next": "先运行 python tools/microduck_learning/check_bam_model.py"
+    },
+    {
+      "gate": "S7 ONNX",
+      "status": "passed",
+      "evidence": "input=[1, 61], output=[1, 14], SHA-256=aafdb8950afb…, bytes=793706",
+      "next": "按 SHA-256 校验后才允许拷到 Radxa"
+    },
+    {
+      "gate": "S7 training lineage",
+      "status": "pending",
+      "evidence": "没有训练血缘报告",
+      "next": "python tools/microduck_learning/check_training_lineage.py --help"
+    },
+    {
+      "gate": "S8 real robot",
+      "status": "manual",
+      "evidence": "15 只舵机、结构、吊装和策略尚无现场证据",
+      "next": "逐级执行 S8 测试金字塔"
+    }
+  ]
+}

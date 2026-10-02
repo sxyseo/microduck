@@ -1,0 +1,32 @@
+{
+  "status": "passed",
+  "actuator": "hl2915",
+  "model": "m6",
+  "required_fields": [
+    "kt",
+    "R",
+    "armature",
+    "q_offset",
+    "friction_base",
+    "friction_stribeck",
+    "load_friction_motor",
+    "load_friction_external",
+    "load_friction_motor_stribeck",
+    "load_friction_external_stribeck",
+    "load_friction_motor_quad",
+    "load_friction_external_quad",
+    "dtheta_stribeck",
+    "alpha",
+    "friction_viscous"
+  ],
+  "adapter_metadata": {
+    "error_gain": 0.1,
+    "max_velocity_rpm": 110.0,
+    "default_vin": 12.0,
+    "default_kp": 16.0,
+    "max_pwm": 0.97,
+    "max_current_a": 1.5
+  },
+  "data_provenance": "synthetic",
+  "path": "artifacts\\bam\\synthetic\\hl2915-m6-smoke.json"
+}

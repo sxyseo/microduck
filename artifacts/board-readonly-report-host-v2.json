@@ -1,0 +1,98 @@
+{
+  "schema_version": 1,
+  "read_only": true,
+  "status": "incomplete",
+  "machine": "AMD64",
+  "checks": [
+    {
+      "name": "architecture",
+      "status": "warn",
+      "value": "AMD64",
+      "detail": "not an aarch64 board",
+      "required": true
+    },
+    {
+      "name": "serial",
+      "status": "missing",
+      "value": [],
+      "detail": "未发现 ttyS2/ttyUSB0/ttyACM0",
+      "required": true
+    },
+    {
+      "name": "imu",
+      "status": "unknown",
+      "value": "Dynamixel v2 ID=200",
+      "detail": "只读报告不打开串口；必须用 imu_probe 或 hl2915_mixed_probe 实际读取",
+      "required": false
+    },
+    {
+      "name": "hat_i2c",
+      "status": "missing",
+      "value": [],
+      "detail": "未发现 i2c-pihat 或 i2c-3",
+      "required": true
+    },
+    {
+      "name": "camera",
+      "status": "missing",
+      "value": [],
+      "detail": "未发现 /dev/video*；先检查 overlay、排线和 vendor kernel",
+      "required": true
+    },
+    {
+      "name": "camera_mainpath",
+      "status": "missing",
+      "value": [],
+      "detail": "未发现 rkisp_mainpath；/dev/video* 可能只是 USB 或 overlay 尚未生效",
+      "required": true
+    },
+    {
+      "name": "mpp",
+      "status": "missing",
+      "value": null,
+      "detail": "未发现 /dev/mpp_service",
+      "required": true
+    },
+    {
+      "name": "rga",
+      "status": "missing",
+      "value": null,
+      "detail": "未发现 /dev/rga；MPP 编码可能无法完成格式转换",
+      "required": false
+    },
+    {
+      "name": "npu",
+      "status": "missing",
+      "value": [],
+      "detail": "未发现 NPU 入口；不影响舵机和 IMU 台架测试",
+      "required": false
+    },
+    {
+      "name": "hat_audio",
+      "status": "missing",
+      "value": null,
+      "detail": "未发现 HAT 音频卡；若不使用音频可暂不处理",
+      "required": false
+    },
+    {
+      "name": "tof_service",
+      "status": "unknown",
+      "value": null,
+      "detail": "没有确认 tofd active；ToF 是可选 HAT 外设",
+      "required": false
+    },
+    {
+      "name": "gstreamer",
+      "status": "unknown",
+      "value": null,
+      "detail": "gst-inspect-1.0 不可用；运行 setup-gstreamer.sh 安装后再检查",
+      "required": true
+    }
+  ],
+  "summary": {
+    "pass": 0,
+    "warn": 1,
+    "missing": 8,
+    "unknown": 3
+  }
+}

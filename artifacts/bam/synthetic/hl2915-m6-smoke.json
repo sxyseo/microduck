@@ -1,0 +1,30 @@
+{
+    "kt": 2.454049178169776,
+    "error_gain_ratio": 2.6980037334877642,
+    "R": 4.0344174384068126,
+    "armature": 0.026725814239601298,
+    "q_offset": 0.08149355148359111,
+    "max_velocity": 101.48655922105698,
+    "friction_base": 0.044498466176654386,
+    "friction_stribeck": 0.0789362745191321,
+    "load_friction_motor": 0.24754194791658252,
+    "load_friction_external": 0.3979580083526269,
+    "load_friction_motor_stribeck": 0.9586045799070287,
+    "load_friction_external_stribeck": 0.2288384226518071,
+    "load_friction_motor_quad": 0.002648479692562672,
+    "load_friction_external_quad": 0.00223953854965948,
+    "dtheta_stribeck": 4.6384602934142825,
+    "alpha": 5.755088486318923,
+    "friction_viscous": 0.7838105326867891,
+    "model": "m6",
+    "actuator": "hl2915",
+    "hl2915_adapter": {
+        "error_gain": 0.1,
+        "max_velocity_rpm": 110.0,
+        "default_vin": 12.0,
+        "default_kp": 16.0,
+        "max_pwm": 0.97,
+        "max_current_a": 1.5
+    },
+    "data_provenance": "synthetic"
+}
