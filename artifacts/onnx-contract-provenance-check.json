@@ -1,0 +1,21 @@
+{
+  "path": "F:\\microduck_rl\\logs\\rsl_rl\\velocity\\2026-09-12_03-33-14_lesson-01-repro\\2026-09-12_03-33-14_lesson-01-repro.onnx",
+  "input": {
+    "name": "obs",
+    "shape": [
+      1,
+      61
+    ]
+  },
+  "output": {
+    "name": "actions",
+    "shape": [
+      1,
+      14
+    ]
+  },
+  "runtime": "onnxruntime/CPUExecutionProvider",
+  "finite_zero_observation": true,
+  "sha256": "aafdb8950afb1be93692823f53366a6cb5b1b3d9d882b98efbe1ad7ebebd2595",
+  "size_bytes": 793706
+}
