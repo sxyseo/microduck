@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "status": "pending",
+  "gates": [
+    {
+      "gate": "S0/S1/S2 servo IDs",
+      "status": "manual",
+      "evidence": "必须看现场探针日志和照片",
+      "next": "单只 PING，第二只改 ID=2"
+    },
+    {
+      "gate": "S3 bench CSV",
+      "status": "pending",
+      "evidence": "没有 CSV 摘要",
+      "next": "运行 hl2915_record 600 秒并生成摘要"
+    },
+    {
+      "gate": "S4 Radxa",
+      "status": "pending",
+      "evidence": "缺少 ttyS2/ttyUSB0/ttyACM0",
+      "next": "确认串口、停止 serial-getty，并重跑只读报告"
+    },
+    {
+      "gate": "S5 IMU/mixed",
+      "status": "pending",
+      "evidence": "没有混合协议日志",
+      "next": "hl2915_mixed_probe ... --watch-seconds 60"
+    },
+    {
+      "gate": "S6 camera/HAT media",
+      "status": "pending",
+      "evidence": "需同时通过 HAT I2C/音频、camera/mainpath、MPP、RGA 和 GStreamer",
+      "next": "执行 setup-gstreamer.sh --check，并先修 overlay/vendor kernel"
+    },
+    {
+      "gate": "BAM data",
+      "status": "pending",
+      "evidence": "没有 BAM 原始 JSON",
+      "next": "先用独立摆锤运行 hl2915_bam_record"
+    },
+    {
+      "gate": "BAM model",
+      "status": "pending",
+      "evidence": "没有拟合后的 HL-2915 参数合同",
+      "next": "先运行 check_bam_model.py"
+    },
+    {
+      "gate": "S7 ONNX",
+      "status": "passed",
+      "evidence": "input=[1, 61], output=[1, 14]",
+      "next": "保留 SHA-256，才允许拷到 Radxa"
+    },
+    {
+      "gate": "S8 real robot",
+      "status": "manual",
+      "evidence": "15 只舵机、结构、吊装和策略尚无现场证据",
+      "next": "逐级执行 S8 测试金字塔"
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "status": "passed",
+  "actuator": "xl330",
+  "model": "m6",
+  "required_fields": [
+    "kt",
+    "R",
+    "armature",
+    "q_offset",
+    "friction_base",
+    "friction_stribeck",
+    "load_friction_motor",
+    "load_friction_external",
+    "load_friction_motor_stribeck",
+    "load_friction_external_stribeck",
+    "load_friction_motor_quad",
+    "load_friction_external_quad",
+    "dtheta_stribeck",
+    "alpha",
+    "friction_viscous"
+  ],
+  "path": "/home/codex/microduck_rl_clean/.venv/lib/python3.12/site-packages/bam/params/xl330/m6.json"
+}

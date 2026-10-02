@@ -1,0 +1,19 @@
+{
+  "path": "logs/rsl_rl/velocity/2026-09-12_07-32-01_lesson-01-repro/2026-09-12_07-32-01_lesson-01-repro.onnx",
+  "input": {
+    "name": "obs",
+    "shape": [
+      1,
+      61
+    ]
+  },
+  "output": {
+    "name": "actions",
+    "shape": [
+      1,
+      14
+    ]
+  },
+  "runtime": "onnxruntime/CPUExecutionProvider",
+  "finite_zero_observation": true
+}
