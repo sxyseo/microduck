@@ -28,3 +28,12 @@
 [submodule "tools/FT_SCServo_Debug_Qt"]
 	path = tools/FT_SCServo_Debug_Qt
 	url = https://github.com/CarolinePascal/FT_SCServo_Debug_Qt.git
+[submodule "Microduck-kissqy"]
+	path = Microduck-kissqy
+	url = https://github.com/kissqy/Microduck-kissqy
+[submodule "microduck-community-kit"]
+	path = microduck-community-kit
+	url = https://github.com/jyg9/microduck-community-kit.git
+[submodule "microduck-servo-guide"]
+	path = microduck-servo-guide
+	url = https://github.com/sxyseo/microduck-servo-guide.git
