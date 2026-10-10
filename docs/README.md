@@ -19,7 +19,7 @@ docs give the reasoning and point at it.
 | [`代码解释与使用教程.md`](代码解释与使用教程.md) | 从 `robotd` 控制链和 Rust workspace 地图入手，说明如何运行、阅读和改造代码。 |
 | [`HL2915全链路落地手册.md`](HL2915全链路落地手册.md) | HL-2915-C001 从两只台架、Radxa、IMU/HAT、相机到重训的验收门槛。 |
 | [`HL2915两只舵机现场验收表.md`](HL2915两只舵机现场验收表.md) | 打印后逐项勾选的接线、ID、读数、动作和证据记录表。 |
-| [`Microduck Studio`](../microduck-studio/README.md) | 本地复刻工作台：硬件档案、只读探针、证据、训练 smoke 和部署前检查。 |
+| [`Microduck Studio`](../microduck-studio/README.md) | 本地复刻工作台：硬件档案、只读探针、项目证据、训练服务适配和部署前检查。 |
 | [`低成本舵机替换决策表.md`](低成本舵机替换决策表.md) | 完成 HL-2915 基线后，如何评估更便宜舵机的替换风险。 |
 | [`BAM与URDF全流程小白教程.md`](BAM与URDF全流程小白教程.md) | 从关节命名、URDF、采集、BAM 处理到训练的入门路线。 |
 | [`HD1910仿真迁移与PPO训练教程.md`](HD1910仿真迁移与PPO训练教程.md) · [离线阅读版](HD1910仿真迁移与PPO训练教程.html) | XL330 → HD-1910 的参数迁移、PPO 训练、分项评测、ONNX 导出与后续真机验证。 |
