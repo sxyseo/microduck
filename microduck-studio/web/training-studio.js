@@ -4,7 +4,7 @@ window.TrainingStudio = (() => {
   const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   let project, generation=0, plan, run, timer, busy=false, sequence=0;
   const request = async (url, body) => {
-    const response = await fetch(url, body === undefined ? {} : {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const response = await StudioAPI.fetch(url, body === undefined ? {} : {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
     const data = await response.json();
     if (!response.ok) throw Error(typeof data.detail === 'string' ? data.detail : '请求未完成');
     return data;

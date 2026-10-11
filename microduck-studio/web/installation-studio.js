@@ -3,7 +3,7 @@ window.InstallationStudio = (() => {
   const $ = id => document.getElementById(id);
   const esc = value => String(value ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   let guide, catalog, project, revision=0, step=0, api, frame, generation=0, trajectory, playing=false, playTimer, jobTimer, runId, recipe, mode='install';
-  const request = async (url, body) => { const r=await fetch(url,body===undefined?{}:{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const j=await r.json();if(!r.ok)throw Error(typeof j.detail==='string'?j.detail:'请求未完成');return j; };
+  const request = async (url, body) => { const r=await StudioAPI.fetch(url,body===undefined?{}:{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const j=await r.json();if(!r.ok)throw Error(typeof j.detail==='string'?j.detail:'请求未完成');return j; };
   const status = message => {$('guide-status').textContent=message;};
   const guard = fn => async()=>{try{await fn();}catch(e){status(e.message);}};
   const projectPath = path => `/api/projects/${project}/${path}`;

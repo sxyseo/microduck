@@ -70,3 +70,55 @@
 - 375 px 窄屏无页面横向溢出；下拉控件 16 px 字号、38 px 右侧留白；视口测试后已恢复默认尺寸。
 
 全部实验写入 `/tmp/studio-pipeline-validation.db` 与对应 `*-workbench/`，未写入日常“我的鸭子”的实验记录。日常 8765 服务已更新。当前适配范围是保持原版关节契约的 XL330 M6 方案；其他型号需要专用执行器、相应 MJCF 和实测辨识。主控/摄像头/打印件的质量与惯量以指定 MJCF 为准，下拉选型不自动生成结构。未操作串口、SSH、舵机或机器人，未部署策略。
+
+## 2026-10-02：URT2 调试台（Web Serial 直连）
+
+「舵机实验室 → URT2 调试台」新增第三个子页，把 duck.whatled.com 网页版调试台（解读 203 实测版）的功能完整移植到工作台：连接（型号/波特率/ID/PING/REBOOT/一键初始化）、150 ms 遥测（位置、电压、温度、电流、速度/负载、状态位、丢包）、位置控制（滑条、±600 步限幅、到位或 3 秒超时自动关扭矩）、增益与 EEPROM 保护参数（55 号锁位检查）、原始寄存器读写、总线扫描（ID 1–253）、多舵机总览表、改 ID 与可导出的操作日志。串口由浏览器 Web Serial 持有，Python 服务端无任何新增串口路径；这里的操作不写入 SQLite、不进入任务图与证据。
+
+- 前端：新增 `web/servo-debug-studio.js`；`web/studio.js` 注册子页 tab；`web/studio.css` 新增调试台样式段；`web/index.html` 接入脚本并统一 `20261002-servodebug-1` 缓存版本。
+- 危险动作（REBOOT、中位校准、原始写、改 ID）保留确认对话框；运动类按钮沿用 `dangerous-start`，375 px 窄屏隐藏，急停与遥测开关保留；不支持 Web Serial 时显示提示并禁用连接。
+
+验证结果：
+
+- Studio `uv run pytest -q`：**250 passed**（前端改动不触及服务端）。
+- `node --check` 通过于 `servo-debug-studio.js` 与 `studio.js`；`git diff --check` 通过。
+- 新增 59 项 Playwright 浏览器检查通过（临时库 + 8766 隔离服务）：子页切换、连接门禁按钮初始禁用、字段齐备、型号切换回填电压上限并写日志、滑条与数字双向同步、删除 `Navigator.prototype.serial` 后提示并禁用连接、375/768/1024/1440 px 无横向溢出、手机隐藏运动按钮且保留急停/遥测、切页后子页选中记忆、无页面脚本异常。
+- 既有 `tests/ui-smoke.js`（6 组）与 `tests/ui-workflow.js`（12 组，8766 + 临时库 + `/tmp/microduck-studio-ui-fixture`）回归通过。
+- 桌面与 375 px 截图核对：布局与工作台风格一致，窄屏单列且字号 16px。
+
+本轮未打开串口、未连接舵机、无运动；协议代码为解读 203 实测页的忠实移植，实机行为仍以台架实操为准。
+
+## 2026-10-03：前端上 Cloudflare Pages（API 留在本机）
+
+工作台网页可部署到静态托管（Cloudflare Pages），API/SQLite/串口/训练留在本机。`web/app-config.js` 统一解析 API 地址（同源=原行为；公网来源默认 `http://127.0.0.1:8765`，可在「云端与本机」卡片按浏览器覆盖）；`studio.js`、三个子模块与 index.html 内联脚本共 110 处请求全部经由该解析器。服务端新增 `GET /api/version` 与可选 CORS：`MICRODUCK_STUDIO_ALLOWED_ORIGINS` 精确 Origin 白名单，默认空 = 与原行为一致，开启时回答含 Private Network Access 的预检。
+
+- 新增 `scripts/build-pages-dist.py` 与 `wrangler.toml`；`pages-dist/`（23 个文件 10.6 MiB，含 Color Studio 3D 产物）已构建验证并 gitignore。
+- 新增「项目与设置 → 云端与本机」卡片：服务地址保存/清除、解析提示、`/api/version` 连接与版本显示（版本偏差仅提示）、不可达地址的明确失败提示。
+
+验证结果：
+
+- Studio `uv run pytest -q`：**256 passed**（新增 `tests/test_cors.py` 6 项：默认无 CORS、白名单解析、允许来源的预检/实际响应头、Private Network 预检、相似后缀与未登记来源拒绝；`httpx` 加入 test extras）。
+- 跨源 E2E（Playwright，8766 页面 → 8767 API，白名单指向页面来源）：跨源 GET 读列表、跨源预检 POST 创建项目、版本检测文案、不可达地址提示与恢复全部通过，无非预期脚本异常。
+- 既有回归：`tests/ui-smoke.js` 6 组、`tests/ui-workflow.js` 12 组、URT2 调试台 59 项检查全部通过（同源路径行为不变）。
+- `node --check` 通过于全部改动 JS；`git diff --check` 通过；`/api/version` 与页面卡片截图核对正常。
+
+同日补充：已实际完成部署并线上验证。
+
+- `wrangler pages project create microduck-studio` + `wrangler pages deploy`：23 个文件（约 8.8 秒上传），生产地址 **https://microduck-studio.pages.dev**。本机服务以 `MICRODUCK_STUDIO_ALLOWED_ORIGINS=https://microduck-studio.pages.dev` 重启，`/api/version` 确认白名单生效。
+- 线上全链路（Playwright Chromium 从公网 URL 打开）：公网页面自动把 API 指向 `http://127.0.0.1:8765`；跨源 GET 读到项目列表与服务版本；跨源预检 POST 在公网→127.0.0.1 的完整 Private Network Access 链路下成功创建项目「云端部署验证 01:13:11」（写入日常库，属验证记录）；「云端与本机」卡片显示已连接；URT2 调试台在 Pages 来源下 Web Serial 可用；3D 视图 iframe 自 Pages 加载；无脚本异常与网络错误，顶栏连接指示为「本地服务已连接」。
+
+## 2026-10-10：IMU 姿态台架（Web Serial 直连 ID 200）
+
+「舵机实验室 → IMU 姿态」新增第四个子页（`web/imu-studio.js`）：浏览器经 Web Serial 直读舵机总线上 imu_to_dxl 节点（ID 200）的 FT6 契约块（寄存器 56–70，15 字节 = 陀螺 i16 ×3 ±500 dps + 四元数 binary16 x/y/z 主机重建 w + 采样计数 + 状态位 + 保留），与 15 颗 HD-1910 同一条 1 Mbps 半双工总线，服务端零改动、不进证据。显示：姿态仪（SVG 地平线）+ roll/pitch 大读数 + 相对偏航、陀螺三轴、四元数、计数与状态位解读（未就绪/过期>30ms/错误/节奏/保留位告警）、节点身份（固件 + 型号 'IM'）、实际速率与丢包。健康判据与节点侧一致：全零四元数或未就绪位保持上一份有效姿态；连续 3 次相同计数判疑似冻结。附姿态角与陀螺两条 SVG 折线、6000 行样本 CSV 导出、日志导出、静态零漂检查（10 s，±0.05 rad/s 门槛，deep-dive/68）。只读：不写寄存器、不改 ID；面板内提示与 URT2 调试台共用串口、直连前须停 robotd（单主站）。
+
+- 前端：新增 `web/imu-studio.js`；`web/studio.js` bench tab 注册 `['imu','IMU 姿态']`；`web/studio.css` 新增 `#card-imu` 样式段；`web/index.html` 接入脚本、`window.ImuPanel.init()` 置于 `window.Studio.init()` 之前（tab 条从卡片构建），缓存版本 `20261010-imu-1`。
+- 协议出处：kissqy 仓 `firmware/firmware/imu-source/README_FT6_SYNC15.md`；社区套件 `firmware/v1/docs/imu_to_dxl_protocol.md` §5.2/§6/§7.2（READ 指令、15 字节块布局、'IM' 型号寄存器、全零四元数=融合未收敛须保持上一有效值）。
+
+验证结果：
+
+- Studio `uv run pytest -q`：**299 passed**（含新增 `tests/test_imu_panel.py` 10 项：脚本与 init 顺序、tab 注册、CSS、FT6 块地址与长度、陀螺刻度与 w 重建、全零四元数保持上一姿态、过期/冻结判据、默认 ID 200、保留字节告警、零漂门槛、总线安全提示）。
+- `node --check` 通过于 `imu-studio.js` 与 `studio.js`。
+- Playwright 渲染检查（临时库 + 8770 隔离服务，Chromium headless）：bench 四个 tab 齐全、`#card-imu` 可见、14 项面板元素齐备、无页面脚本异常、375/768/1024/1440 px 无横向溢出；桌面全页截图核对：姿态仪天空/地平线/地面与红旗符号正确（修正过一处地平线画在 SVG y=0 而非圆心的几何错误）。
+- 既有 `tests/ui-smoke.js` / `tests/ui-workflow.js` 未触及（bench 卡片为新增，不改既有元素）；`build-pages-dist.py` 整目录拷贝 `web/`，新 JS 自动随 Pages 发布。
+
+本轮未打开串口、未连接实机；协议按已发布文档实现，实机行为待台架实测（LSM6DSV16X 模块或 imu_to_dxl 节点上电后直接可试）。

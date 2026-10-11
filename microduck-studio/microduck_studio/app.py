@@ -4,12 +4,16 @@ import os
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Query
-from fastapi.responses import FileResponse, PlainTextResponse
+from fastapi.responses import FileResponse, PlainTextResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
+from starlette.middleware.cors import CORSMiddleware
 from .visual import VisualStore, RevisionConflict, model_manifest, model_reference
 from .workbench import Workbench, read_data
 from .training_pipeline import TrainingPipeline
+from .servo_guide import locate_site, payload as servo_guide_payload
+from .weighing import WeighingStore, find_templates, load_template
+from .kissqy_connector import KissqyTrainingService, TrainingServiceError
 
 from .core import (
     StudioStore,
@@ -27,14 +31,53 @@ DB_PATH = Path(os.environ.get("MICRODUCK_STUDIO_DB", ROOT / "studio.db"))
 store = StudioStore(DB_PATH)
 app = FastAPI(title="Microduck Studio", version="0.1.0")
 app.mount("/assets", StaticFiles(directory=STATIC), name="studio-assets")
+
+
+def allowed_browser_origins() -> list[str]:
+    """Browser origins allowed to call this service cross-origin (e.g. the Pages deployment).
+
+    Empty by default: same-origin only, exactly the pre-Cloudflare behaviour. The service keeps
+    listening on loopback; this only whitelists who may read its responses.
+    """
+    raw = os.environ.get("MICRODUCK_STUDIO_ALLOWED_ORIGINS", "")
+    return [origin.strip().rstrip("/") for origin in raw.split(",") if origin.strip()]
+
+
+def add_browser_origins(app: FastAPI, origins: list[str]) -> None:
+    # allow_private_network answers Chrome's Private Network Access preflight for pages on a
+    # public origin (Cloudflare Pages) calling http://127.0.0.1.
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=origins,
+        allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
+        allow_headers=["Content-Type"],
+        allow_credentials=False,
+        allow_private_network=True,
+        max_age=600,
+    )
+
+
+BROWSER_ORIGINS = allowed_browser_origins()
+if BROWSER_ORIGINS:
+    add_browser_origins(app, BROWSER_ORIGINS)
 visual_store = VisualStore(DB_PATH)
 workbench = Workbench(store, DB_PATH)
 training_pipeline = TrainingPipeline(workbench)
+weighing_store = WeighingStore(DB_PATH, store)
+kissqy_training = KissqyTrainingService(os.environ.get("MICRODUCK_KISSQY_URL"), DB_PATH)
 # Build artifacts are local and keep the Color Studio attribution and model license.
 COLOR_BUILD = ROOT / "microduck-color-studio" / "dist"
 COLOR_AVAILABLE = (COLOR_BUILD / "index.html").is_file()
 if COLOR_AVAILABLE:
     app.mount("/color-studio", StaticFiles(directory=COLOR_BUILD, html=True), name="color-studio")
+# The servo guide ships prebuilt static assets (no build step); mounted only when found.
+SERVO_GUIDE_SITE = locate_site()
+if SERVO_GUIDE_SITE:
+    app.mount(
+        "/servo-guide",
+        StaticFiles(directory=SERVO_GUIDE_SITE, html=True),
+        name="servo-guide",
+    )
 
 
 class VisualIn(BaseModel):
@@ -42,9 +85,100 @@ class VisualIn(BaseModel):
     expected_revision: int = Field(ge=0, strict=True)
 
 
+class KissqyQueueIn(BaseModel):
+    task: str = Field(min_length=1, max_length=120)
+    label: str = Field(default="", max_length=60)
+    num_envs: int = Field(ge=1, le=8192, strict=True)
+    iterations: int = Field(ge=1, le=409_600_000, strict=True)
+    training_firmware_p: int = Field(ge=1, le=32, strict=True)
+    training_action_scale: float = Field(strict=True)
+    action_filter: dict
+    request_id: str = Field(min_length=8, max_length=100)
+
+
+class KissqyQueueControlIn(BaseModel):
+    action: str
+    entry_id: str | None = None
+    confirm: bool = False
+
+
+@app.get("/api/projects/{project_id}/kissqy")
+def kissqy_snapshot(project_id: str):
+    if not store.get_project(project_id):
+        raise HTTPException(404, "project not found")
+    return kissqy_training.snapshot(project_id)
+
+
+@app.post("/api/projects/{project_id}/kissqy/queue")
+def kissqy_queue_add(project_id: str, body: KissqyQueueIn):
+    if not store.get_project(project_id):
+        raise HTTPException(404, "project not found")
+    try:
+        return kissqy_training.add_to_queue(project_id, body.model_dump())
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    except TrainingServiceError as exc:
+        raise HTTPException(exc.status_code, str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(502, str(exc)) from exc
+
+
+@app.post("/api/projects/{project_id}/kissqy/queue/control")
+def kissqy_queue_control(project_id: str, body: KissqyQueueControlIn):
+    if not store.get_project(project_id):
+        raise HTTPException(404, "project not found")
+    if body.action in {"start", "stop"} and body.confirm is not True:
+        raise HTTPException(409, "启动或停止训练需要在工作台再次确认")
+    try:
+        return kissqy_training.control_queue(body.action, body.entry_id, project_id)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    except TrainingServiceError as exc:
+        raise HTTPException(exc.status_code, str(exc)) from exc
+
+
+@app.get("/api/projects/{project_id}/kissqy/jobs/{job_id}/log")
+def kissqy_job_log(project_id: str, job_id: str):
+    if not store.get_project(project_id):
+        raise HTTPException(404, "project not found")
+    try:
+        return PlainTextResponse(kissqy_training.job_log(project_id, job_id))
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    except KeyError as exc:
+        raise HTTPException(404, "training run not linked to this project") from exc
+    except TrainingServiceError as exc:
+        raise HTTPException(exc.status_code, str(exc)) from exc
+
+
+@app.get("/api/projects/{project_id}/kissqy/jobs/{job_id}/model.zip")
+def kissqy_model_archive(project_id: str, job_id: str):
+    if not store.get_project(project_id):
+        raise HTTPException(404, "project not found")
+    try:
+        archive = kissqy_training.model_archive(project_id, job_id)
+        return Response(
+            content=archive,
+            media_type="application/zip",
+            headers={"Content-Disposition": f'attachment; filename="microduck-kissqy-{job_id}.zip"'},
+        )
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    except KeyError as exc:
+        raise HTTPException(404, "training run not linked to this project") from exc
+    except TrainingServiceError as exc:
+        raise HTTPException(exc.status_code, str(exc)) from exc
+
+
 @app.get('/api/installation-guide')
 def installation_guide():
     return {**read_data('installation-guide.json'), 'model': model_manifest(), 'reference': model_reference()}
+
+
+@app.get('/api/servo-guide')
+def servo_guide():
+    """Availability and structured ID reference for the HD-1910 servo guide."""
+    return servo_guide_payload(SERVO_GUIDE_SITE)
 
 
 def workbench_call(fn, *args):
@@ -272,6 +406,19 @@ class HardwareAcceptanceIn(BaseModel):
     data: dict
 
 
+class WeighingIn(BaseModel):
+    data: dict
+
+
+class ModelCopyIn(BaseModel):
+    output_path: str = Field(min_length=1)
+    confirm: bool = False
+
+
+class ServoIdMapIn(BaseModel):
+    data: dict
+
+
 class CompatibilityIn(BaseModel):
     hardware: dict
     policy: dict
@@ -360,6 +507,15 @@ class SourceIn(BaseModel):
 @app.get("/")
 def index():
     return FileResponse(STATIC / "index.html")
+
+
+@app.get("/api/version")
+def version():
+    return {
+        "service": "microduck-studio",
+        "version": app.version,
+        "browser_origins": BROWSER_ORIGINS,
+    }
 
 
 @app.post("/api/projects")
@@ -919,6 +1075,80 @@ def save_assembly(project_id: str, body: AssemblyIn):
 def list_assemblies(project_id: str):
     try:
         return {"assemblies": store.list_assemblies(project_id)}
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="project not found") from exc
+
+
+def weighing_template_for(project_id: str, path: str | None) -> dict:
+    project = store.get_project(project_id)
+    if not project:
+        raise KeyError(project_id)
+    root = Path(project["root"])
+    template = load_template(root, path)
+    return {
+        "template": template,
+        "candidates": find_templates(root),
+        "note": "官方模板只读解析；称重记录会绑定所选模板的路径与 SHA-256。",
+    }
+
+
+@app.get("/api/projects/{project_id}/weighing-template")
+def weighing_template(project_id: str, path: str | None = None):
+    try:
+        template = weighing_template_for(project_id, path)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="project not found") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return template
+
+
+@app.post("/api/projects/{project_id}/weighings")
+def save_weighing(project_id: str, body: WeighingIn):
+    try:
+        return weighing_store.save_weighing(project_id, body.data)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="project not found") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.get("/api/projects/{project_id}/weighings")
+def list_weighings(project_id: str):
+    try:
+        return {"weighings": weighing_store.list_weighings(project_id)}
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="project not found") from exc
+
+
+@app.post("/api/projects/{project_id}/weighings/{weighing_id}/model-copy")
+def build_model_copy(project_id: str, weighing_id: str, body: ModelCopyIn):
+    try:
+        return weighing_store.build_model_copy(
+            project_id, weighing_id, body.output_path, confirm=body.confirm
+        )
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="project or weighing not found") from exc
+    except PermissionError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/api/projects/{project_id}/servo-id-maps")
+def save_servo_id_map(project_id: str, body: ServoIdMapIn):
+    try:
+        return weighing_store.save_id_map(project_id, body.data)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="project not found") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.get("/api/projects/{project_id}/servo-id-maps")
+def list_servo_id_maps(project_id: str):
+    try:
+        return {"id_maps": weighing_store.list_id_maps(project_id)}
     except KeyError as exc:
         raise HTTPException(status_code=404, detail="project not found") from exc
 

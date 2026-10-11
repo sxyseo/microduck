@@ -14,7 +14,7 @@ window.Studio = (() => {
     visual: ['3D 外观与装配','把你的鸭子，放到眼前。','逐件配色、规划耗材，从模型选中零件并关联装配检查。','DESIGN YOUR MICRODUCK'],
     guide: ['可视化安装','看懂结构，再动手组装。','逐步查看部位与零件，核对硬件、接线和仿真证据。','BUILD YOUR MICRODUCK'],
     hardware: ['我的鸭子','一份档案，贯穿整个复刻。','记录实际硬件与资料来源，未确认的条件会明确保留。','HARDWARE PROFILE'],
-    bench: ['舵机实验室','从第一只舵机开始。','确认连接、只读体检、核对证据，让每次测试都可以追溯。','SERVO LAB'],
+    bench: ['舵机实验室','从第一只舵机开始。','确认连接、只读体检、实时调试与连续测试，让每次操作都可以追溯。','SERVO LAB'],
     controller: ['主控诊断','先让开发环境与主控就绪。','检查工具、版本、服务与权限，按证据定位连接问题。','SYSTEM DIAGNOSTICS'],
     assembly: ['装配与标定','让记录与实际硬件对应。','整理装配证据、关节标定与辨识条件，逐项推进。','ASSEMBLY & CALIBRATION'],
     training: ['仿真与训练','先验证，再扩大实验。','管理小规模验证、受控训练、续训与指标产物。','SIMULATION & TRAINING'],
@@ -33,12 +33,12 @@ window.Studio = (() => {
   const activeCards = {};
   const initialFields = new Map();
   const tabs = {
-    bench: [['probe','通信验证'],['bench','连续测试判定']], controller: [['preflight','开发机预检'],['controller','主控诊断']],
-    training: [['pipeline','方案 → ONNX'],['smoke','小规模验证'],['training','模型训练与续训'],['tensorboard','指标摘要']],
-    assembly: [['assembly','装配与电气'],['calibration','关节标定'],['identification','执行器辨识']],
+    bench: [['probe','通信验证'],['servodebug','URT2 调试台'],['imu','IMU 姿态'],['bench','连续测试判定']], controller: [['preflight','开发机预检'],['controller','主控诊断']],
+    training: [['pipeline','方案 → ONNX'],['kissqy','Microduck-kissqy'],['smoke','小规模验证'],['training','模型训练与续训'],['tensorboard','指标摘要']],
+    assembly: [['assembly','装配与电气'],['calibration','关节标定'],['identification','执行器辨识'],['servoguide','舵机编号 3D 对照'],['weighing','整机称重与 ID 对照']],
     deployment: [['policy','策略包检查'],['deployment','兼容性与部署'],['acceptance','逐级验收']],
     records: [['timeline','运行与对比'],['experiment','实验记录'],['issue','问题台账'],['report','复刻报告']],
-    knowledge: [['search','资料与证据搜索'],['source','来源登记']], settings: [['project','项目管理'],['settings','工作台偏好']]
+    knowledge: [['search','资料与证据搜索'],['source','来源登记']], settings: [['project','项目管理'],['settings','工作台偏好'],['api','云端与本机']]
   };
   function selectCard(key, card) {
     if (!tabs[key]) return;
@@ -71,6 +71,7 @@ window.Studio = (() => {
     el('workspace-layout').classList.toggle('wide-workspace', key === 'assembly');
     window.VisualStudio?.onNavigate(key);
     window.InstallationStudio?.onNavigate(key);
+    window.KissqyStudio?.onNavigate(key);
     document.querySelectorAll('.nav-button').forEach(button => {
       if (button.dataset.view === key) button.setAttribute('aria-current','page'); else button.removeAttribute('aria-current');
     });
@@ -150,6 +151,8 @@ window.Studio = (() => {
     window.VisualStudio?.receiveReport(data);
     window.InstallationStudio?.receiveReport(data);
     window.TrainingStudio?.receiveReport(data);
+    window.KissqyStudio?.receiveReport(data);
+    window.WeighingStudio?.receiveReport(data);
     report = data; connection(true); rendering = true;
     const tasks = data.tasks || [], runs = data.runs || [], hardware = data.hardware;
     const next = tasks.find(task => ['ready','needs_confirmation'].includes(task.status));
@@ -163,7 +166,7 @@ window.Studio = (() => {
     el('duck-name').textContent = data.project.name;
     el('active-project-name').textContent = data.project.name;
     el('active-project-name').title = data.project.root;
-    el('download-report').href = `/api/projects/${encodeURIComponent(data.project.id)}/report.md`;
+    el('download-report').href = StudioAPI.url(`/api/projects/${encodeURIComponent(data.project.id)}/report.md`);
     el('download-report').hidden = false;
     el('duck-status').outerHTML = pill(hardware?.status || 'needs_confirmation').replace('class="pill','id="duck-status" class="pill');
     el('duck-model').textContent = hardware?.data?.servos?.model || '舵机型号待确认';
@@ -209,6 +212,8 @@ window.Studio = (() => {
     window.VisualStudio?.reset();
     window.InstallationStudio?.reset();
     window.TrainingStudio?.reset();
+    window.KissqyStudio?.reset();
+    window.WeighingStudio?.reset();
     dirty.clear(); clear();
     for (const [id,value] of initialFields) {
       const field = el(id); if (field.type === 'checkbox') field.checked = value; else field.value = value;
@@ -312,6 +317,23 @@ window.Studio = (() => {
       ids.forEach(id => { el(id).closest('label').hidden = el(target).value !== 'wsl'; });
     }
   }
+  async function refreshServiceInfo() {
+    const target = el('api-service-state');
+    if (!target) return;
+    const base = StudioAPI.base();
+    el('api-base-input').value = localStorage.getItem(StudioAPI.KEY) || '';
+    el('api-base-hint').textContent = base ? `当前请求发往 ${base}(数据库、串口与训练仍在运行服务的这台机器上)。` : '当前为同源访问:网页与本机服务来自同一地址。';
+    target.textContent = '正在读取本机服务版本…';
+    try {
+      const info = await StudioAPI.version();
+      const seen = localStorage.getItem('microduckStudioServiceVersion');
+      const skew = seen && seen !== info.version ? `(与上次所见 v${seen} 不同,仅提示,不影响使用)` : '';
+      localStorage.setItem('microduckStudioServiceVersion', info.version);
+      target.textContent = `本机服务已连接 · v${info.version}${skew} · ${new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'})}`;
+    } catch (error) {
+      target.textContent = `本机服务不可达:${error.message}。请确认服务已启动,或修改上方服务地址。`;
+    }
+  }
   function init() {
     clear();
     for (const [key, items] of Object.entries(tabs)) {
@@ -369,6 +391,15 @@ window.Studio = (() => {
     el('training-target').addEventListener('change',syncTargets);
     el('settings-target').addEventListener('change',syncTargets);
     syncTargets();
+    el('api-base-save').onclick = () => {
+      const value = el('api-base-input').value.trim();
+      if (value && !/^https?:\/\//.test(value)) return result('服务地址需要以 http:// 或 https:// 开头');
+      if (value) localStorage.setItem(StudioAPI.KEY, value); else localStorage.removeItem(StudioAPI.KEY);
+      result(value ? `本机服务地址已保存:${value.replace(/\/+$/,'')}` : '已清除自定义地址,恢复默认解析。');
+      refreshServiceInfo();
+    };
+    el('api-service-refresh').onclick = () => refreshServiceInfo();
+    refreshServiceInfo();
     document.querySelectorAll('.card input, .card select, .card textarea').forEach(field => {
       if (field.id && !field.closest('#card-project')) initialFields.set(field.id,field.type === 'checkbox' ? field.checked : field.value);
     });

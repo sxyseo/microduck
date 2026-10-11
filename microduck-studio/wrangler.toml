@@ -1,0 +1,2 @@
+name = "microduck-studio"
+pages_build_output_dir = "pages-dist"

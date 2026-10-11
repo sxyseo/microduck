@@ -14,6 +14,8 @@
 
 主工作台沿用本地静态网页与既有 API。3D 工作区复用本目录下独立的 `microduck-color-studio`，通过同源内嵌页面共享服务；其 TypeScript / Three.js 前端需要一次本机构建，日常运行只需 Python 服务。`web/studio.css` 管理样式，`web/studio.js` 管理展示与交互，任务判定继续由 Python 服务执行。模型图复制自 `microduck-replica/rl-series/assets/duck-render-03-四分之三.png`，只作仿真模型参考，不代表当前实物状态。
 
+舵机编号对照集成自独立的 `microduck-servo-guide` 静态站点（HD-1910 版装配模型的 15 颗舵机 ID 标注）。服务启动时在其 `site/` 目录（本目录下，或与本目录同级的检出）找到 `index.html` 和 `model/model.json` 后，将站点挂载到 `/servo-guide/`，并通过 `GET /api/servo-guide` 返回可用性与结构化编号对照；找不到时该功能不可用，其他功能不受影响。“装配与标定 → 舵机编号 3D 对照”内嵌查看器并提供编号速查表，“舵机实验室”的通信验证卡附编号速查。边界与既有事实一致：这是纯查看工具，不打开串口、不读取或写入实机 ID；标注 ID 是项目关节编号的位置对照，不代表舵机出厂或实机已写入的 ID，装配姿态不是零位；模型与衍生网格遵循 CC BY-NC-SA 4.0（署名见站点 `credits.html`），不能当作 MIT 软件再分发。3D 页首次载入约 20 MB 网格，页面内需手动点击后才加载。
+
 浏览器回归用例保存在 `tests/ui-smoke.js` 与 `tests/ui-workflow.js`，均为接收 Playwright `page` 的异步函数。前者在 8765 端口只读检查导航与布局；后者要求独立的 8766 服务，数据库必须通过 `MICRODUCK_STUDIO_DB` 指向临时文件，且 `/tmp/microduck-studio-ui-fixture/guide.md` 存在并含 `HL-2915`。后者会在临时库创建项目、保存记录、检查异常与各分区布局，不打开串口或执行训练部署。
 
 ## 3D 外观与可视化装配
@@ -33,6 +35,7 @@
 当前版本把辅助开发收敛到同一个项目和运行记录中：
 
 - 分阶段硬件：可为主控、单舵机台架、关节组、IMU、摄像头和整机记录 `planned`、`owned`、`installed`、`detected`、`verified` 或 `failed`，只解锁现有硬件能够完成的调试能力。
+- 整机称重与 ID 对照：以官方 MJCF（`robot_walk.xml`）各 body 的显式 `inertial mass` 为分区域模板（一个 body 一个称重区域），支持整机对账、分区域实测（整称/倒推/镜像）、秤与操作者留痕；缺失区域保持证据不足，不用零值补齐。所有区域实测后可在显式确认下生成质量修正 MJCF 副本（惯量按质量比例缩放，不覆盖官方模板、不覆盖已有文件，模板 SHA-256 变化时拒绝生成并登记为产物）。同一卡片登记"舵机 ID ↔ 关节"映射——这是操作者对已写入总线的编号方案的记录，供 robotd 配置、标定与 BAM 使用，链路由只读探针另行验证；台架样机与整机存在相同 ID 时不得同时上总线。
 - 受控训练：除固定 CPU smoke 外，可使用服务端内置 `walk` 配方生成和启动本机 Linux/macOS 或 WSL2 训练；参数经过范围校验，不接受任意 Shell。
 - 显式续训：必须同时选择父训练运行和该运行已登记、哈希一致的 `.pt` checkpoint；硬件、观测动作或控制频率契约不一致时不会启动。
 - 可视化调试：训练期间增量保存已脱敏、分段限长的标准输出/错误日志，并从 RSL-RL/MJLab 输出提取临时指标曲线；训练结束后的正式指标仍以 TensorBoard 产物为准。也可比较两个已结束运行的生效配置和数值指标。
@@ -40,6 +43,19 @@
 - 多端布局：同一网页在 PC、平板和手机上响应式排列。手机窄屏隐藏硬件运动和部署启动按钮，取消和只读查看仍保留；服务端确认仍是安全边界。
 
 远程 GPU 目标可以登记并生成明确的“尚不可执行”结果；在远端 checkpoint 哈希和断线状态对账完成前，工作台不会把 SSH 长训练伪装成已支持。服务仍默认监听本机地址，不应直接暴露到公网。
+
+### Microduck-kissqy 训练服务适配
+
+“仿真与训练 → Microduck-kissqy”通过本机 Studio 服务连接独立运行的 kissqy 训练控制台。默认地址为 `http://127.0.0.1:8092`，可在启动 Studio 服务前设置 `MICRODUCK_KISSQY_URL` 更改 loopback 端口；出于本机服务边界，适配器拒绝公网地址、路径和内嵌凭据。上游一次性训练凭据只由 Python 服务读取，不下发到浏览器。
+
+先在另一个终端启动上游服务：Linux/macOS 执行 `cd Microduck-kissqy/microduck-hd1910/training-console && bash start-training.command`；Windows 执行该目录下的 `start-training.cmd`。训练控制台显示已启动后再打开 Studio 的训练页；只连接服务不会排入任务或启动训练。
+
+- 页面读取训练台版本、环境、已启用任务、队列、运行进度与最近指标；UI 展示版本，不因版本号不同自动判定不兼容。服务端也会检查实际接口是否存在。
+- Studio 可添加一份带请求编号的训练配置快照；它只进入上游持久化队列，不会自动启动。开始和停止需要二次确认。超时后不会自动重发添加请求，刷新会先按上游请求编号对账，避免重复排队。
+- 训练队列和外部运行会绑定当前 Studio 项目。服务端阻止当前项目操作启动、暂停或停止未关联到该项目的活动任务。完成运行可在同一页面读取日志、下载训练台导出的策略 ZIP；下载仅对已经关联的运行开放。
+- 上游 `Microduck-kissqy` 面向其自身 HD1910 仿真路线。它的训练、标定、质量假设不会覆盖 Studio 的硬件档案，也不能证明其他舵机兼容或策略可部署；新型号仍须独立执行器模型、辨识、策略契约核验和实机验收。
+
+适配器是针对本机 HTTP API 独立编写的代码，不复制上游训练台 UI、调度实现或资源。上游内容有分立的许可范围，尤其训练控制台许可和第三方训练引擎并不相同；集成后的再分发/商业使用须遵守 [Microduck-kissqy 的 LICENSE 与 NOTICE](../Microduck-kissqy/microduck-hd1910/training-console/NOTICE.md)。
 
 ## 运行
 
@@ -54,7 +70,7 @@ uv run pytest -q
 uv run python -m microduck_studio
 ```
 
-打开 <http://127.0.0.1:8765>，3D 工作区为 <http://127.0.0.1:8765/#visual>。修改 Color Studio 源码后重新构建；首次构建后需重启 Python 服务以挂载静态目录。数据库默认写入 `microduck-studio/studio.db`，可用 `MICRODUCK_STUDIO_DB` 指定位置。页面默认把项目根设为启动目录的上一级（`..`），对应 Microduck 仓库；若资料在其他目录，请先修改路径。
+打开 <http://127.0.0.1:8765>，3D 工作区为 <http://127.0.0.1:8765/#visual>。修改 Color Studio 源码后重新构建；首次构建后需重启 Python 服务以挂载静态目录。舵机编号对照无需构建：把 `microduck-servo-guide` 克隆或复制到 `microduck-studio/` 目录内（或与其同级），重启服务后挂载到 <http://127.0.0.1:8765/servo-guide/>。数据库默认写入 `microduck-studio/studio.db`，可用 `MICRODUCK_STUDIO_DB` 指定位置。页面默认把项目根设为启动目录的上一级（`..`），对应 Microduck 仓库；若资料在其他目录，请先修改路径。
 
 当前页面用于验证最小闭环：创建“我的鸭子”、保存待确认或已确认硬件路线、运行只读环境预检、生成/执行需确认的只读探针、导入连续测试原始计数并找回报告。探针按钮默认只生成计划；执行前会弹出确认，服务会把真实输出重新解析成结构化证据，避免采信脚本打印的 `PASS`。
 
@@ -171,3 +187,43 @@ TensorBoard 摘要接口 `POST /api/projects/{id}/training/tensorboard-plan` / `
 这是候选方案的软件实验入口：`hardware_verified=false`、`deployment_ready=false`。运行完成不代表训练收敛、舵机通过台架或当前机器人适配成功。当前工作台仅核验 XL330 M6 的步行任务接口；新舵机还需要专用执行器实现、对应结构与实测辨识。既有“模型训练与续训”页仍按原流程执行，不会隐式采用此处选中的方案。
 
 接口：`GET recipe-training/defaults`、`POST recipe-training/prepare`（`revision` / `parameters`）、`POST recipe-training/start`（`plan_id` / `confirm:true`），以及 `GET recipe-training/{run_id}/{name}`。均位于 `/api/projects/{project_id}/` 下；运行查询、事件和中止复用原有 `/api/runs/` 接口。
+
+### 舵机调试台（URT2 直连 · 2026-10-02）
+
+「舵机实验室 → URT2 调试台」把 duck.whatled.com 的网页版调试台（`duck-whatled/public/tools/servo-debug-web.html`，解读 203 台架实测版）完整搬进工作台，前端逻辑在 `web/servo-debug-studio.js`。它运行在浏览器里，通过 Web Serial（Chrome/Edge，`http://127.0.0.1:8765` 属安全上下文）直连 URT2 调试板；**串口由浏览器持有，Python 服务不会打开它**，与只读探针、BAM 的服务端串口互斥不冲突。功能与网页版一致：
+
+- 连接：型号（HL-2915 / HL-1910 / 通用磁编码）、波特率、舵机 ID、PING、REBOOT 清锁、一键温和初始化；连接后自动读固件版本、电压窗和扭矩状态，并开始 150 ms 遥测。
+- 遥测：位置/角度、电压（低于型号工作区告警）、温度、电流（6.5 系数口径待验证）、速度/负载、状态位（过压/欠压、磁编码、过热、过流、过载）与丢包计数；急停随时可用（手机端也保留）。
+- 位置控制：目标位置 + 滑条、±600 步安全限幅（可解除）、速度/加速度，到位（±6 步）或 3 秒超时后自动关扭矩；扭矩开关与 40=128 中位校准。
+- 增益与保护：P/D/I（21/22/23，RAM）写入与读回；EEPROM 行程、电压上限、温度上限、最大扭矩写入前自动检查 55 号锁位，掉电保存。
+- 高级：原始寄存器读/写（写需确认）。
+- 总线：PING 扫描 ID 1–253、多舵机实时总览表（选择/回中）、全部回中与全部扭矩开关、EEPROM 改 ID（一次只接一只）。
+- 日志：带时间戳的操作日志，可导出 `.log` 文件，作为后续实验/问题记录的人工证据附件。
+
+边界：调试台是台架实操工具，不产生运行记录、不写入 SQLite、不参与任务图；危险动作（REBOOT、校准、原始写、改 ID）保留确认对话框，运动类按钮沿用 `dangerous-start` 在手机窄屏隐藏。「不直接写舵机」指服务端——工作台后端仍未新增任何串口写路径。
+
+### IMU 姿态台架（Web Serial 直连 ID 200 · 2026-10-10）
+
+「舵机实验室 → IMU 姿态」新增第四个子页（`web/imu-studio.js`），直读舵机总线上的 imu_to_dxl 节点（kissqy IMU_TO_DXL / 社区套件 v1，主控 LSM6DSV16X）：节点把姿态伪装成总线 ID 200，与 15 颗 HD-1910 共用同一条 1 Mbps 半双工总线，浏览器经 Web Serial 用普通 READ 指令读它的 FT6 契约块（寄存器 56–70，15 字节 = 陀螺 XYZ i16 小端 ±500 dps + 四元数 XYZ binary16（主机侧重建 w）+ 采样计数 + 状态位 + 保留），协议出处为 kissqy 仓 `firmware/imu-source/README_FT6_SYNC15.md` 与社区套件 `firmware/v1/docs/imu_to_dxl_protocol.md` §6。串口仍由浏览器持有，服务端不碰、不进证据。功能：
+
+- 连接：节点 ID（默认 200）、波特率（默认 1 Mbps）、目标采样率（50/20/10 Hz）；连接后先读身份寄存器（固件版本 + 型号 'IM'，0x4D49），随即自动开始遥测，显示实际速率与丢包/发送计数。
+- 姿态显示：姿态仪（SVG 地平线，roll/pitch 驱动）+ 大号 roll/pitch 读数 + 相对偏航；陀螺三轴 °/s、四元数 x y z w、采样计数与状态位解读（FT6：bit0 未就绪、bit1 过期>30ms、bit2 错误、bit3 节奏提示、保留位非零告警）。
+- 健康判据与节点侧一致：全零四元数或未就绪位 = 融合未收敛（上电约 1.5 s），保持上一份有效姿态而不画假零；连续 3 次相同计数判「疑似冻结」；过期位判「数据过期」。
+- 曲线与导出：姿态角（roll/pitch）与陀螺三轴两条 SVG 折线（约 100 ms 刷新、240 点窗口）；样本环形缓冲（6000 行）导出 CSV，操作日志导出 `.log`；静态零漂检查（10 s）按 0.05 rad/s（±2.865 °/s）门槛逐轴判定（deep-dive/68 五步验收门槛之一），为后续 IMU+舵机联合标定预留预检。
+
+边界：与 URT2 调试台共用物理串口、不能同时连接；总线同一时刻只允许一个主站，直连前必须停止机器人上的 robotd（面板内有提示）。只读面板——不写任何寄存器、不改 ID/波特率；状态位解读按 FT6 人格，接到 native 人格固件的节点时保留字节告警会提示口径差异。
+
+### 前端上 Cloudflare Pages（操作仍在本机 · 2026-10-03）
+
+工作台网页可以部署到 Cloudflare Pages 等静态托管，**API、SQLite 数据库、串口、SSH 与训练始终留在运行本机服务的那台电脑上**，不上云。`web/app-config.js` 解析 API 地址：本机同源访问时与原行为完全一致；从公网来源（如 `https://<项目>.pages.dev`）打开时自动指向 `http://127.0.0.1:8765`，也可在「项目与设置 → 云端与本机」按浏览器保存自定义地址。该卡片同时通过 `GET /api/version` 显示服务版本，页面与服务版本不同时仅提示、不拒绝。
+
+部署：
+
+1. `uv run python scripts/build-pages-dist.py` —— 生成 `pages-dist/`（页面 + `/assets` + Color Studio 3D 模型，约 10.6 MiB；目录已 gitignore）。
+2. `npx wrangler login && npx wrangler pages deploy`（`wrangler.toml` 已指向 `pages-dist`）。
+3. 本机服务带环境变量启动：`MICRODUCK_STUDIO_ALLOWED_ORIGINS=https://<项目>.pages.dev uv run python -m microduck_studio`。**默认为空 = 同源 only，与原先行为一致**；白名单按精确 Origin 匹配，`https://a.pages.dev` 不会放行其他 `*.pages.dev` 站点。
+4. 打开 Pages 地址即可使用；「云端与本机」卡片应显示本机服务已连接。
+
+当前部署：**<https://microduck-studio.pages.dev>**（2026-10-05，Account `Admin@sxyseo.com`）。日常启动本机服务请携带上面的 `MICRODUCK_STUDIO_ALLOWED_ORIGINS`；部署专属预览地址（`<哈希>.microduck-studio.pages.dev`）来源不同，不在白名单内，请使用生产地址。
+
+边界与已知事实：跨源能力由 Starlette `CORSMiddleware` 提供，并回答 Chrome 对公网页面访问 `127.0.0.1` 的 Private Network Access 预检；Web Serial 调试台在任何 HTTPS 来源都可用（串口在操作者电脑上），仍限 Chrome/Edge。服务仍只监听 loopback——CORS 白名单只决定"哪些页面可以读响应"，不改变"只有这台机器能执行硬件操作"的事实。3D 视图与安装教程的 Color Studio 产物随 pages-dist 一起发布，其内部只读自身静态清单，不依赖本机 API。`microduck-color-studio` 源码变更后需重新 `npm run build` 并重跑第 1 步。

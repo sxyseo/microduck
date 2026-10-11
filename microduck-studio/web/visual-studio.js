@@ -16,7 +16,7 @@ window.VisualStudio = (() => {
   const emptyCalibration = () => ({joints:[],operator:'',verified:false});
   const state = text => { $('visual-save-state').textContent = text; };
   async function request(url, options) {
-    const response = await fetch(url, options);
+    const response = await StudioAPI.fetch(url, options);
     let data; try { data = await response.json(); } catch { throw new Error('本地服务返回了不可用的内容'); }
     if (!response.ok) throw new Error(typeof data.detail === 'string' ? data.detail : `请求失败（${response.status}）`);
     return data;

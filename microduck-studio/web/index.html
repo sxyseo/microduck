@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><title>Microduck Studio · 个人复刻工作台</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23526443'/%3E%3Ctext x='6' y='24' fill='white' font-size='24'%3Em%3C/text%3E%3C/svg%3E">
-<link rel="stylesheet" href="/assets/studio.css?v=20260914-pipeline-1">
+<link rel="stylesheet" href="/assets/studio.css?v=20261008-kissqy-1">
 <style>@media(max-width:700px){.dangerous-start{display:none}}</style>
 </head><body>
 <svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true"><symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></symbol><symbol id="i-duck" viewBox="0 0 24 24"><path d="M5 14V8a5 5 0 0 1 5-5h4a5 5 0 0 1 5 5v5H8a3 3 0 0 0 0 6h9M10 19v3m6-3v3M5 10H2v4h3"/><circle cx="14" cy="8" r="1.5"/></symbol><symbol id="i-cpu" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="3"/><rect x="9" y="9" width="6" height="6" rx="1"/><path d="M9 2v3m6-3v3M9 19v3m6-3v3M2 9h3m-3 6h3m14-6h3m-3 6h3"/></symbol><symbol id="i-servo" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="3"/><circle cx="12" cy="12" r="3"/><path d="M12 9V3m-5 18v-2m10 2v-2"/></symbol><symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 3v17h17M7 14l4-5 4 3 5-8"/></symbol><symbol id="i-book" viewBox="0 0 24 24"><path d="M12 5v15m0-15C8 2 3 3 3 3v16s5-1 9 1c4-2 9-1 9-1V3s-5-1-9 2Z"/></symbol><symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7V5a2 2 0 0 1 2-2h5l3 3h6a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/></symbol><symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 16V3m-5 5 5-5 5 5M4 15v5a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-5"/></symbol><symbol id="i-settings" viewBox="0 0 24 24"><path d="M4 7h16M4 17h16"/><circle cx="8" cy="7" r="3" fill="white"/><circle cx="16" cy="17" r="3" fill="white"/></symbol><symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14m-5-5 5 5-5 5"/></symbol><symbol id="i-chevron" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></symbol><symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol><symbol id="i-alert" viewBox="0 0 24 24"><path d="m12 3 10 18H2L12 3Z"/><path d="M12 9v5m0 3v.1"/></symbol><symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 6v6l4 2"/></symbol><symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></symbol><symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol><symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></symbol><symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 7A9 9 0 0 0 4 7m0 0V2m0 5h5M4 17a9 9 0 0 0 16 0m0 0v5m0-5h-5"/></symbol><symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 2 3 6v6c0 5 9 10 9 10s9-5 9-10V6l-9-4Z"/><path d="m8 12 3 3 5-6"/></symbol><symbol id="i-layers" viewBox="0 0 24 24"><path d="m12 3 10 5-10 5L2 8l10-5Zm-10 9 10 5 10-5M2 16l10 5 10-5"/></symbol><symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M6 18 18 6"/></symbol><symbol id="i-bolt" viewBox="0 0 24 24"><path d="m14 2-9 12h6l-1 8 9-13h-6l1-7Z"/></symbol></svg>
@@ -65,6 +65,15 @@
       <label>WSL 发行版<input id="settings-wsl-distro" value="Ubuntu"></label>
       <label>WSL 训练路径<input id="settings-wsl-path" placeholder="/home/duck/microduck_rl"></label>
       <button id="settings-save">保存工作台配置</button>
+    </section><section class="card" id="card-api">
+      <h2><svg class="icon" aria-hidden="true"><use href="#i-upload"/></svg>云端页面与本机服务</h2>
+      <p class="muted">这个网页可以部署到 Cloudflare Pages 等静态托管;API、SQLite 数据库、串口与训练始终留在运行本机服务的这台电脑上。跨源访问需在本机服务环境变量 <code>MICRODUCK_STUDIO_ALLOWED_ORIGINS</code> 中登记页面来源(逗号分隔),服务仍只监听 127.0.0.1。</p>
+      <label>本机服务地址(同源访问时留空)<input id="api-base-input" placeholder="例如 http://127.0.0.1:8765"></label>
+      <p class="muted" id="api-base-hint"></p>
+      <button id="api-base-save">保存服务地址</button>
+      <button id="api-service-refresh" class="ghost">重新检测</button>
+      <p class="muted" id="api-service-state" role="status">尚未检测</p>
+      <p class="muted">URT2 调试台经浏览器 Web Serial 直连串口,在 Cloudflare 页面上同样可用(需 Chrome/Edge);部署步骤见仓库 <code>microduck-studio/README.md</code>。</p>
     </section></section><section class="view-panel" id="view-bench" data-panel="bench" hidden><div class="inline-note"><svg class="icon" aria-hidden="true"><use href="#i-shield"/></svg><span>先确认独立单舵机与串口，再执行只读检查。USB 转接板名称不代表舵机型号。</span></div>    <section class="card" id="card-probe">
       <h2><svg class="icon" aria-hidden="true"><use href="#i-servo"/></svg>第一只舵机通信验证</h2>
       <p class="muted">生成计划不会打开串口。执行前核对 HL-2915 与实际接线。</p>
@@ -95,7 +104,24 @@
       <label>SSH 端口<input id="controller-port" type="number" value="22" min="1" max="65535"></label>
       <button id="controller-plan">生成诊断计划</button>
       <button id="controller-run">执行诊断（需确认）</button>
-    </section></section><section class="view-panel" id="view-training" data-panel="training" hidden><div class="inline-note"><svg class="icon" aria-hidden="true"><use href="#i-chart"/></svg><span>从小规模验证开始。仿真与训练结果单独记录，实机能力以逐级验收为准。</span></div>    <section class="card" id="card-smoke">
+    </section></section><section class="view-panel" id="view-training" data-panel="training" hidden><div class="inline-note"><svg class="icon" aria-hidden="true"><use href="#i-chart"/></svg><span>从小规模验证开始。仿真与训练结果单独记录，实机能力以逐级验收为准。</span></div>    <section class="card kissqy-card" id="card-kissqy">
+      <div class="kissqy-heading"><div><span class="eyebrow">LOCAL TRAINING SERVICE · ADAPTER</span><h2>Microduck-kissqy 训练工作台</h2><p class="muted">在 Studio 中查看任务目录、排队训练、跟踪运行，并把外部运行绑定到当前项目。</p></div><div class="kissqy-heading-actions"><span id="kissqy-connection" class="kissqy-status" role="status">等待选择项目</span><button id="kissqy-refresh" type="button" aria-label="刷新训练台状态"><svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg></button></div></div>
+      <div class="inline-note warning kissqy-boundary"><svg class="icon" aria-hidden="true"><use href="#i-alert"/></svg><span>上游仓的训练与仿真参数属于其参考硬件路线。它们不会自动适配其他舵机，也不会证明当前实机兼容；新增队列和开始训练是两步独立操作。</span></div>
+      <div class="kissqy-overview" aria-label="训练服务状态"><div><small>训练台版本</small><strong id="kissqy-version">—</strong></div><div><small>执行环境</small><strong id="kissqy-environment">—</strong></div><div><small>队列状态</small><strong id="kissqy-queue-summary">—</strong></div><div><small>当前硬件档案</small><strong id="kissqy-hardware">—</strong></div></div>
+      <div class="kissqy-columns">
+        <section class="kissqy-compose" aria-labelledby="kissqy-compose-title"><div class="kissqy-section-title"><h3 id="kissqy-compose-title">添加训练任务</h3><span class="pill needs_confirmation">仿真 / 训练</span></div>
+          <p class="muted">先选上游已启用的任务，再把这次训练的完整设置作为参数快照加入持久化队列。不会在此步骤启动训练。</p>
+          <label>训练任务<select id="kissqy-task"><option value="">连接后读取任务目录</option></select></label>
+          <label>本次运行名称<input id="kissqy-label" maxlength="60" placeholder="例如：低算力流程验证"></label>
+          <div class="form-grid kissqy-fields"><label>并行环境<input id="kissqy-envs" type="number" min="1" max="8192" value="4"></label><label>训练轮数<input id="kissqy-iterations" type="number" min="1" max="409600000" value="10"></label><label>舵机 P<input id="kissqy-servo-p" type="number" min="1" max="32" value="3"></label><label>动作系数<select id="kissqy-action-scale"><option>1.0</option><option selected>0.9</option><option>0.8</option><option>0.7</option><option>0.6</option><option>0.5</option><option>0.4</option><option>0.3</option><option>0.2</option><option>0.1</option></select></label></div>
+          <details class="advanced kissqy-advanced"><summary>动作滤波参数</summary><label class="kissqy-check"><input id="kissqy-filter-enabled" type="checkbox" checked>启用动作滤波</label><div class="form-grid kissqy-fields"><label>头部 α<input id="kissqy-head-alpha" type="number" min="0.01" max="1" step="0.01" value="0.5"></label><label>腿部 α<input id="kissqy-legs-alpha" type="number" min="0.01" max="1" step="0.01" value="0.7"></label></div></details>
+          <p class="kissqy-small-run">当前预填为小规模流程验证值。队列会保存设置快照；真正开始后，训练台会再次检查环境与任务参数。</p>
+          <div class="kissqy-actions"><button id="kissqy-add" class="primary" type="button" disabled>加入训练队列</button><button id="kissqy-queue-start" type="button" disabled>确认并开始队列</button><button id="kissqy-queue-pause" type="button" disabled>暂停后续任务</button><button id="kissqy-queue-stop" type="button" disabled>停止训练</button></div><p id="kissqy-message" class="kissqy-message inline-note" role="status">训练台连接状态和任务目录会显示在这里。</p>
+        </section>
+        <section class="kissqy-queue-panel" aria-labelledby="kissqy-queue-title"><div class="kissqy-section-title"><h3 id="kissqy-queue-title">训练队列</h3><small id="kissqy-queue-updated">等待同步</small></div><div id="kissqy-queue-list" class="kissqy-queue-list"><div class="empty-state">连接训练台后查看队列。</div></div></section>
+      </div>
+      <details class="advanced kissqy-runs"><summary>当前项目关联的外部运行与产物</summary><div id="kissqy-linked-runs" class="kissqy-linked-runs"><p class="muted">加入训练队列后，外部任务会关联到当前 Studio 项目。</p></div></details>
+    </section><section class="card" id="card-smoke">
       <h2><svg class="icon" aria-hidden="true"><use href="#i-bolt"/></svg>CPU smoke 训练</h2>
       <p class="muted">固定 5 次迭代、8 环境、每环境 24 steps；只在你确认后启动，训练 checkout 会写入日志和模型。</p>
       <label>训练 checkout 路径<input id="training-dir" placeholder="例如 ../microduck_rl"></label>
@@ -205,6 +231,32 @@
       <label>BAM 采样计划（JSON）<textarea id="bam-plan-data">{"port":"","servo_id":1,"mass_kg":0.05,"arm_length_m":0.1,"output_path":"artifacts/bam/raw/test.json","amplitude_deg":10,"duration_s":6,"hz":100,"confirm_motion":false}</textarea></label>
       <button id="bam-plan">生成辨识采样计划（不执行）</button>
       <button id="bam-run" class="dangerous-start">启动 BAM 采样（双重确认）</button>
+    </section>    <section class="card" id="card-servoguide">
+      <h2><svg class="icon" aria-hidden="true"><use href="#i-servo"/></svg>舵机编号 3D 对照</h2>
+      <p class="muted">HD-1910 版装配模型的编号与位置对照（microduck-servo-guide）。纯查看工具：不连接舵机，标注 ID 是项目关节编号，不代表实机已写入的 ID，装配姿态也不是零位。</p>
+      <div id="servoguide-body"><p class="muted">正在读取编号对照…</p></div>
+    </section>    <section class="card" id="card-weighing">
+      <h2><svg class="icon" aria-hidden="true"><use href="#i-layers"/></svg>整机称重与 ID 对照</h2>
+      <p class="muted">以官方 MJCF（robot_walk.xml）各 body 质量为分区域模板：先整机对账，再分区域称重回填，官方模板本身只读不改。ID 映射记录实际写入总线的编号与关节位置；台架样机与整机存在相同 ID 时，两者不能同时上总线。</p>
+      <div class="inline-note" id="weighing-status" hidden></div>
+      <label>官方模板（项目根目录内搜索）<select id="weighing-template"><option value="">选择项目后载入</option></select></label>
+      <p class="muted" id="weighing-template-info"></p>
+      <div class="weigh-table" id="weighing-rows"></div>
+      <div class="form-grid">
+        <label>秤型号<input id="weighing-scale" placeholder="例如：0.1g 电子秤及型号"></label>
+        <label>秤精度 g<input id="weighing-precision" type="number" min="0" step="0.01" placeholder="0.1"></label>
+        <label>操作者<input id="weighing-operator" placeholder="记录谁称的"></label>
+      </div>
+      <button id="weighing-save">保存称重记录</button>
+      <label>质量修正模型副本输出路径（项目根目录内，不覆盖已有文件）<input id="weighing-copy-path" value="artifacts/mjcf/robot_walk_hl1910.xml"></label>
+      <button id="weighing-copy" disabled>生成质量修正 MJCF 副本（需确认）</button>
+      <div id="weighing-result"></div>
+      <h3 class="section-title">舵机 ID ↔ 关节映射</h3>
+      <p class="muted">默认行是 hl2915 后端约定的占位；请改成你实际写入的编号方案。这个表是操作者登记的实物对照，总线探针（舵机实验室）负责验证链路。</p>
+      <div class="weigh-table" id="idmap-rows"></div>
+      <label>操作者<input id="idmap-operator" placeholder="记录谁登记的"></label>
+      <button id="idmap-save">保存 ID 映射</button>
+      <div id="idmap-result"></div>
     </section></section><section class="view-panel" id="view-deployment" data-panel="deployment" hidden>    <section class="card" id="card-policy">
       <h2><svg class="icon" aria-hidden="true"><use href="#i-folder"/></svg>策略包检查</h2>
       <p class="muted">读取项目内 ONNX 和 manifest.json，登记 SHA-256；不加载、不部署。</p>
@@ -249,10 +301,16 @@
   </main>
 </div>
 <div class="toast" id="toast" role="status" hidden><span id="toast-message"></span><button id="toast-close" aria-label="关闭提示"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button></div>
-<script src="/assets/studio.js?v=20260914-pipeline-1"></script>
-<script src="/assets/visual-studio.js?v=20260914-pipeline-1"></script>
-<script src="/assets/installation-studio.js?v=20260914-pipeline-1"></script>
-<script src="/assets/training-studio.js?v=20260914-pipeline-1"></script>
+<script src="/assets/app-config.js?v=20261003-cloudflare-1"></script>
+<script src="/assets/studio.js?v=20261010-imu-1"></script>
+<script src="/assets/visual-studio.js?v=20261003-cloudflare-1"></script>
+<script src="/assets/installation-studio.js?v=20261003-cloudflare-1"></script>
+<script src="/assets/training-studio.js?v=20261003-cloudflare-1"></script>
+<script src="/assets/kissqy-studio.js?v=20261008-kissqy-2"></script>
+<script src="/assets/servo-debug-studio.js?v=20261003-cloudflare-1"></script>
+<script src="/assets/imu-studio.js?v=20261010-imu-1"></script>
+<script src="/assets/servo-guide-studio.js?v=20261005-studio-1"></script>
+<script src="/assets/weighing-studio.js?v=20261007-studio-1"></script>
 <script>
     let projectId = localStorage.getItem('microduckStudioProjectId');
     const activeRuns = {bench: null, training: null};
@@ -320,7 +378,7 @@
       if (!runId) return show('run-timeline-body', '请填写运行 ID');
       const timelineProject = projectId;
       const after = append ? (timelineSequences[runId] || 0) : 0;
-      const res = await fetch(`/api/runs/${encodeURIComponent(runId)}/events?after=${after}`);
+      const res = await StudioAPI.fetch(`/api/runs/${encodeURIComponent(runId)}/events?after=${after}`);
       const data = await res.json();
       if (!res.ok) return show('run-timeline-body', data);
       if (projectId !== timelineProject || $('run-timeline-id').value !== runId) return;
@@ -346,7 +404,7 @@
       try {
         while (activeRuns[slot] === runId && ['running','cancelling'].includes(run.status)) {
           await new Promise(resolve => setTimeout(resolve, 500));
-          const res = await fetch(`/api/runs/${runId}`); run = await res.json();
+          const res = await StudioAPI.fetch(`/api/runs/${runId}`); run = await res.json();
           if (!res.ok) throw new Error(run.detail || `HTTP ${res.status}`);
           await loadRunTimeline(runId, true);
           if (activeRuns[slot] === run.id && projectId === run.project_id) show('status', run);
@@ -393,26 +451,26 @@
       window.Studio.syncTargets();
     };
     const loadProjects = async () => {
-      const data = await (await fetch('/api/projects')).json(); const select = $('project-list');
+      const data = await (await StudioAPI.fetch('/api/projects')).json(); const select = $('project-list');
       select.innerHTML = '<option value="">选择已有项目</option>';
       for (const item of data.projects) { const option = document.createElement('option'); option.value = item.id; option.textContent = item.name; select.appendChild(option); }
       if (projectId && data.projects.some(item => item.id === projectId)) { select.value = projectId; const item = data.projects.find(item => item.id === projectId); show('project', `已恢复 ${item.name}\n${item.id}`); $('report').click(); }
       else { resetActiveRuns(); projectId = null; localStorage.removeItem('microduckStudioProjectId'); hydrateHardwareForm(null); hydrateSettings(null); window.Studio.clear(); }
     };
     const loadTrainingRecipes = async () => {
-      const res = await fetch('/api/training/recipes');
+      const res = await StudioAPI.fetch('/api/training/recipes');
       const data = await res.json();
       if (!res.ok || !Array.isArray(data.recipes)) return;
       const select = $('training-recipe');
       select.replaceChildren(...data.recipes.map(recipe => new Option(`${recipe.id} · ${recipe.task}`, recipe.id)));
     };
     $('create').onclick = async () => {
-      const res = await fetch('/api/projects', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:$('name').value,root:$('root').value})});
+      const res = await StudioAPI.fetch('/api/projects', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:$('name').value,root:$('root').value})});
       const data = await res.json(); if (!res.ok) return show('status', data); resetActiveRuns(); window.Studio.reset(); projectId = data.id; localStorage.setItem('microduckStudioProjectId', projectId); show('project', `已创建 ${data.name}\n${data.id}`); show('status', '项目已建立，硬件路线仍待确认。'); await loadProjects();
     };
     $('project-list').onchange = (event) => { resetActiveRuns(); window.Studio.reset(); projectId = event.target.value || null; if (projectId) { localStorage.setItem('microduckStudioProjectId', projectId); $('report').click(); } else { localStorage.removeItem('microduckStudioProjectId'); hydrateHardwareForm(null); show('report-body', '尚未创建项目'); } show('project', projectId ? `已选择 ${projectId}` : '尚未创建项目'); };
     $('probe-ports').onclick = async () => {
-      const res = await fetch('/api/serial-ports');
+      const res = await StudioAPI.fetch('/api/serial-ports');
       const data = await res.json();
       const select = $('probe-port-list');
       select.replaceChildren(new Option(data.ports?.length ? '选择一个端口' : '未发现端口', ''));
@@ -428,7 +486,7 @@
       const model = $('servo-model').value.trim() || null;
       const numberOrNull = value => value.trim() ? Number(value) : null;
       const count = numberOrNull($('servo-count').value);
-      const res = await fetch(`/api/projects/${projectId}/hardware`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({data:{servos:{model,candidates,count},controller:{model:$('controller-model').value.trim()},imu:{model:$('imu-model').value.trim()},power:{voltage_v:numberOrNull($('power-voltage').value)},printed_parts:{version:$('printed-version').value.trim()},runtime:{version:$('runtime-version').value.trim()},training:{repo:$('training-repo').value.trim(),revision:$('training-revision').value.trim()},components}})});
+      const res = await StudioAPI.fetch(`/api/projects/${projectId}/hardware`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({data:{servos:{model,candidates,count},controller:{model:$('controller-model').value.trim()},imu:{model:$('imu-model').value.trim()},power:{voltage_v:numberOrNull($('power-voltage').value)},printed_parts:{version:$('printed-version').value.trim()},runtime:{version:$('runtime-version').value.trim()},training:{repo:$('training-repo').value.trim(),revision:$('training-revision').value.trim()},components}})});
       show('status', await res.json());
       if (res.ok) window.Studio.saved('hardware');
       refreshReport();
@@ -443,7 +501,7 @@
         : kind === 'ssh'
           ? {kind, ...controllerBody()}
           : {kind};
-      const res = await fetch(`/api/projects/${projectId}/settings`, {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({data:{visible_metrics,alert_thresholds,execution_target}})});
+      const res = await StudioAPI.fetch(`/api/projects/${projectId}/settings`, {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({data:{visible_metrics,alert_thresholds,execution_target}})});
       show('status', await res.json());
       if (res.ok) { window.Studio.saved('settings'); refreshReport(); }
     };
@@ -451,7 +509,7 @@
       if (!projectId) return show('status','请先创建项目');
       const ids = $('probe-ids').value.split(',').map(x=>Number(x.trim())).filter(Number.isInteger);
       const body = {port:$('probe-port').value.trim(), ids, watch_seconds:Number($('probe-seconds').value), include_imu:$('probe-include-imu').checked};
-      const res = await fetch(`/api/projects/${projectId}/bench/probe-plan`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+      const res = await StudioAPI.fetch(`/api/projects/${projectId}/bench/probe-plan`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
       show('status', await res.json());
     };
     $('probe-run').onclick = async () => {
@@ -459,47 +517,47 @@
       if (!window.confirm('只读探针会打开已确认的 HL-2915 串口，但不会写寄存器、开扭矩或移动舵机。继续？')) return;
       const ids = $('probe-ids').value.split(',').map(x=>Number(x.trim())).filter(Number.isInteger);
       const body = {port:$('probe-port').value.trim(), ids, watch_seconds:Number($('probe-seconds').value), include_imu:$('probe-include-imu').checked, confirm:true};
-      const res = await fetch(`/api/projects/${projectId}/bench/probe`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+      const res = await StudioAPI.fetch(`/api/projects/${projectId}/bench/probe`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
       const run = await res.json();
       if (run.id && run.status === 'running') pollRun(run, 'bench'); else show('status', run);
     };
     $('probe-cancel').onclick = async () => {
       if (!activeRuns.bench) return show('status','当前没有可取消的探针');
-      const res = await fetch(`/api/runs/${activeRuns.bench}/cancel`, {method:'POST'});
+      const res = await StudioAPI.fetch(`/api/runs/${activeRuns.bench}/cancel`, {method:'POST'});
       show('status', await res.json());
     };
     $('preflight').onclick = async () => {
       if (!projectId) return show('status','请先创建项目');
-      const res = await fetch(`/api/projects/${projectId}/preflight`, {method:'POST'}); show('status', await res.json()); refreshReport();
+      const res = await StudioAPI.fetch(`/api/projects/${projectId}/preflight`, {method:'POST'}); show('status', await res.json()); refreshReport();
     };
     const controllerBody = () => ({host:$('controller-host').value.trim(), user:$('controller-user').value.trim(), port:Number($('controller-port').value)});
     $('controller-plan').onclick = async () => {
       if (!projectId) return show('status','请先创建项目');
-      const res = await fetch(`/api/projects/${projectId}/controller/diagnostic-plan`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(controllerBody())});
+      const res = await StudioAPI.fetch(`/api/projects/${projectId}/controller/diagnostic-plan`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(controllerBody())});
       show('status', await res.json());
     };
     $('controller-run').onclick = async () => {
       if (!projectId) return show('status','请先创建项目');
       if (!window.confirm('只读诊断会通过 SSH 读取主控健康状态，不会写入主控。继续？')) return;
-      const res = await fetch(`/api/projects/${projectId}/controller/diagnostic`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...controllerBody(), confirm:true})});
+      const res = await StudioAPI.fetch(`/api/projects/${projectId}/controller/diagnostic`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...controllerBody(), confirm:true})});
       show('status', await res.json());
     };
     $('bench-run').onclick = async () => {
       if (!projectId) return show('status','请先创建项目');
       let raw; try { raw = JSON.parse($('bench').value); } catch (e) { return show('status','JSON 格式错误'); }
-      const res = await fetch(`/api/projects/${projectId}/bench/continuous`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({raw,required_duration_s:60})});
+      const res = await StudioAPI.fetch(`/api/projects/${projectId}/bench/continuous`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({raw,required_duration_s:60})});
       show('status', await res.json()); refreshReport();
     };
     const trainingBody = () => ({training_dir:$('training-dir').value.trim()});
     $('training-plan').onclick = async () => {
       if (!projectId) return show('status','请先创建项目');
-      const res = await fetch(`/api/projects/${projectId}/training/smoke-plan`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(trainingBody())});
+      const res = await StudioAPI.fetch(`/api/projects/${projectId}/training/smoke-plan`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(trainingBody())});
       show('status', await res.json());
     };
     $('training-run').onclick = async () => {
       if (!projectId) return show('status','请先创建项目');
       if (!window.confirm('训练会在指定 checkout 中写入日志和模型，不会操作硬件。已完成预检并确认继续？')) return;
-      const res = await fetch(`/api/projects/${projectId}/training/smoke`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...trainingBody(), confirm:true})});
+      const res = await StudioAPI.fetch(`/api/projects/${projectId}/training/smoke`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...trainingBody(), confirm:true})});
       const run = await res.json();
       if (run.id && run.status === 'running') pollRun(run, 'training'); else show('status', run);
     };
@@ -527,31 +585,31 @@
     };
     $('training-full-plan').onclick = async () => {
       if (!projectId) return show('status','请先创建项目');
-      const res = await fetch(`/api/projects/${projectId}/training/plan`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(fullTrainingBody())});
+      const res = await StudioAPI.fetch(`/api/projects/${projectId}/training/plan`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(fullTrainingBody())});
       show('status', await res.json());
     };
     $('training-full-run').onclick = async () => {
       if (!projectId) return show('status','请先创建项目');
       if (!window.confirm('训练会写入 checkpoint 和日志。续训将只加载明确校验过的父运行 checkpoint；不会操作硬件。继续？')) return;
-      const res = await fetch(`/api/projects/${projectId}/training/run`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...fullTrainingBody(),confirm:true})});
+      const res = await StudioAPI.fetch(`/api/projects/${projectId}/training/run`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...fullTrainingBody(),confirm:true})});
       const run = await res.json();
       if (run.id && run.status === 'running') pollRun(run, 'training'); else show('status', run);
     };
     $('training-cancel').onclick = async () => {
       if (!activeRuns.training) return show('status','当前没有可取消的运行');
-      const res = await fetch(`/api/runs/${activeRuns.training}/cancel`, {method:'POST'});
+      const res = await StudioAPI.fetch(`/api/runs/${activeRuns.training}/cancel`, {method:'POST'});
       show('status', await res.json());
     };
     const tensorboardBody = () => ({training_dir:$('tb-training-dir').value.trim(), run_dir:$('tb-run-dir').value.trim(), output_dir:$('tb-output-dir').value.trim()});
     $('tb-plan').onclick = async () => {
       if (!projectId) return show('status','请先创建项目');
-      const res = await fetch(`/api/projects/${projectId}/training/tensorboard-plan`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(tensorboardBody())});
+      const res = await StudioAPI.fetch(`/api/projects/${projectId}/training/tensorboard-plan`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(tensorboardBody())});
       show('status', await res.json());
     };
     $('tb-run').onclick = async () => {
       if (!projectId) return show('status','请先创建项目');
       if (!window.confirm('将读取 TensorBoard event 并在项目输出目录写入摘要和曲线，不会操作硬件。继续？')) return;
-      const res = await fetch(`/api/projects/${projectId}/training/tensorboard`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...tensorboardBody(), confirm:true})});
+      const res = await StudioAPI.fetch(`/api/projects/${projectId}/training/tensorboard`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...tensorboardBody(), confirm:true})});
       show('status', await res.json());
     };
     $('run-timeline').onclick = () => loadRunTimeline($('run-timeline-id').value.trim());
@@ -582,7 +640,7 @@
       if (!projectId) return show('run-compare-body','请先创建项目');
       const body = {left_id:$('run-left-id').value.trim(), right_id:$('run-right-id').value.trim()};
       if (!body.left_id || !body.right_id) return show('run-compare-body','请填写两个运行 ID');
-      const res = await fetch(`/api/projects/${projectId}/runs/compare`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+      const res = await StudioAPI.fetch(`/api/projects/${projectId}/runs/compare`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
       const data = await res.json();
       if (!res.ok) return show('run-compare-body', data);
       renderRunComparison(data);
@@ -593,7 +651,7 @@
       let context; try { context = JSON.parse($('exp-context').value || '{}'); } catch (e) { return show('status','实验条件 JSON 格式错误'); }
       if (!context || Array.isArray(context) || typeof context !== 'object') return show('status','实验条件必须是 JSON 对象');
       const body = {title:$('exp-title').value, hypothesis:$('exp-hypothesis').value, variable:$('exp-variable').value, baseline, context, expected:$('exp-expected').value};
-      const res = await fetch(`/api/projects/${projectId}/experiments`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+      const res = await StudioAPI.fetch(`/api/projects/${projectId}/experiments`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
       const created = await res.json();
       if (created.id) $('exp-update-id').value = created.id;
       show('status', created);
@@ -607,7 +665,7 @@
       let evidence; try { evidence = JSON.parse($('exp-update-evidence').value || '[]'); } catch (e) { return show('status','实验证据 JSON 格式错误'); }
       if (!Array.isArray(evidence) || evidence.some(item => typeof item !== 'string' || !item.trim())) return show('status','实验证据必须是非空字符串数组');
       const body = {status:$('exp-update-status').value, result, decision:$('exp-update-decision').value, evidence_refs:evidence};
-      const res = await fetch(`/api/experiments/${encodeURIComponent(experimentId)}`, {method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+      const res = await StudioAPI.fetch(`/api/experiments/${encodeURIComponent(experimentId)}`, {method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
       show('status', await res.json());
       refreshReport();
     };
@@ -616,11 +674,11 @@
       const experimentId = $('exp-update-id').value.trim();
       const runId = $('exp-link-run-id').value.trim();
       if (!experimentId || !runId) return show('status','请填写实验 ID 和已完成运行 ID');
-      const res = await fetch(`/api/projects/${projectId}/experiments/${encodeURIComponent(experimentId)}/link-run/${encodeURIComponent(runId)}`, {method:'POST'});
+      const res = await StudioAPI.fetch(`/api/projects/${projectId}/experiments/${encodeURIComponent(experimentId)}/link-run/${encodeURIComponent(runId)}`, {method:'POST'});
       const linked = await res.json();
       if (!res.ok) return show('status', linked);
       $('exp-update-evidence').value = JSON.stringify(linked.evidence_refs || [], null, 2);
-      const runRes = await fetch(`/api/runs/${encodeURIComponent(runId)}`);
+      const runRes = await StudioAPI.fetch(`/api/runs/${encodeURIComponent(runId)}`);
       const run = await runRes.json();
       if (runRes.ok) {
         $('exp-update-result').value = JSON.stringify({run_id: run.id, kind: run.kind, status: run.status, result: run.result}, null, 2);
@@ -631,46 +689,46 @@
     $('exp-compare').onclick = async () => {
       if (!projectId) return show('status','请先创建项目');
       const body = {left_id:$('exp-left-id').value.trim(), right_id:$('exp-right-id').value.trim()};
-      const res = await fetch(`/api/projects/${projectId}/experiments/compare`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+      const res = await StudioAPI.fetch(`/api/projects/${projectId}/experiments/compare`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
       show('status', await res.json());
     };
     $('calibration-save').onclick = async () => {
       if (!projectId) return show('status','请先创建项目');
       let data; try { data = JSON.parse($('calibration-data').value); } catch (e) { return show('status','标定 JSON 格式错误'); }
-      const res = await fetch(`/api/projects/${projectId}/calibrations`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({data})});
+      const res = await StudioAPI.fetch(`/api/projects/${projectId}/calibrations`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({data})});
       show('status', await res.json()); refreshReport();
     };
     $('calibration-list').onclick = async () => {
       if (!projectId) return show('status','请先创建项目');
-      const res = await fetch(`/api/projects/${projectId}/calibrations`);
+      const res = await StudioAPI.fetch(`/api/projects/${projectId}/calibrations`);
       show('status', await res.json());
     };
     $('assembly-save').onclick = async () => {
       if (!projectId) return show('status','请先创建项目');
       let data; try { data = JSON.parse($('assembly-data').value); } catch (e) { return show('status','装配 JSON 格式错误'); }
-      const res = await fetch(`/api/projects/${projectId}/assemblies`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({data})});
+      const res = await StudioAPI.fetch(`/api/projects/${projectId}/assemblies`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({data})});
       show('status', await res.json()); refreshReport();
     };
     $('assembly-list').onclick = async () => {
       if (!projectId) return show('status','请先创建项目');
-      const res = await fetch(`/api/projects/${projectId}/assemblies`);
+      const res = await StudioAPI.fetch(`/api/projects/${projectId}/assemblies`);
       show('status', await res.json());
     };
     $('identification-save').onclick = async () => {
       if (!projectId) return show('status','请先创建项目');
       let data; try { data = JSON.parse($('identification-data').value); } catch (e) { return show('status','辨识 JSON 格式错误'); }
-      const res = await fetch(`/api/projects/${projectId}/identifications`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({data})});
+      const res = await StudioAPI.fetch(`/api/projects/${projectId}/identifications`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({data})});
       show('status', await res.json()); refreshReport();
     };
     $('identification-list').onclick = async () => {
       if (!projectId) return show('status','请先创建项目');
-      const res = await fetch(`/api/projects/${projectId}/identifications`);
+      const res = await StudioAPI.fetch(`/api/projects/${projectId}/identifications`);
       show('status', await res.json());
     };
     $('bam-plan').onclick = async () => {
       if (!projectId) return show('status','请先创建项目');
       let data; try { data = JSON.parse($('bam-plan-data').value); } catch (e) { return show('status','BAM 计划 JSON 格式错误'); }
-      const res = await fetch(`/api/projects/${projectId}/bench/bam-plan`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+      const res = await StudioAPI.fetch(`/api/projects/${projectId}/bench/bam-plan`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
       show('status', await res.json());
     };
     $('bam-run').onclick = async () => {
@@ -678,21 +736,21 @@
       let data; try { data = JSON.parse($('bam-plan-data').value); } catch (e) { return show('status','BAM 计划 JSON 格式错误'); }
       if (!window.confirm('高风险动作：将使单只 HL-2915 按计划小幅运动。请确认输出轴卸载、周围无人、实体急停可用。继续？')) return;
       data.confirm = true; data.confirm_motion = true;
-      const res = await fetch(`/api/projects/${projectId}/bench/bam`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+      const res = await StudioAPI.fetch(`/api/projects/${projectId}/bench/bam`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
       const run = await res.json();
       if (run.id && run.status === 'running') pollRun(run, 'bench'); else show('status', run);
     };
     $('issue-save').onclick = async () => {
       if (!projectId) return show('status','请先创建项目');
       let data; try { data = JSON.parse($('issue-data').value); } catch (e) { return show('status','问题 JSON 格式错误'); }
-      const res = await fetch(`/api/projects/${projectId}/issues`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+      const res = await StudioAPI.fetch(`/api/projects/${projectId}/issues`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
       const created = await res.json();
       if (created.id) $('issue-update-id').value = created.id;
       show('status', created); refreshReport();
     };
     $('issue-list').onclick = async () => {
       if (!projectId) return show('status','请先创建项目');
-      const res = await fetch(`/api/projects/${projectId}/issues`);
+      const res = await StudioAPI.fetch(`/api/projects/${projectId}/issues`);
       show('status', await res.json());
     };
     $('issue-update').onclick = async () => {
@@ -702,7 +760,7 @@
       let evidence; try { evidence = JSON.parse($('issue-update-evidence').value || '[]'); } catch (e) { return show('status','问题证据 JSON 格式错误'); }
       if (!Array.isArray(evidence) || evidence.some(item => typeof item !== 'string' || !item.trim())) return show('status','问题证据必须是非空字符串数组');
       const body = {status:$('issue-update-status').value, resolution:$('issue-update-resolution').value, evidence_refs:evidence};
-      const res = await fetch(`/api/issues/${encodeURIComponent(issueId)}`, {method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+      const res = await StudioAPI.fetch(`/api/issues/${encodeURIComponent(issueId)}`, {method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
       show('status', await res.json()); refreshReport();
     };
     $('issue-link-run').onclick = async () => {
@@ -710,7 +768,7 @@
       const issueId = $('issue-update-id').value.trim();
       const runId = $('issue-link-run-id').value.trim();
       if (!issueId || !runId) return show('status','请填写问题 ID 和已完成运行 ID');
-      const res = await fetch(`/api/projects/${projectId}/issues/${encodeURIComponent(issueId)}/link-run/${encodeURIComponent(runId)}`, {method:'POST'});
+      const res = await StudioAPI.fetch(`/api/projects/${projectId}/issues/${encodeURIComponent(issueId)}/link-run/${encodeURIComponent(runId)}`, {method:'POST'});
       const linked = await res.json();
       if (res.ok) $('issue-update-evidence').value = JSON.stringify(linked.evidence_refs || [], null, 2);
       show('status', linked); refreshReport();
@@ -719,27 +777,27 @@
       if (!projectId) return show('status','请先创建项目');
       const runId = $('issue-run-id').value.trim();
       if (!runId) return show('status','请填写 run ID');
-      const res = await fetch(`/api/projects/${projectId}/issues/from-run/${encodeURIComponent(runId)}`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({})});
+      const res = await StudioAPI.fetch(`/api/projects/${projectId}/issues/from-run/${encodeURIComponent(runId)}`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({})});
       show('status', await res.json());
     };
     $('policy-inspect').onclick = async () => {
       if (!projectId) return show('status','请先创建项目');
       const body = {onnx_path:$('policy-onnx').value.trim(), manifest_path:$('policy-manifest').value.trim(), policy_name:$('policy-name').value.trim() || null};
-      const res = await fetch(`/api/projects/${projectId}/policy/inspect`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+      const res = await StudioAPI.fetch(`/api/projects/${projectId}/policy/inspect`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
       show('status', await res.json());
     };
     $('deployment-preflight').onclick = async () => {
       if (!projectId) return show('status','请先创建项目');
       let runtime; try { runtime = JSON.parse($('runtime-contract').value); } catch (e) { return show('status','运行时 JSON 格式错误'); }
       const body = {onnx_path:$('policy-onnx').value.trim(), manifest_path:$('policy-manifest').value.trim(), runtime};
-      const res = await fetch(`/api/projects/${projectId}/deployment/preflight`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+      const res = await StudioAPI.fetch(`/api/projects/${projectId}/deployment/preflight`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
       show('status', await res.json());
     };
     $('deployment-plan').onclick = async () => {
       if (!projectId) return show('status','请先创建项目');
       const target = controllerBody();
       const body = {onnx_path:$('policy-onnx').value.trim(), manifest_path:$('policy-manifest').value.trim(), ...target};
-      const res = await fetch(`/api/projects/${projectId}/deployment/plan`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+      const res = await StudioAPI.fetch(`/api/projects/${projectId}/deployment/plan`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
       show('status', await res.json());
     };
     $('deployment-execute').onclick = async () => {
@@ -747,32 +805,32 @@
       if (!window.confirm('高风险操作：加载当前 walk 槽策略可能触发机器人归位并重新驱动。请先架空或可靠约束机器人，确认实体急停可用且周围无人。是否继续？')) return;
       const target = controllerBody();
       const body = {onnx_path:$('policy-onnx').value.trim(), manifest_path:$('policy-manifest').value.trim(), ...target, confirm:true};
-      const res = await fetch(`/api/projects/${projectId}/deployment/execute`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+      const res = await StudioAPI.fetch(`/api/projects/${projectId}/deployment/execute`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
       show('status', await res.json());
     };
     $('acceptance-save').onclick = async () => {
       if (!projectId) return show('status','请先创建项目');
       let data; try { data = JSON.parse($('acceptance-data').value); } catch (e) { return show('status','验收 JSON 格式错误'); }
-      const res = await fetch(`/api/projects/${projectId}/acceptances`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({data})});
+      const res = await StudioAPI.fetch(`/api/projects/${projectId}/acceptances`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({data})});
       show('status', await res.json());
       if (res.ok) refreshReport();
     };
     $('source-save').onclick = async () => {
       if (!projectId) return show('status','请先创建项目');
       const body = {kind:$('source-kind').value, location:$('source-location').value, revision:$('source-revision').value, license_status:'unknown'};
-      const res = await fetch(`/api/projects/${projectId}/sources`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+      const res = await StudioAPI.fetch(`/api/projects/${projectId}/sources`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
       show('status', await res.json());
     };
     $('source-list').onclick = async () => {
       if (!projectId) return show('status','请先创建项目');
-      const res = await fetch(`/api/projects/${projectId}/sources`);
+      const res = await StudioAPI.fetch(`/api/projects/${projectId}/sources`);
       show('status', await res.json());
     };
     $('search-run').onclick = async () => {
       if (!projectId) return show('status','请先创建项目');
       const query = $('search-query').value.trim();
       if (!query) return show('search-body','请输入关键词');
-      const res = await fetch(`/api/projects/${projectId}/search?q=${encodeURIComponent(query)}`);
+      const res = await StudioAPI.fetch(`/api/projects/${projectId}/search?q=${encodeURIComponent(query)}`);
       const data = await res.json();
       if (!res.ok) return show('search-body', data);
       const lines = [`关键词：${data.query}`, `结果数：${data.results.length}${data.truncated ? '（已达到上限）' : ''}`, '', ...data.results.map(item => `${item.path}:${item.line} ${item.text}`)];
@@ -787,7 +845,7 @@
       let endpoint = `/api/projects/${projectId}/evidence-search?q=${encodeURIComponent(query)}`;
       if (recordType) endpoint += `&type=${encodeURIComponent(recordType)}`;
       if (recordStatus) endpoint += `&status=${encodeURIComponent(recordStatus)}`;
-      const res = await fetch(endpoint);
+      const res = await StudioAPI.fetch(endpoint);
       const data = await res.json();
       if (!res.ok) return show('record-search-body', data);
       if (data.results?.[0]) $('record-detail-id').value = data.results[0].id;
@@ -798,7 +856,7 @@
       if (!projectId) return show('record-detail-body','请先创建项目');
       const evidenceId = $('record-detail-id').value.trim();
       if (!evidenceId) return show('record-detail-body','请填写证据详情 ID');
-      const res = await fetch(`/api/projects/${projectId}/evidence/${encodeURIComponent(evidenceId)}`);
+      const res = await StudioAPI.fetch(`/api/projects/${projectId}/evidence/${encodeURIComponent(evidenceId)}`);
       show('record-detail-body', await res.json());
     };
     const evidenceLabel = (item) => item.kind
@@ -809,7 +867,7 @@
     $('report').onclick = async () => {
       if (!projectId) return show('report-body','请先创建项目');
       const requestedProjectId = projectId;
-      const res = await fetch(`/api/projects/${requestedProjectId}/report`); const data = await res.json();
+      const res = await StudioAPI.fetch(`/api/projects/${requestedProjectId}/report`); const data = await res.json();
       if (projectId !== requestedProjectId) return;
       const reportEvidenceRefs = [...(data.experiments || []), ...(data.issues || [])].flatMap(item => Array.isArray(item.evidence_refs) ? item.evidence_refs : []);
       if (!$('record-detail-id').value && reportEvidenceRefs[0]) $('record-detail-id').value = reportEvidenceRefs[0];
@@ -899,13 +957,13 @@
     $('retry-last-run').onclick = async () => {
       if (!projectId) return show('status','请先创建项目');
       const requestedProjectId = projectId;
-      const reportRes = await fetch(`/api/projects/${requestedProjectId}/report`);
+      const reportRes = await StudioAPI.fetch(`/api/projects/${requestedProjectId}/report`);
       const data = await reportRes.json();
       if (projectId !== requestedProjectId) return;
       const candidate = data.runs.find(run => ['failed','interrupted'].includes(run.status) && ['hl2915_read_only_probe','training_smoke'].includes(run.kind));
       if (!candidate) return show('status','没有可自动重试的探针或训练运行');
       if (!window.confirm(`将重试 ${candidate.kind}，仍会重新检查当前硬件/环境前置条件。继续？`)) return;
-      const res = await fetch(`/api/runs/${candidate.id}/retry`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({confirm:true})});
+      const res = await StudioAPI.fetch(`/api/runs/${candidate.id}/retry`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({confirm:true})});
       const run = await res.json();
       if (!res.ok) return show('status', run);
       const slot = candidate.kind === 'training_smoke' ? 'training' : 'bench';
@@ -914,26 +972,31 @@
     $('issue-from-latest-run').onclick = async () => {
       if (!projectId) return show('status','请先创建项目');
       const requestedProjectId = projectId;
-      const reportRes = await fetch(`/api/projects/${requestedProjectId}/report`);
+      const reportRes = await StudioAPI.fetch(`/api/projects/${requestedProjectId}/report`);
       const data = await reportRes.json();
       if (projectId !== requestedProjectId) return;
       const candidate = data.runs.find(run => ['failed','interrupted'].includes(run.status));
       if (!candidate) return show('status','没有可记录的问题运行');
       if (!window.confirm(`确认将失败运行记录为问题草稿：${candidate.kind}？`)) return;
-      const res = await fetch(`/api/projects/${requestedProjectId}/issues/from-run/${candidate.id}`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({})});
+      const res = await StudioAPI.fetch(`/api/projects/${requestedProjectId}/issues/from-run/${candidate.id}`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({})});
       show('status', await res.json());
     };
     $('support-bundle').onclick = async () => {
       if (!projectId) return show('status','请先创建项目');
       if (!window.confirm('将在项目目录内写入 ZIP，仅包含脱敏后的 JSON/Markdown 报告。请仍在分享前人工复核内容。继续？')) return;
       const output_path = $('support-path').value.trim() || null;
-      const res = await fetch(`/api/projects/${projectId}/support-bundle`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({output_path,confirm:true})});
+      const res = await StudioAPI.fetch(`/api/projects/${projectId}/support-bundle`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({output_path,confirm:true})});
       show('status', await res.json());
     };
+    window.ServoDebug.init();
+    window.ImuPanel.init();
     window.InstallationStudio.init();
     window.TrainingStudio.init();
+    window.KissqyStudio.init();
     window.Studio.init();
     window.VisualStudio.init();
+    window.ServoGuideStudio.init();
+    window.WeighingStudio.init();
     loadProjects().catch(error => { window.Studio.connection(false); show('status', `项目读取失败：${error.message}`); });
     loadTrainingRecipes().catch(error => show('status', `训练配方读取失败：${error.message}`));
 </script>
