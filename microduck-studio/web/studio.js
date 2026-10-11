@@ -35,7 +35,7 @@ window.Studio = (() => {
   const tabs = {
     bench: [['probe','通信验证'],['servodebug','URT2 调试台'],['imu','IMU 姿态'],['bench','连续测试判定']], controller: [['preflight','开发机预检'],['controller','主控诊断']],
     training: [['pipeline','方案 → ONNX'],['kissqy','Microduck-kissqy'],['smoke','小规模验证'],['training','模型训练与续训'],['tensorboard','指标摘要']],
-    assembly: [['assembly','装配与电气'],['calibration','关节标定'],['identification','执行器辨识'],['servoguide','舵机编号 3D 对照'],['weighing','整机称重与 ID 对照']],
+    assembly: [['assembly','装配与电气'],['calibration','关节标定'],['identification','执行器辨识'],['servoguide','舵机编号 3D 对照'],['weighing','整机称重与 ID 对照'],['imucheck','IMU 安装验收']],
     deployment: [['policy','策略包检查'],['deployment','兼容性与部署'],['acceptance','逐级验收']],
     records: [['timeline','运行与对比'],['experiment','实验记录'],['issue','问题台账'],['report','复刻报告']],
     knowledge: [['search','资料与证据搜索'],['source','来源登记']], settings: [['project','项目管理'],['settings','工作台偏好'],['api','云端与本机']]
@@ -153,6 +153,7 @@ window.Studio = (() => {
     window.TrainingStudio?.receiveReport(data);
     window.KissqyStudio?.receiveReport(data);
     window.WeighingStudio?.receiveReport(data);
+    window.ImuCheckStudio?.receiveReport(data);
     report = data; connection(true); rendering = true;
     const tasks = data.tasks || [], runs = data.runs || [], hardware = data.hardware;
     const next = tasks.find(task => ['ready','needs_confirmation'].includes(task.status));
@@ -214,6 +215,7 @@ window.Studio = (() => {
     window.TrainingStudio?.reset();
     window.KissqyStudio?.reset();
     window.WeighingStudio?.reset();
+    window.ImuCheckStudio?.reset();
     dirty.clear(); clear();
     for (const [id,value] of initialFields) {
       const field = el(id); if (field.type === 'checkbox') field.checked = value; else field.value = value;

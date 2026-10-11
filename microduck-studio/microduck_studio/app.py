@@ -13,6 +13,7 @@ from .workbench import Workbench, read_data
 from .training_pipeline import TrainingPipeline
 from .servo_guide import locate_site, payload as servo_guide_payload
 from .weighing import WeighingStore, find_templates, load_template
+from .imu_acceptance import ImuAcceptanceStore
 from .kissqy_connector import KissqyTrainingService, TrainingServiceError
 
 from .core import (
@@ -64,6 +65,7 @@ visual_store = VisualStore(DB_PATH)
 workbench = Workbench(store, DB_PATH)
 training_pipeline = TrainingPipeline(workbench)
 weighing_store = WeighingStore(DB_PATH, store)
+imu_acceptance_store = ImuAcceptanceStore(DB_PATH)
 kissqy_training = KissqyTrainingService(os.environ.get("MICRODUCK_KISSQY_URL"), DB_PATH)
 # Build artifacts are local and keep the Color Studio attribution and model license.
 COLOR_BUILD = ROOT / "microduck-color-studio" / "dist"
@@ -416,6 +418,10 @@ class ModelCopyIn(BaseModel):
 
 
 class ServoIdMapIn(BaseModel):
+    data: dict
+
+
+class ImuAcceptanceIn(BaseModel):
     data: dict
 
 
@@ -1149,6 +1155,24 @@ def save_servo_id_map(project_id: str, body: ServoIdMapIn):
 def list_servo_id_maps(project_id: str):
     try:
         return {"id_maps": weighing_store.list_id_maps(project_id)}
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="project not found") from exc
+
+
+@app.post("/api/projects/{project_id}/imu-acceptances")
+def save_imu_acceptance(project_id: str, body: ImuAcceptanceIn):
+    try:
+        return imu_acceptance_store.save(project_id, body.data)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="project not found") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.get("/api/projects/{project_id}/imu-acceptances")
+def list_imu_acceptances(project_id: str):
+    try:
+        return {"acceptances": imu_acceptance_store.list(project_id)}
     except KeyError as exc:
         raise HTTPException(status_code=404, detail="project not found") from exc
 

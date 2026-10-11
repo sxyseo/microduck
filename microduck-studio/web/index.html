@@ -257,6 +257,31 @@
       <label>操作者<input id="idmap-operator" placeholder="记录谁登记的"></label>
       <button id="idmap-save">保存 ID 映射</button>
       <div id="idmap-result"></div>
+    </section>    <section class="card" id="card-imucheck">
+      <h2><svg class="icon" aria-hidden="true"><use href="#i-cpu"/></svg>IMU 安装验收</h2>
+      <p class="muted">解读 68 §3.4 的五步数字验收：实测数值来自「舵机实验室 → IMU 姿态」面板（Web Serial 直读 ID 200）或等效读数，由服务端按稳定规则版本判定。方向不对先改安装旋转（mount），不要在下游给单轴乘 −1。总线操作前停 robotd；IMU 面板与 URT2 调试台共用串口。</p>
+      <div class="inline-note" id="imucheck-status" hidden></div>
+      <div class="weigh-table">
+        <table>
+          <thead><tr><th>验收步骤</th><th>门槛（解读 68 §3.4）</th><th>实测</th></tr></thead>
+          <tbody>
+            <tr><td><code>gyro_stationary</code> 平放静止</td><td>每轴 |gyro| &lt; 0.05 rad/s，时长 ≥ 30s</td><td><div class="form-grid"><label>gx rad/s<input id="imu-gx" type="number" step="0.001" placeholder="gx"></label><label>gy rad/s<input id="imu-gy" type="number" step="0.001" placeholder="gy"></label><label>gz rad/s<input id="imu-gz" type="number" step="0.001" placeholder="gz"></label><label>时长 s<input id="imu-still-duration" type="number" step="1" placeholder="≥30"></label></div></td></tr>
+            <tr><td><code>gravity_upright</code> 正立</td><td>模长 ≈ 1，z ≤ −0.9（[0,0,−1]）</td><td><label>gravity x,y,z<input id="imu-gravity-up" placeholder="0,0,-1"></label></td></tr>
+            <tr><td><code>gravity_inverted</code> 倒立</td><td>z 变号，z ≥ +0.9（[0,0,+1]）</td><td><label>gravity x,y,z<input id="imu-gravity-down" placeholder="0,0,1"></label></td></tr>
+            <tr><td><code>pitch_sign</code> 低头方向</td><td>gyro Y 轴符号与训练约定一致</td><td><label>低头时 gyro_y rad/s<input id="imu-pitch-gy" type="number" step="0.001"></label><label><input id="imu-pitch-ok" type="checkbox"> 方向与训练约定一致（不一致先改 mount）</label></td></tr>
+            <tr><td><code>quat_rotation</code> 慢转 90°</td><td>四元数模长 ≈ 1、无跳变（[w,x,y,z]）</td><td><label>转前 w,x,y,z<input id="imu-quat-before" placeholder="1,0,0,0"></label><label>转后 w,x,y,z<input id="imu-quat-after" placeholder="0.7,0,0,0.7"></label><label><input id="imu-quat-ok" type="checkbox"> 过程无跳变、模长正常</label></td></tr>
+            <tr><td><code>soak_50hz</code> 连读拷机</td><td>≥ 600s @ ≥50Hz，连续 stale ≤ 3 帧</td><td><div class="form-grid"><label>时长 s<input id="imu-soak-duration" type="number" step="1" placeholder="≥600"></label><label>采样率 Hz<input id="imu-soak-hz" type="number" step="1" placeholder="50"></label><label>样本数<input id="imu-soak-samples" type="number" step="1"></label><label>最大连续 stale 帧<input id="imu-soak-stale" type="number" step="1" placeholder="≤3"></label></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="form-grid">
+        <label>操作者<input id="imucheck-operator" placeholder="记录谁验收的"></label>
+        <label>IMU 型号<input id="imucheck-imu" placeholder="例如 LSM6DSV16X 模块"></label>
+        <label>安装旋转映射<input id="imucheck-mount" value="trunk = [+raw_z, +raw_y, -raw_x]"></label>
+      </div>
+      <label>备注<input id="imucheck-note" placeholder="安装朝向、改动与异常"></label>
+      <button id="imucheck-save">保存 IMU 验收记录</button>
+      <div id="imucheck-result"></div>
     </section></section><section class="view-panel" id="view-deployment" data-panel="deployment" hidden>    <section class="card" id="card-policy">
       <h2><svg class="icon" aria-hidden="true"><use href="#i-folder"/></svg>策略包检查</h2>
       <p class="muted">读取项目内 ONNX 和 manifest.json，登记 SHA-256；不加载、不部署。</p>
@@ -311,6 +336,7 @@
 <script src="/assets/imu-studio.js?v=20261010-imu-1"></script>
 <script src="/assets/servo-guide-studio.js?v=20261005-studio-1"></script>
 <script src="/assets/weighing-studio.js?v=20261007-studio-1"></script>
+<script src="/assets/imu-check-studio.js?v=20261011-studio-1"></script>
 <script>
     let projectId = localStorage.getItem('microduckStudioProjectId');
     const activeRuns = {bench: null, training: null};
@@ -997,6 +1023,7 @@
     window.VisualStudio.init();
     window.ServoGuideStudio.init();
     window.WeighingStudio.init();
+    window.ImuCheckStudio.init();
     loadProjects().catch(error => { window.Studio.connection(false); show('status', `项目读取失败：${error.message}`); });
     loadTrainingRecipes().catch(error => show('status', `训练配方读取失败：${error.message}`));
 </script>
