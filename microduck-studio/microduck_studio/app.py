@@ -15,6 +15,7 @@ from .servo_guide import locate_site, payload as servo_guide_payload
 from .weighing import WeighingStore, find_templates, load_template
 from .imu_acceptance import ImuAcceptanceStore
 from .kissqy_connector import KissqyTrainingService, TrainingServiceError
+from . import community_kit
 
 from .core import (
     StudioStore,
@@ -1175,6 +1176,14 @@ def list_imu_acceptances(project_id: str):
         return {"acceptances": imu_acceptance_store.list(project_id)}
     except KeyError as exc:
         raise HTTPException(status_code=404, detail="project not found") from exc
+
+
+@app.get("/api/community-kit/status")
+def community_kit_status(base_url: str | None = None):
+    try:
+        return community_kit.status(base_url)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @app.post("/api/projects/{project_id}/identifications")

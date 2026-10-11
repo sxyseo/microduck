@@ -282,6 +282,21 @@
       <label>备注<input id="imucheck-note" placeholder="安装朝向、改动与异常"></label>
       <button id="imucheck-save">保存 IMU 验收记录</button>
       <div id="imucheck-result"></div>
+    </section>    <section class="card" id="card-kit">
+      <h2><svg class="icon" aria-hidden="true"><use href="#i-servo"/></svg>核心板校准台（community-kit）</h2>
+      <p class="muted">HLS 舵机调试工具跑在鸭子核心板上，独占 <code>/dev/ttyS2</code>；studio 只做只读探活与证据衔接，舵机连接、逐台校准和写寄存器都在工具自己的页面完成。工具不是常驻服务：用完就停，把总线还给 robotd。</p>
+      <div class="inline-note" id="kit-status" hidden></div>
+      <label>调试台地址<input id="kit-url" placeholder="http://<板子IP>:8765"></label>
+      <p><button id="kit-check">检查状态（只读）</button> <button id="kit-open">打开校准台页面</button> <button id="kit-draft">从 ID 映射生成标定草稿</button></p>
+      <details class="advanced"><summary>校准台使用流程与安全边界</summary>
+        <ol class="muted">
+          <li>部署与更新：<code>scripts/deploy_hls_debugger.sh &lt;user@host&gt; install --stop-robotd</code>（装依赖、rsync、离线自检、停 robotd）。</li>
+          <li>启动：<code>scripts/deploy_hls_debugger.sh &lt;user@host&gt; start</code>，浏览器打开 <code>http://&lt;板子IP&gt;:8765/</code>。</li>
+          <li>校准：连接 /dev/ttyS2 @ 1Mbps →「点检 15 台」→「舵机初始化」页逐台编号/中位校准；一次只有一个进程持有串口，robotd 的 TIOCEXCL 拦不住 root。</li>
+          <li>收尾：停掉工具（<code>... stop</code>）→ <code>systemctl start robotd</code> 把总线还给 robotd。</li>
+          <li><code>--host 0.0.0.0</code> 下任何能连到板子的人都能写舵机寄存器：只在可信任局域网开启；停 robotd 不切扭矩，机器人失去平衡控制。</li>
+        </ol>
+      </details>
     </section></section><section class="view-panel" id="view-deployment" data-panel="deployment" hidden>    <section class="card" id="card-policy">
       <h2><svg class="icon" aria-hidden="true"><use href="#i-folder"/></svg>策略包检查</h2>
       <p class="muted">读取项目内 ONNX 和 manifest.json，登记 SHA-256；不加载、不部署。</p>
@@ -337,6 +352,7 @@
 <script src="/assets/servo-guide-studio.js?v=20261005-studio-1"></script>
 <script src="/assets/weighing-studio.js?v=20261007-studio-1"></script>
 <script src="/assets/imu-check-studio.js?v=20261011-studio-1"></script>
+<script src="/assets/kit-studio.js?v=20261011-studio-1"></script>
 <script>
     let projectId = localStorage.getItem('microduckStudioProjectId');
     const activeRuns = {bench: null, training: null};
@@ -1024,6 +1040,7 @@
     window.ServoGuideStudio.init();
     window.WeighingStudio.init();
     window.ImuCheckStudio.init();
+    window.KitStudio.init();
     loadProjects().catch(error => { window.Studio.connection(false); show('status', `项目读取失败：${error.message}`); });
     loadTrainingRecipes().catch(error => show('status', `训练配方读取失败：${error.message}`));
 </script>
