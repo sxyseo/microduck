@@ -287,7 +287,7 @@
       <p class="muted">HLS 舵机调试工具跑在鸭子核心板上，独占 <code>/dev/ttyS2</code>；studio 只做只读探活与证据衔接，舵机连接、逐台校准和写寄存器都在工具自己的页面完成。工具不是常驻服务：用完就停，把总线还给 robotd。</p>
       <div class="inline-note" id="kit-status" hidden></div>
       <label>调试台地址<input id="kit-url" placeholder="http://<板子IP>:8765"></label>
-      <p><button id="kit-check">检查状态（只读）</button> <button id="kit-open">打开校准台页面</button> <button id="kit-draft">从 ID 映射生成标定草稿</button></p>
+      <p><button id="kit-check">检查状态（只读）</button> <button id="kit-save">保存地址到项目</button> <button id="kit-open">打开校准台页面</button> <button id="kit-draft">从 ID 映射生成标定草稿</button></p>
       <details class="advanced"><summary>校准台使用流程与安全边界</summary>
         <ol class="muted">
           <li>部署与更新：<code>scripts/deploy_hls_debugger.sh &lt;user@host&gt; install --stop-robotd</code>（装依赖、rsync、离线自检、停 robotd）。</li>
@@ -352,7 +352,7 @@
 <script src="/assets/servo-guide-studio.js?v=20261005-studio-1"></script>
 <script src="/assets/weighing-studio.js?v=20261007-studio-1"></script>
 <script src="/assets/imu-check-studio.js?v=20261011-studio-1"></script>
-<script src="/assets/kit-studio.js?v=20261011-studio-1"></script>
+<script src="/assets/kit-studio.js?v=20261011-kit-2"></script>
 <script>
     let projectId = localStorage.getItem('microduckStudioProjectId');
     const activeRuns = {bench: null, training: null};
@@ -543,7 +543,11 @@
         : kind === 'ssh'
           ? {kind, ...controllerBody()}
           : {kind};
-      const res = await StudioAPI.fetch(`/api/projects/${projectId}/settings`, {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({data:{visible_metrics,alert_thresholds,execution_target}})});
+      // Settings saves replace the record server-side, so carry the board debugger URL
+      // saved from the kit card through instead of letting this form drop it.
+      let savedKitUrl = '';
+      try { savedKitUrl = (await (await StudioAPI.fetch(`/api/projects/${projectId}/settings`)).json())?.data?.community_kit_url || ''; } catch {}
+      const res = await StudioAPI.fetch(`/api/projects/${projectId}/settings`, {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({data:{visible_metrics,alert_thresholds,execution_target,...(savedKitUrl ? {community_kit_url:savedKitUrl} : {})}})});
       show('status', await res.json());
       if (res.ok) { window.Studio.saved('settings'); refreshReport(); }
     };

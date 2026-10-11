@@ -1186,6 +1186,18 @@ def community_kit_status(base_url: str | None = None):
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
+@app.get("/api/projects/{project_id}/community-kit/status")
+def community_kit_project_status(project_id: str, base_url: str | None = None):
+    if not store.get_project(project_id):
+        raise HTTPException(status_code=404, detail="project not found")
+    settings = store.get_project_settings(project_id)
+    stored = (settings.get("data") or {}).get("community_kit_url") or None
+    try:
+        return community_kit.status(base_url, stored=stored)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
 @app.post("/api/projects/{project_id}/identifications")
 def save_identification(project_id: str, body: IdentificationIn):
     try:

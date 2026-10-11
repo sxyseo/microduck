@@ -23,12 +23,17 @@ BOUNDARY_NOTE = (
 DEFAULT_JOINT_COUNT = 15
 
 
-def resolve_base_url(explicit: str | None = None) -> str | None:
+def resolve_base_url(explicit: str | None = None, stored: str | None = None) -> str | None:
+    """Precedence: page input > MICRODUCK_KIT_URL environment > project settings."""
     if explicit:
         value = explicit.strip().rstrip("/")
         return value or None
     env = (os.environ.get("MICRODUCK_KIT_URL") or "").strip().rstrip("/")
-    return env or None
+    if env:
+        return env
+    if stored:
+        return str(stored).strip().rstrip("/") or None
+    return None
 
 
 def _get_json(base_url: str, path: str, timeout: float) -> tuple[dict | None, str | None]:
@@ -39,13 +44,13 @@ def _get_json(base_url: str, path: str, timeout: float) -> tuple[dict | None, st
         return None, f"{type(exc).__name__}: {exc}"
 
 
-def status(base_url: str | None) -> dict:
-    resolved = resolve_base_url(base_url)
+def status(base_url: str | None, stored: str | None = None) -> dict:
+    resolved = resolve_base_url(base_url, stored)
     if not resolved:
         return {
             "reachable": False,
             "base_url": None,
-            "note": "未配置核心板调试台地址；在页面里填写（例如 http://<板子IP>:8765），或用 MICRODUCK_KIT_URL 环境变量。",
+            "note": "未配置核心板调试台地址；在页面里填写并保存到项目设置，或用 MICRODUCK_KIT_URL 环境变量。",
             "boundary_note": BOUNDARY_NOTE,
         }
     if not resolved.startswith(("http://", "https://")):

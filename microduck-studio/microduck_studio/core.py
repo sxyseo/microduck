@@ -551,7 +551,7 @@ _SECRET_ENV = re.compile(
 def validate_project_settings(data: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(data, dict):
         raise ValueError("project settings must be an object")
-    unknown = set(data) - {"visible_metrics", "alert_thresholds", "execution_target"}
+    unknown = set(data) - {"visible_metrics", "alert_thresholds", "execution_target", "community_kit_url"}
     if unknown:
         raise ValueError(f"unknown project setting: {sorted(unknown)[0]}")
     metrics = data.get("visible_metrics", [])
@@ -598,7 +598,22 @@ def validate_project_settings(data: dict[str, Any]) -> dict[str, Any]:
         "visible_metrics": list(metrics),
         "alert_thresholds": {key: float(value) for key, value in thresholds.items()},
         "execution_target": normalized_target,
+        **({"community_kit_url": kit_url} if (kit_url := _normalized_kit_url(data.get("community_kit_url"))) is not None else {}),
     }
+
+
+def _normalized_kit_url(value: Any) -> str | None:
+    """Store a reachable base URL for the board debugger; empty string clears it."""
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        raise ValueError("community kit URL is invalid")
+    url = value.strip().rstrip("/")
+    if not url:
+        return ""
+    if not url.startswith(("http://", "https://")):
+        raise ValueError("community kit URL must start with http:// or https://")
+    return url
 
 
 def training_recipes() -> list[dict[str, Any]]:

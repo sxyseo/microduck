@@ -41,11 +41,14 @@ HEALTH = {"data": {"name": "hls-servo-debugger", "time": 1.0}, "ok": True}
 JOINTS = {"data": {"joints": [{"id": 20, "name": "left_hip_yaw"}, {"id": 21, "name": "left_hip_roll"}]}}
 
 
-def test_url_resolution_prefers_explicit_then_env(monkeypatch):
+def test_url_resolution_prefers_explicit_then_env_then_settings(monkeypatch):
     monkeypatch.setenv("MICRODUCK_KIT_URL", "http://10.0.0.9:8765/")
     assert community_kit.resolve_base_url(None) == "http://10.0.0.9:8765"
     assert community_kit.resolve_base_url(" http://192.168.31.217:8765/ ") == "http://192.168.31.217:8765"
+    # Project settings only apply when neither the page nor the environment says anything.
+    assert community_kit.resolve_base_url(None, stored="http://192.168.31.4:8765") == "http://10.0.0.9:8765"
     monkeypatch.delenv("MICRODUCK_KIT_URL")
+    assert community_kit.resolve_base_url(None, stored="http://192.168.31.4:8765") == "http://192.168.31.4:8765"
     assert community_kit.resolve_base_url(None) is None
 
 
@@ -100,3 +103,54 @@ def test_kit_card_is_registered_and_wired():
     js = (web / "studio.js").read_text(encoding="utf-8")
     assert "['kit','核心板校准台']" in js
     assert "window.KitStudio?.receiveReport(data);" in js
+
+
+def test_project_settings_store_kit_url(tmp_path):
+    from microduck_studio.core import StudioStore
+
+    store = StudioStore(tmp_path / "studio.db")
+    project_id = store.create_project("test", str(tmp_path / "repo"))["id"]
+    saved = store.save_project_settings(project_id, {
+        "community_kit_url": " http://192.168.31.217:8765/ ",
+        "execution_target": {"kind": "local"},
+    })
+    assert saved["data"]["community_kit_url"] == "http://192.168.31.217:8765"
+    with pytest.raises(ValueError, match="http"):
+        store.save_project_settings(project_id, {"community_kit_url": "192.168.31.217:8765"})
+    cleared = store.save_project_settings(project_id, {"community_kit_url": ""})
+    assert cleared["data"]["community_kit_url"] == ""
+    # Server settings saves REPLACE the record: a save without the key drops it. Both
+    # frontend writers (settings form, kit card) therefore GET-merge before PUT.
+    dropped = store.save_project_settings(project_id, {"execution_target": {"kind": "local"}})
+    assert "community_kit_url" not in dropped["data"]
+
+
+def test_settings_form_and_kit_card_merge_before_saving():
+    web = Path(__file__).parents[1] / "web"
+    html = (web / "index.html").read_text(encoding="utf-8")
+    # The settings form saves the whole record; it must carry the saved kit URL through.
+    handler = html.split("$('settings-save').onclick")[1][:1200]
+    assert "community_kit_url" in handler
+    js = (web / "kit-studio.js").read_text(encoding="utf-8")
+    assert "current.data" in js
+
+
+def test_project_endpoint_reads_settings_url(monkeypatch, tmp_path):
+    import microduck_studio.app as app_module
+    from fastapi.testclient import TestClient
+
+    store = app_module.store
+    project_id = store.create_project("kit-url-test", str(tmp_path / "repo"))["id"]
+    store.save_project_settings(project_id, {"community_kit_url": "http://192.168.31.99:8765"})
+    monkeypatch.delenv("MICRODUCK_KIT_URL", raising=False)
+
+    def fail(url, timeout):
+        raise URLError("connection refused")
+
+    monkeypatch.setattr(app_module.community_kit.urllib.request, "urlopen", fail)
+    client = TestClient(app_module.app)
+    value = client.get(f"/api/projects/{project_id}/community-kit/status").json()
+    assert value["reachable"] is False
+    assert value["base_url"] == "http://192.168.31.99:8765"
+    missing = client.get("/api/projects/missing/community-kit/status")
+    assert missing.status_code == 404

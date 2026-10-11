@@ -1,12 +1,12 @@
 /* Community-kit board debugger bridge. The HLS servo debugger runs on the duck's core
    board and owns the serial bus; studio only checks reachability (server-side, GET only)
    and turns the recorded servo ID map into a calibration draft. Writing registers,
-   connecting the port and calibrating happen in the board tool's own page. */
+   connecting the port and calibrating happen in the board tool's own page. The debugger
+   URL is saved in project settings so it survives browsers and devices. */
 window.KitStudio = (() => {
   const $ = id => document.getElementById(id);
   const esc = value => String(value ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const KEY = 'microduckKitUrl';
-  let project = null, lastStatus = null;
+  let project = null, lastStatus = null, savedUrl = '';
 
   const request = async (url, body) => {
     const r = await StudioAPI.fetch(url, body === undefined ? {} : {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
@@ -15,11 +15,19 @@ window.KitStudio = (() => {
     return j;
   };
 
-  function reset() { project = null; lastStatus = null; }
+  function reset() { project = null; lastStatus = null; savedUrl = ''; }
 
-  function receiveReport(report) { project = report.project.id; }
-
-  function savedUrl() { try { return localStorage.getItem(KEY) || ''; } catch { return ''; } }
+  async function receiveReport(report) {
+    if (report.project.id === project) return;
+    project = report.project.id;
+    const token = project;
+    try {
+      const settings = await request(`/api/projects/${project}/settings`);
+      if (token !== project) return;
+      savedUrl = (settings.data?.community_kit_url || '').trim();
+      if (savedUrl && !$('kit-url').value.trim()) $('kit-url').value = savedUrl;
+    } catch { /* settings stay optional; the URL input works without them. */ }
+  }
 
   function renderStatus(value) {
     lastStatus = value;
@@ -55,15 +63,25 @@ ${count !== null && count !== undefined ? ` · 关节表 ${esc(String(count))} �
   }
 
   function init() {
-    $('kit-url').value = savedUrl();
     $('kit-check').onclick = guard(async () => {
       const url = $('kit-url').value.trim();
-      try { if (url) localStorage.setItem(KEY, url); else localStorage.removeItem(KEY); } catch {}
-      const value = await request(`/api/community-kit/status${url ? `?base_url=${encodeURIComponent(url)}` : ''}`);
-      renderStatus(value);
+      const query = url ? `?base_url=${encodeURIComponent(url)}` : '';
+      const endpoint = project ? `/api/projects/${project}/community-kit/status${query}` : `/api/community-kit/status${query}`;
+      renderStatus(await request(endpoint));
+    });
+    $('kit-save').onclick = guard(async () => {
+      if (!project) return status('先选择项目。', true);
+      const url = $('kit-url').value.trim().replace(/\/+$/, '');
+      if (url && !/^https?:\/\//.test(url)) return status('调试台地址需要以 http:// 或 https:// 开头。', true);
+      const current = await request(`/api/projects/${project}/settings`);
+      const r = await StudioAPI.fetch(`/api/projects/${project}/settings`, {method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({data: {...(current.data || {}), community_kit_url: url}})});
+      const record = await r.json();
+      if (!r.ok) throw Error(typeof record.detail === 'string' ? record.detail : '保存未完成');
+      savedUrl = record.data?.community_kit_url || '';
+      status(savedUrl ? `调试台地址已保存到项目设置：${savedUrl}` : '已清除项目设置中的调试台地址。');
     });
     $('kit-open').onclick = () => {
-      const url = ($('kit-url').value.trim() || lastStatus?.base_url || '').replace(/\/+$/, '');
+      const url = ($('kit-url').value.trim() || savedUrl || lastStatus?.base_url || '').replace(/\/+$/, '');
       if (!/^https?:\/\//.test(url)) return status('先填写调试台地址并检查状态。', true);
       window.open(url + '/', '_blank', 'noopener');
     };
