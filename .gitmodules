@@ -37,3 +37,9 @@
 [submodule "microduck-servo-guide"]
 	path = microduck-servo-guide
 	url = https://github.com/sxyseo/microduck-servo-guide.git
+[submodule "ftservo-bam"]
+	path = ftservo-bam
+	url = https://gitee.com/ftservo/ftservo-bam.git
+[submodule "xgoduck_rl"]
+	path = xgoduck_rl
+	url = https://github.com/LuwuDynamics/xgoduck_rl
