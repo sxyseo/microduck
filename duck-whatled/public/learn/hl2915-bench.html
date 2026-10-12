@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>URT2 + HL-2915-C001 接线、组装与测试指南 · 什么鸭 WhatDuck</title>
+<meta name="description" content="12V 开发单元的台架全流程：验证电源、单只只读、小角度运动、改 ID、双机共线、机械中位与现场验收表，每一步都有验收门槛。">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="URT2 + HL-2915-C001 接线、组装与测试指南">
+<meta property="og:description" content="12V 开发单元的台架全流程：验证电源、单只只读、小角度运动、改 ID、双机共线、机械中位与现场验收表，每一步都有验收门槛。">
+<meta property="og:url" content="https://duck.whatled.com/learn/hl2915-bench">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/hl2915-bench">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body img{max-width:100%;height:auto;border-radius:8px;border:1px solid var(--line);display:block;margin:14px auto}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">MANUAL 07 · HL-2915 台架篇 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-09-14 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="urt2-hl-2915-c001-接线组装与测试指南">URT2 + HL-2915-C001 接线、组装与测试指南</h1>
+<p>这份文档面向第一次接触电路和总线舵机的人。目标不是让整机立即行走，而是安全完成：</p>
+<pre><code class="language-text">认识接口
+  → 验证 12 V 电源
+  → 单只舵机只读通信
+  → 单只小角度运动
+  → 第二只改 ID
+  → 两只同时只读
+  → 设置机械中位
+  → 安装一个测试关节
+</code></pre>
+<p>每完成一步，就在两只舵机现场验收表（工作区文件）里填写结果和证据。<br />
+上一步没有通过，不进入下一步。</p>
+<blockquote>
+<p>本指南的电压、线序和参数为 12 V 的 HL-2915-C001 开发单元编写。当前 15 只装机舵机是<br />
+4–8.4 V 的 HD-1910-C001：线序相反、出厂默认模式和保护都不同，不要把本页的接线表和<br />
+寄存器搬过去。装机主线的台架流程见<br />
+<a href="/learn/hd1910-bench">URT2 + HD-1910 接线、组装与测试指南</a>。</p>
+</blockquote>
+<h2 id="1-当前阶段只连接什么">1. 当前阶段只连接什么</h2>
+<p>第一次台架只需要：</p>
+<ul>
+<li>Windows 电脑；</li>
+<li>FE-URT-2 / FE-URT2-C001；</li>
+<li>一只 HL-2915-C001；</li>
+<li>独立的可限流 12 V 电源；</li>
+<li>万用表；</li>
+<li>USB-C 数据线；</li>
+<li>线序正确的 URT2 到 HL-2915 转接线。</li>
+</ul>
+<p>当前不要连接 Radxa Zero 3W、树莓派、ESP32、Robot HAT、IMU、摄像头、打印外壳或完整行走程序。<br />
+尤其不能让 URT2 和 Radxa 同时驱动同一根舵机 DATA 线。</p>
+<h2 id="2-电源应该买多大">2. 电源应该买多大</h2>
+<p>HL-2915-C001 官方参数为 9–14 V、典型 12 V；空载电流约 0.16 A、额定电流约 0.5 A、<br />
+堵转电流约 1.5 A。资料入口：<a href="https://www.feetech.cn/585239">产品页</a>和<br />
+<a href="https://www.feetech.cn/Data/feetechrc/upload/file/20260623/6391782995369048295663730.pdf">规格书 PDF</a>。</p>
+<table>
+<thead>
+<tr>
+<th>场景</th>
+<th>电源建议</th>
+<th>初始限流</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>一只，只读/Ping</td>
+<td>12 V/2 A 可限流电源</td>
+<td>约 0.5 A</td>
+</tr>
+<tr>
+<td>一只，悬空小角度运动</td>
+<td>12 V/2 A 可限流电源</td>
+<td>约 1.0 A</td>
+</tr>
+<tr>
+<td>两只，同时只读</td>
+<td>12 V/4 A 可限流电源</td>
+<td>约 1.0 A</td>
+</tr>
+<tr>
+<td>两只，悬空小角度运动</td>
+<td>12 V/4 A 可限流电源</td>
+<td>先约 2.0 A</td>
+</tr>
+</tbody>
+</table>
+<p>“12 V/2 A”表示电源最多可以提供 2 A，不会把 2 A 强行灌入舵机。不要使用面包板承载舵机<br />
+电流；电源线应短而牢固。首次台架不要做堵转测试，也不要用手抓住输出轴测试扭矩。</p>
+<h2 id="3-认识-urt2">3. 认识 URT2</h2>
+<p>URT2 官方页面：<a href="https://www.feetechrc.com/530962">FE-URT-2 USB to TTL/485 bus programmer</a>。</p>
+<p>需要识别四个区域：</p>
+<pre><code class="language-text">USB-C          连接电脑，给 URT2 通信逻辑供电
+TTL-Bus        连接 HL-2915
+TTL 侧 G / V1 连接舵机的 12 V 电源
+RS485 / V2     本项目不用
+</code></pre>
+<p>URT2 的 3V3/5V 开关是通信逻辑电平选择，不是舵机电源选择。电脑调试 HL-2915 时先置于 <code>5V</code>。</p>
+<p>HL-2915 使用三根线：</p>
+<pre><code class="language-text">1 = GND
+2 = Vcc
+3 = Signal/TTL
+</code></pre>
+<p>URT2 和舵机的插头尺寸可能不同。不能硬插，也不能按线色猜线序；只按 <code>GND/Vcc/Signal</code><br />
+功能制作或核对转接线。</p>
+<h2 id="4-总接线图">4. 总接线图</h2>
+<pre><code class="language-text">                         USB-C 数据线
+Windows 电脑 ─────────────────────────► URT2
+                                         │
+12 V 电源正极 ─────────────────────────► V1（TTL 侧）
+12 V 电源负极 ─────────────────────────► G （TTL 侧）
+                                         │
+                                  URT2 TTL-Bus
+                                  ┌────────────┐
+                                  │ G  V1  S   │
+                                  └─┬──┬───┬───┘
+                                    │  │   │
+                                    │  │   └────► HL-2915 Signal
+                                    │  └────────► HL-2915 Vcc
+                                    └───────────► HL-2915 GND
+</code></pre>
+<p>绝对不要：</p>
+<ul>
+<li>把 12 V 接到 USB、UART 排针的 5V/3V3；</li>
+<li>把 HL-2915 接到 RS485 的 A/B/V2；</li>
+<li>用 Radxa、树莓派或 ESP32 的 5 V 给舵机供电；</li>
+<li>带电插拔舵机线；</li>
+<li>同时接入两只仍为出厂 ID=1 的舵机。</li>
+</ul>
+<h2 id="task-urt2-001验证电源和-urt2-端子">Task URT2-001：验证电源和 URT2 端子</h2>
+<p>Goal：在不连接舵机时确认 12 V 电压和极性。</p>
+<p>Files：无。</p>
+<p>Action：</p>
+<ol>
+<li>关闭 12 V 电源，拔掉 URT2 USB；</li>
+<li>电源正极接 URT2 TTL 侧 <code>V1</code>；</li>
+<li>电源负极接 TTL 侧 <code>G</code>；</li>
+<li>检查没有裸铜丝碰到相邻端子；</li>
+<li>电源设为 <code>12.0 V</code>，限流约 <code>0.5 A</code>；</li>
+<li>打开电源；</li>
+<li>万用表黑表笔接 <code>G</code>，红表笔接 <code>V1</code>。</li>
+</ol>
+<p>Why：先排除最危险的反接和错端子，再让舵机进入电路。</p>
+<p>Verification：万用表显示正的约 <code>12.0 V</code>，不能显示 <code>-12 V</code>。</p>
+<p>Expected result：记录照片，然后关闭 12 V 电源。</p>
+<h2 id="task-urt2-002连接第一只裸舵机">Task URT2-002：连接第一只裸舵机</h2>
+<p>Goal：建立只有一只舵机的安全桌面台架。</p>
+<p>Files：两只舵机现场验收表（工作区文件）。</p>
+<p>Action：</p>
+<ol>
+<li>把第一只舵机标记为 <code>A</code>；</li>
+<li>拆掉舵盘、连杆、支架和打印件；</li>
+<li>保持 12 V 和 USB 都断开；</li>
+<li>将 URT2 <code>G/V1/S</code> 分别接到舵机 <code>GND/Vcc/Signal</code>；</li>
+<li>把第二只舵机留在桌外，不连接；</li>
+<li>把舵机放在非导电表面，输出轴四周不放线缆。</li>
+</ol>
+<p>Why：新舵机通常都是 ID=1，两只一起接会同时应答，造成通信冲突。</p>
+<p>Verification：逐根口述并复核 <code>G→GND、V1→Vcc、S→Signal</code>。</p>
+<p>Expected result：一只无负载舵机连接到 TTL-Bus。</p>
+<h2 id="task-urt2-003先找出-windows-com-口">Task URT2-003：先找出 Windows COM 口</h2>
+<p>Goal：只验证 URT2 USB 通信，不给舵机上 12 V。</p>
+<p>Files：无。</p>
+<p>Action：</p>
+<ol>
+<li>12 V 电源保持关闭；</li>
+<li>用 USB-C 数据线把 URT2 接到电脑；</li>
+<li>在 PowerShell 执行：</li>
+</ol>
+<pre><code class="language-powershell">Get-PnpDevice -PresentOnly -Class Ports |
+  Format-Table Status,FriendlyName,InstanceId -AutoSize
+</code></pre>
+<ol start="4">
+<li>拔插 URT2 一次，确认哪个 <code>COMx</code> 随之消失和出现。</li>
+</ol>
+<p>Why：电脑里灰色的旧 COM 口不代表 URT2 当前在线。</p>
+<p>Verification：出现一个新的 USB 串口，如 <code>USB-SERIAL CH343 (COM5)</code>。</p>
+<p>Expected result：记下实际 <code>COMx</code>。如果仍只有 <code>COM1</code>，检查 CH343P 驱动、USB-C 数据线和 USB 口，<br />
+不要继续给舵机上电。</p>
+<h2 id="task-urt2-004第一次上电和-fd-只读">Task URT2-004：第一次上电和 FD 只读</h2>
+<p>Goal：让 FD 找到一只舵机，但不让它运动。</p>
+<p>Files：<a href="https://www.feetech.cn/software.html">飞特软件下载页</a>。</p>
+<p>Action：</p>
+<ol>
+<li>确认舵盘和结构件已经拆除；</li>
+<li>USB-C 已连接，COM 口正常；</li>
+<li>打开 12 V 电源，观察是否立即进入 0.5 A 限流；</li>
+<li>正常后打开 FD；</li>
+<li>选择实际 <code>COMx</code>；</li>
+<li>波特率先选 <code>1000000</code>；</li>
+<li>点击“打开”→“搜索”；</li>
+<li>搜到舵机后点击型号使其高亮；</li>
+<li>记录型号、ID、模式、当前位置、电压、温度、电流和故障状态；</li>
+<li>保存参数截图。</li>
+</ol>
+<p>Why：官方教程同样要求先确认串口、供电和波特率，再打开并搜索。教程入口：<br />
+<a href="https://www.feetech.cn/Data/feetechrc/upload/file/20220618/%E5%85%88%E7%9C%8B%E8%BF%99%E9%87%8C-%E5%85%A5%E6%89%8B%E6%95%99%E7%A8%8B2-1.pdf">飞特串口舵机入门教程</a>。</p>
+<p>Verification：只出现一只舵机，预计 ID=1；电压接近 12 V，温度接近环境温度，参数能刷新。</p>
+<p>Expected result：第一只舵机完成 FD 只读通信。</p>
+<p>第一次不要执行恢复出厂、固件升级、一键中位、批量写参数、自动运动或把位置滑杆拖到两端。</p>
+<h2 id="task-urt2-005用仓库探针复核">Task URT2-005：用仓库探针复核</h2>
+<p>Goal：证明本项目的软件可以读取第一只舵机。</p>
+<p>Files：hl2915_probe.rs（工作区文件）。</p>
+<p>Action：</p>
+<ol>
+<li>完全关闭 FD，让它释放 COM 口；</li>
+<li>在仓库根目录运行，把 <code>COM5</code> 换成实际端口：</li>
+</ol>
+<pre><code class="language-powershell">.\target\release\hl2915_probe.exe COM5 1
+</code></pre>
+<ol start="3">
+<li>保存并验证完整输出：</li>
+</ol>
+<pre><code class="language-powershell">New-Item -ItemType Directory -Force artifacts | Out-Null
+.\target\release\hl2915_probe.exe COM5 1 *&gt; artifacts\servo-a-id1.txt
+python tools\microduck_learning\validate_hl2915_probe_log.py `
+  artifacts\servo-a-id1.txt --ids 1 `
+  --json-out artifacts\servo-a-id1-validation.json
+</code></pre>
+<p>Why：FD 成功只证明官方软件能通信；探针成功才证明项目驱动、寄存器和串口链路也成立。</p>
+<p>Verification：输出包含 <code>请求 ID=[1]；响应=[1]</code>，并读到位置、电压、温度和电流；验证结果为<br />
+<code>passed</code>。</p>
+<p>Expected result：A 舵机保持 ID=1，并贴上 <code>A / ID=1</code> 标签。</p>
+<h2 id="task-urt2-006第一次小角度运动">Task URT2-006：第一次小角度运动</h2>
+<p>Goal：在没有机械负载时验证低速、小角度动作。</p>
+<p>Files：FD。</p>
+<p>Action：</p>
+<ol>
+<li>输出轴仍然不安装舵盘；</li>
+<li>电源保持 12.0 V，将限流提高到约 1.0 A；</li>
+<li>在 FD 中读取当前位置；</li>
+<li>设置低速度；</li>
+<li>从当前位置增加约 50 个计数，再减少约 50 个计数；</li>
+<li>50 个计数约等于 4.4°；</li>
+<li>测试结束后关闭扭矩。</li>
+</ol>
+<p>Why：第一次直接命令到 0、2048 或 4095，可能造成突然的大角度运动。</p>
+<p>Verification：动作平稳，没有撞击、持续抖动、异响、掉线或快速升温；停止后电流明显下降。</p>
+<p>Expected result：A 舵机完成无负载小角度测试。</p>
+<p>出现焦味、冒烟、线缆发热、电流持续顶到限流值或 USB 反复掉线时，立即关闭 12 V 电源。</p>
+<h2 id="task-urt2-007把第二只改成-id2">Task URT2-007：把第二只改成 ID=2</h2>
+<p>Goal：让两只舵机具有唯一 ID。</p>
+<p>Files：hl2915_probe.rs（工作区文件）。</p>
+<p>Action：</p>
+<ol>
+<li>关闭 12 V，拔掉 A；</li>
+<li>只接第二只 B；</li>
+<li>上电后先确认 B 仍响应 ID=1：</li>
+</ol>
+<pre><code class="language-powershell">.\target\release\hl2915_probe.exe COM5 1
+</code></pre>
+<ol start="4">
+<li>修改 ID：</li>
+</ol>
+<pre><code class="language-powershell">.\target\release\hl2915_probe.exe COM5 1 --set-id 2
+</code></pre>
+<ol start="5">
+<li>关闭 12 V，等待几秒后重新上电；</li>
+<li>用新 ID 验证：</li>
+</ol>
+<pre><code class="language-powershell">.\target\release\hl2915_probe.exe COM5 2
+</code></pre>
+<p>Why：总线上相同 ID 的设备会同时应答。</p>
+<p>Verification：输出包含 <code>请求 ID=[2]；响应=[2]</code>。</p>
+<p>Expected result：贴标签 <code>B / ID=2</code>。ID 1/2 只是台架编号，装入整机前还要按关节表重新分配。</p>
+<h2 id="task-urt2-008两只同时只读">Task URT2-008：两只同时只读</h2>
+<p>Goal：验证两只舵机能共享一条 TTL 总线。</p>
+<p>Files：两只舵机现场验收表（工作区文件）。</p>
+<p>Action：</p>
+<ol>
+<li>关闭 12 V；</li>
+<li>同时接入 A 和 B；</li>
+<li>使用有 12 V/4 A 能力的可限流电源；</li>
+<li>先执行一次只读：</li>
+</ol>
+<pre><code class="language-powershell">.\target\release\hl2915_probe.exe COM5 1 2
+</code></pre>
+<ol start="5">
+<li>再连续观察 60 秒：</li>
+</ol>
+<pre><code class="language-powershell">.\target\release\hl2915_probe.exe COM5 1 2 --watch-seconds 60
+</code></pre>
+<p>Why：先验证供电、ID 和总线稳定，再考虑安装结构。</p>
+<p>Verification：<code>响应=[1, 2]</code>、<code>errors=0</code>、两只 <code>status=0</code>，电压稳定，温度不持续上升，<br />
+只读期间不自行运动。</p>
+<p>Expected result：两只台架通信通过。</p>
+<h2 id="task-urt2-009设置机械中位并安装一个测试关节">Task URT2-009：设置机械中位并安装一个测试关节</h2>
+<p>Goal：把编码器中位和结构零位对齐。</p>
+<p>Files：打印件、对应 CAD/装配图、HL2915 标定记录模板（工作区文件）。</p>
+<p>Action：</p>
+<ol>
+<li>再次只接一只已经通过测试的舵机；</li>
+<li>保持舵盘和结构件拆除；</li>
+<li>在 FD 中设置低速度，缓慢移动到位置 <code>2048</code>；</li>
+<li>关闭扭矩和 12 V 电源；</li>
+<li>不要用手强拧输出轴；</li>
+<li>把舵盘安装在最接近结构零位的齿位；</li>
+<li>先松装舵机和支架，检查壳体方向、输出轴线和出线方向；</li>
+<li>给线缆留活动余量，确认全行程不会夹线；</li>
+<li>对角逐步拧紧螺丝，不把塑料外壳拧变形；</li>
+<li>重新上电，从结构零位附近 <code>±5°</code>、<code>±10°</code> 逐级测试；</li>
+<li>把实际零位、方向和安全限位写入标定模板。</li>
+</ol>
+<p>Why：先装结构再找中位，容易撞限位、夹手或让舵机堵转。</p>
+<p>Verification：结构无干涉、不夹线、无明显变形；小角度动作方向正确且电流、温度正常。</p>
+<p>Expected result：完成一个关节台架。只有两只舵机时不能组装和运行完整 15 关节机器人。</p>
+<h2 id="5-常见故障速查">5. 常见故障速查</h2>
+<table>
+<thead>
+<tr>
+<th>现象</th>
+<th>先断电后检查</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>没有新 COM 口</td>
+<td>USB-C 是否为数据线、CH343P 驱动、USB 口</td>
+</tr>
+<tr>
+<td>有 COM，但搜不到 ID</td>
+<td>12 V 是否开启、G/V1 是否接对、是否接 TTL-Bus、波特率是否 1 Mbps</td>
+</tr>
+<tr>
+<td>第一次能搜到，后来搜不到</td>
+<td>是否改错 ID/波特率、FD 是否占用串口、插头是否松动</td>
+</tr>
+<tr>
+<td>一运动就掉线</td>
+<td>电源进入限流、电压下陷、电源线过细或机械卡滞</td>
+</tr>
+<tr>
+<td>电流持续很高</td>
+<td>接线错误、输出轴受阻、结构干涉；立即断电</td>
+</tr>
+<tr>
+<td>两只一起搜不到</td>
+<td>两只是否仍为相同 ID；重新逐只验证</td>
+</tr>
+</tbody>
+</table>
+<h2 id="6-进入下一阶段的通过条件">6. 进入下一阶段的通过条件</h2>
+<p>必须全部满足：</p>
+<ul>
+<li>[ ] 万用表确认 V1 对 G 为正的约 12.0 V；</li>
+<li>[ ] A 单只响应 ID=1；</li>
+<li>[ ] B 单只响应 ID=2；</li>
+<li>[ ] 两只同时响应 <code>[1, 2]</code>；</li>
+<li>[ ] 60 秒观察 <code>errors=0</code>；</li>
+<li>[ ] 两只 <code>status=0</code>；</li>
+<li>[ ] 电压、温度和电流已经记录；</li>
+<li>[ ] 无负载小角度运动正常；</li>
+<li>[ ] 机械中位、方向和限位已经记录；</li>
+<li>[ ] 照片、终端日志和验证 JSON 已保存。</li>
+</ul>
+<p>完成这些以后，下一步才是把同一套只读测试迁移到 Radxa，并验证 HAT/IMU。不要在只有两只舵机时<br />
+启动需要 15 个关节的完整 <code>robotd</code>，也不要直接使用原 XL330 的行走策略。</p>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

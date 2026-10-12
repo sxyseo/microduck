@@ -80,6 +80,7 @@
     overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
   }
   .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body img{max-width:100%;height:auto;border-radius:8px;border:1px solid var(--line);display:block;margin:14px auto}
   .doc-body table{
     width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
   }
@@ -132,7 +133,7 @@
 <p>教程 §3.1 给了两个选项:<strong>I²C 模块直连(推荐)</strong>——LSM6DSV16X 模块 4 根线接 Radxa 40-pin I²C,少一块自绘板、少一个总线故障点(原型机当年就是 BNO055 走 I²C);<strong>imu_to_dxl 自绘板挂总线</strong>——教程注明"板子固件本来就备了飞特协议分支",整机走通、想还原官方架构时再上(见<a href="/learn/deep-43">解读 43</a>)。</p>
 <p>接线是断电操作:<code>VCC→3.3V</code>、<code>GND→GND</code>、<code>SDA→SDA</code>、<code>SCL→SCL</code>(具体哪两个脚是 I²C 查 Radxa 文档),接好后 <code>i2cdetect -y &lt;总线号&gt;</code> 扫到 <strong>0x6A</strong>(或 0x6B)就是接对了。</p>
 <h2 id="2-朝向是硬约束融合交给芯片">2. 朝向是硬约束,融合交给芯片</h2>
-<p><code>duck-control/src/imu.rs</code> 把传感器→躯干的安装旋转写死为 <code>DEFAULT_MOUNT</code>:<code>trunk = [+raw_z, +raw_y, −raw_x]</code>(imu.rs:76 起,绕 Y 的 +90° 旋转)。贴装要让芯片 +Z 指向鸭子头顶、+Y 指向前;做不到就改代码里的 mount,但教程划了两条红线:<strong>改完必须和重训时的朝向一致</strong>并记进构建日志;方向不对"先查接线再查地址,<strong>不要</strong>靠软件里乘个 −1 糊弄过去"。</p>
+<p><code>duck-control/src/imu.rs</code> 把传感器→躯干的安装旋转写死为 <code>DEFAULT_MOUNT</code>:<code>trunk = [+raw_z, +raw_y, −raw_x]</code>(imu.rs:76 起,绕 Y 的 +90° 旋转)。躯干 <code>+X</code> 向前、<code>+Y</code> 向左、<code>+Z</code> 向上时,传感器应为 <strong>+Z 向前、+Y 向左、−X 向上</strong>;轴向要通过实际转动确认,不能凭接线丝印猜。做不到就改 mount;物理安装可以不同,但输出的 gyro/gravity/quat 必须保持训练使用的躯干坐标约定,并把安装旋转记进构建日志。方向不对时先查安装旋转,不要在下游给单轴乘 −1。</p>
 <p>阶段 E 写 <code>Feetech2915Io</code> 时要一并实现 IMU 读取,产出的 <code>ImuData</code> 三项与官方完全相同(imu.rs 真实结构):<code>gyro[3]</code> 机体角速度 rad/s(±500dps 量程 17.5 mdps/LSB,<code>GYRO_RAD_PER_LSB = 0.0175 × π/180</code>);<code>gravity[3]</code> 投影重力单位向量,<strong>正立 = [0, 0, −1]</strong>(<code>ImuData</code> 的默认值)——策略观测与摔倒判定共用的那个数;<code>quat[4]</code> 标量在前 [w,x,y,z],用芯片 SFLP 硬融合输出,别自己写融合。</p>
 <h2 id="3-五步验证法给传感器做体检">3. 五步验证法:给传感器做体检</h2>
 <p>§3.4 的验收,每步一个数:平放 30 秒,gyro 每轴 &lt;0.05 rad/s;正立 [0,0,−1] → 倒立 [0,0,+1],z 变号、模长 ≈1;低头时 gyro 的 Y 轴符号与训练约定一致(不对就改 mount,别改符号表);慢转 90° 四元数无跳变、模长 ≈1;50Hz 连读 10 分钟,"与上次完全相同"的 stale 读连续不超过 3 帧。</p>

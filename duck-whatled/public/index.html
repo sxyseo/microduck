@@ -354,7 +354,7 @@
   <!-- ================= PROGRESS ================= -->
   <section class="block" id="progress">
     <div class="sec-head reveal"><span class="sec-index mono">[01]</span><h2>当前位置</h2><span class="rule"></span></div>
-    <p class="sec-desc reveal">冲刺于 <span class="mono">2026-09-05</span> 发令，今天第 9 天。<b>首版 3D 打印外壳已到货并完成整机装配</b>，HL-2915-C001 ×2 到货（台架辨识可开练），本周还把经验收拢成<a href="#learn">四份学习手册</a>与 <a href="/learn/deep">200 篇深读</a>。</p>
+    <p class="sec-desc reveal">30 天冲刺已于 <span class="mono">10-04</span> 收官。执行器主线切换 <b>HD-1910 ×15</b>（官方骨架 + Radxa Zero 3W），板上 robotd 与 I²C IMU 已就绪、等 HAT 连接线；HD-1910 的仿真迁移与台架接线教程已配齐，经验收拢成<a href="#learn">七份学习手册</a>与 <a href="/learn/deep">203 篇深读</a>。</p>
 
     <div class="overall reveal">
       <div>
@@ -376,8 +376,8 @@
       </div>
       <div class="stage doing reveal">
         <span class="s-no mono">STAGE 02</span><h4>电控设计</h4>
-        <p>主控锁定 Radxa ZERO 3W（获独立拆解验证）；<b>Robot HAT C1 已到货（¥130），待点亮自测</b>；imu_to_dxl 自绘板待画。</p>
-        <span class="pill doing mono">进行中</span>
+        <p>robotd（kissqy HD1910 适配）已部署上板：<b>I²C LSM6DSV16X 实时 46Hz、舵机容错启动、中控适配</b>；imu_to_dxl 飞特协议固件就绪。</p>
+        <span class="pill doing mono">软件上板 ✓ · 待接线</span>
       </div>
       <div class="stage doing reveal">
         <span class="s-no mono">STAGE 03</span><h4>打印与定标</h4>
@@ -391,18 +391,18 @@
       </div>
       <div class="stage doing reveal">
         <span class="s-no mono">STAGE 05</span><h4>采购到货</h4>
-        <p>09-13 起大批到货：<b>HL-2915 ×2、HAT 板、轴承 ×14、URT2、读卡器、外壳 v2、CNC 加强件、imu_to_dxl 板、工具套件</b>——核心硬件全部到位。HL-1910 ×17 发货中。</p>
-        <span class="pill doing mono">核心件齐 ✓ · 台架已通</span>
+        <p>09-13 起大批到货：<b>HL-2915 ×2、HAT 板、轴承 ×14、URT2、读卡器、外壳 v2、CNC 加强件、imu_to_dxl 板、工具套件</b>——核心硬件全部到位。HD-1910 ×15 到货并定为装机主线。</p>
+        <span class="pill doing mono">核心件齐 ✓ · 主线已切</span>
       </div>
-      <div class="stage reveal">
+      <div class="stage doing reveal">
         <span class="s-no mono">STAGE 06</span><h4>联调装配</h4>
-        <p>整机骨架装配完成；HL-2915 台架调通；HAT 板到手待点亮；下一步：Radxa 刷机 + 16 设备 sync_read。</p>
-        <span class="pill doing mono">骨架 ✓ · 待电控</span>
+        <p>整机骨架装配完成；HL-2915 台架复测通过（REBOOT 清锁判定法）；Radxa 已刷机跑 robotd。下一步：HAT 连接线到货 → 15 颗 HD-1910 接线、ID 核对与关节标定。</p>
+        <span class="pill doing mono">骨架 ✓ · 待接线标定</span>
       </div>
       <div class="stage reveal">
         <span class="s-no mono">STAGE 07</span><h4>整机行走</h4>
-        <p>第 4 周（D22–30）：整机装配、上电、低增益站立、遥控走起来——以及复盘。</p>
-        <span class="pill wait mono">目标 · 10 月初</span>
+        <p>15 关节标定 + 门控放行后：低增益站立、吊装跑策略、软垫、平地——以及复盘。</p>
+        <span class="pill wait mono">目标 · 10 月内</span>
       </div>
       <div class="stage reveal" style="border-style:dashed;justify-content:center;align-items:center;text-align:center">
         <span class="s-no mono">GOAL</span>
@@ -414,9 +414,9 @@
     <div class="sprint reveal">
       <div class="sprint-head">
         <h3>30 天冲刺 · 脚印进度</h3>
-        <span class="mono">2026-09-05 → 10-04 · DAY 9</span>
+        <span class="mono">2026-09-05 → 10-04 · 已收官</span>
       </div>
-      <div class="footprints" id="footprints" aria-label="30 天冲刺进度：已完成 9 天"></div>
+      <div class="footprints" id="footprints" aria-label="30 天冲刺已收官：30/30"></div>
       <div class="sprint-weeks">
         <div class="wk"><span class="mono">W1 · D1–7</span><b>打样启动 + 定标</b>测试片、imu_to_dxl 开画、长货期件下单</div>
         <div class="wk"><span class="mono">W2 · D8–14</span><b>批量打印 + 回板</b>41 件打印、PCB 点亮、真实 IMU 数据</div>
@@ -619,9 +619,10 @@
         <ul class="todo">
           <li><span class="no mono">T-01</span><span>打印孔径测试片，回填公差补偿<small>决定全部 41 件是否直接开打</small></span></li>
           <li><span class="no mono">T-02</span><span>imu_to_dxl 画板 → 打样 → 自测<small>设计包已就绪，固件协议 6/6 通过</small></span></li>
-          <li><span class="no mono">T-03</span><span>Robot HAT 点亮自测<small>板已到货;上电跑官方测试,核对 5V 与总线电平</small></span></li>
+          <li><span class="no mono">T-03</span><span>✓ HAT 上板运行：robotd + I²C LSM6DSV16X 实时 46Hz<small>容错启动 + 中控适配已部署，舵机不在线时 IMU 独立运行</small></span></li>
           <li><span class="no mono">T-04</span><span>✓ 台架全流程打通;两只 HL-2915 复测均正常(此前"判坏"系锁死假死)<small><a href="/learn/deep-203">解读 203</a>:判定法最终版(五级递进)+ 标准上电序列 · 基准数据 = HL-1910 验收模板 · <a href="/tools/servo-debug-web" style="color:var(--yellow)">网页版调试台 ↗</a></small></span></li>
           <li><span class="no mono">T-05</span><span>给首版装配做配合复核<small>实测尺寸链，闭环解读 51 的「待验证」项</small></span></li>
+          <li><span class="no mono">T-06</span><span>HAT 连接线到货后接线 15 颗 HD-1910<small>逐颗 ID 核对 → 中控关节标定（motion_enabled 门控）→ 实测数据回填仿真；流程见 <a href="/learn/hd1910-bench">URT2 + HD-1910 台架指南</a></small></span></li>
         </ul>
       </div>
       <div class="risk-card reveal">
@@ -638,7 +639,7 @@
   <!-- ================= LEARN ================= -->
   <section class="block" id="learn">
     <div class="sec-head reveal"><span class="sec-index mono">[06]</span><h2>学习手册 · 把踩过的坑写成路标</h2><span class="rule"></span></div>
-    <p class="sec-desc reveal">五份<b>学习手册</b>、一门<b>从零开始的 30 课公开课</b>、<b>202 篇源码与硬件深度解读</b>、一篇<b>实体 AI 创业调研</b>，全部免费在线读。另附社区三维图纸库与平价复刻路线。</p>
+    <p class="sec-desc reveal">十份<b>学习手册</b>、一门<b>从零开始的 30 课公开课</b>、<b>203 篇源码与硬件深度解读</b>、一篇<b>实体 AI 创业调研</b>，全部免费在线读。另附社区三维图纸库与平价复刻路线。</p>
     <div class="learn-grid">
       <a class="learn-card featured reveal" href="/learn/course">
         <span class="l-no">COURSE · 系列公开课<span class="d">30 课</span></span>
@@ -674,6 +675,36 @@
         <span class="l-no">MANUAL 05 · HD-1910 迁移篇<span class="d">09-19</span></span>
         <h4>从 XL330 到 HD-1910<br>仿真迁移与 PPO 训练</h4>
         <p>把机械与执行器参数、BAM、PPO、横移与转向评测、ONNX 导出和真机验证串成一条可复现实验路线。</p>
+        <span class="l-go">在线阅读 →</span>
+      </a>
+      <a class="learn-card reveal" href="/learn/hd1910-bench">
+        <span class="l-no">MANUAL 06 · HD-1910 台架篇<span class="d">10-11</span></span>
+        <h4>URT2 + HD-1910<br>接线、组装与测试指南</h4>
+        <p>装机主线的 7.4V 台架：与 HL 相反的线序、三根全黑线怎么核对、只读探针与摇晃法、官方关节 ID 表、寄存器速查与标定门控。</p>
+        <span class="l-go">在线阅读 →</span>
+      </a>
+      <a class="learn-card reveal" href="/learn/hl2915-bench">
+        <span class="l-no">MANUAL 07 · HL-2915 台架篇<span class="d">09-14</span></span>
+        <h4>URT2 + HL-2915<br>接线、组装与测试指南</h4>
+        <p>12V 开发单元的台架全流程：限流电源、单只只读、小角度运动、改 ID、双机共线、机械中位——每一步都带验收门槛。</p>
+        <span class="l-go">在线阅读 →</span>
+      </a>
+      <a class="learn-card reveal" href="/learn/imu-integration">
+        <span class="l-no">MANUAL 08 · IMU 集成篇<span class="d">10-11</span></span>
+        <h4>IMU 集成<br>I²C 直读与 imu_to_dxl 总线桥</h4>
+        <p>姿态数据从哪来：BMI088 与 LSM6DSV16X 的分工、12 字节载荷契约、桥板设计与双固件分支、I²C 直读配置与方向核验五阶段。</p>
+        <span class="l-go">在线阅读 →</span>
+      </a>
+      <a class="learn-card reveal" href="/learn/community-kit">
+        <span class="l-no">MANUAL 09 · 社区套件篇<span class="d">10-11</span></span>
+        <h4>community-kit 与 hls_servo_debugger<br>网页舵机标定</h4>
+        <p>核心板部署实测、浏览器逐颗摆位标定（cal/offset/mid）、EPROM 零位与 robotd 标定模板的分工与红线。</p>
+        <span class="l-go">在线阅读 →</span>
+      </a>
+      <a class="learn-card reveal" href="/learn/bam-official">
+        <span class="l-no">MANUAL 10 · BAM 官方篇<span class="d">10-11</span></span>
+        <h4>飞特官方 BAM<br>HD-1910 已辨识执行器模型</h4>
+        <p>官方 Gitee 发布 HD-1910 m1–m6（7.4V）：与陆吾参照逐参数对比（R 差 40%、延迟差 6 倍）、参照链插入位置、MuJoCo/mjlab 两条接线。</p>
         <span class="l-go">在线阅读 →</span>
       </a>
       <a class="learn-card reveal" href="/learn/servo-debug">
@@ -732,7 +763,7 @@
     for (var d = 1; d <= 30; d++) {
       var s = document.createElementNS('http://www.w3.org/2000/svg','svg');
       s.setAttribute('viewBox','0 0 24 28');
-      s.setAttribute('class','fp' + (d <= 9 ? ' walked' : '') + (d === 9 ? ' today' : ''));
+      s.setAttribute('class','fp' + (d <= 30 ? ' walked' : ''));
       var u = document.createElementNS('http://www.w3.org/2000/svg','use');
       u.setAttribute('href','#foot');
       u.setAttribute('fill','currentColor');

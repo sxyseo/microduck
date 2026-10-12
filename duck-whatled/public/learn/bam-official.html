@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>飞特官方 BAM 发布解读：HD-1910 已辨识执行器模型 · 什么鸭 WhatDuck</title>
+<meta name="description" content="官方 Gitee 发布的 HD-1910 m1–m6 已辨识模型（7.4V）：m1–m6 模型族、与陆吾/XGODUCK 参照的逐参数对比、参照链插入位置与 MuJoCo/mjlab 两条接线。">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="飞特官方 BAM 发布解读：HD-1910 已辨识执行器模型">
+<meta property="og:description" content="官方 Gitee 发布的 HD-1910 m1–m6 已辨识模型（7.4V）：m1–m6 模型族、与陆吾/XGODUCK 参照的逐参数对比、参照链插入位置与 MuJoCo/mjlab 两条接线。">
+<meta property="og:url" content="https://duck.whatled.com/learn/bam-official">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/bam-official">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body img{max-width:100%;height:auto;border-radius:8px;border:1px solid var(--line);display:block;margin:14px auto}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">MANUAL 10 · BAM 官方篇 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-10-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="飞特官方-bam-发布解读hd-1910-已辨识执行器模型">飞特官方 BAM 发布解读：HD-1910 已辨识执行器模型</h1>
+<blockquote>
+<p><strong>解读对象</strong>：<a href="https://gitee.com/ftservo/ftservo-bam">gitee.com/ftservo/ftservo-bam</a>（飞特官方 Gitee 组织，2026-09-23 至 09-30 定稿，Apache-2.0，本地克隆于 <code>ftservo-bam/</code>）<br />
+<strong>需要的前置</strong>：<a href="/learn/hd1910-tutorial">HD-1910 仿真迁移与 PPO 训练教程 §5</a>（执行器模型与 m1–m6 命名）· 称重与标定模板-HD1910 §0.5（工作区文件）（参照链命名纪律，工作区文件）</p>
+</blockquote>
+<h2 id="0-一句话结论">0. 一句话结论</h2>
+<p>飞特官方把 <strong>HD-1910 的全套 BAM 执行器模型（m1–m6，7.4 V）</strong> 发布出来了——制造商、<br />
+自己的台架、正确的 <code>actuator: "hd1910"</code> 身份、恰好是我们 2S 母线的电压。<br />
+它是目前可信度最高的一份 HD-1910 动力学先验，直接插入项目的执行器参照链，<br />
+<strong>但不改变红线：最终模型仍然是 <code>hd1910_our_measured_m1..m6</code>（实测），官方值是参照不是替身。</strong></p>
+<h2 id="1-bam-是什么30-秒版">1. BAM 是什么（30 秒版）</h2>
+<p>BAM（Better Actuator Models）出自 Rhoban 团队（ICRA 2025 论文 <em>Extended Friction Models<br />
+for the Physics Simulation of Servo Actuators</em>，Apache-2.0）。MuJoCo/IsaacGym 默认的<br />
+Coulomb-Viscous 摩擦模型太简，盖不住 Stribeck 效应、负载相关摩擦和二次速度项；<br />
+BAM 用录制的轨迹辨识出一族由简到繁的模型，直接吃进 MuJoCo CPU 和 MuJoCo Warp（GPU）。</p>
+<p>模型族编号就是项目里一直在用的 m1–m6（JSON 键即模型项，由简到繁）：</p>
+<table>
+<thead>
+<tr>
+<th>模型</th>
+<th>摩擦项</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>m1</td>
+<td>基础库仑 + 粘滞 + 指令延迟</td>
+</tr>
+<tr>
+<td>m2</td>
+<td>m1 + Stribeck（速度项）</td>
+</tr>
+<tr>
+<td>m3</td>
+<td>m1 + 负载相关摩擦（不分侧）</td>
+</tr>
+<tr>
+<td>m4</td>
+<td>m3 + Stribeck</td>
+</tr>
+<tr>
+<td>m5</td>
+<td>负载摩擦<strong>分电机侧/外侧</strong>，各带 Stribeck</td>
+</tr>
+<tr>
+<td>m6</td>
+<td>m5 + 二次速度项（最全）</td>
+</tr>
+</tbody>
+</table>
+<p>公共电气/机械参数每次都重新辨识：kt（力矩常数）、R（绕组电阻）、armature、q_offset、<br />
+command_delay。</p>
+<h2 id="2-官方发布里有什么">2. 官方发布里有什么</h2>
+<p>ftservo-bam 在 Rhoban 原版基础上新增（主仓 <code>bam/</code> 是旧版快照，README 尚无 HD-1910）：</p>
+<table>
+<thead>
+<tr>
+<th>内容</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>bam/params/feetech_hd1910_7_4V/</code></td>
+<td><strong>HD-1910 m1–m6 全套已辨识参数</strong>（7.4 V 台架）</td>
+</tr>
+<tr>
+<td><code>bam/params/feetech_sts3215_7_4V/</code></td>
+<td>STS3215 m1–m6（7.4 V）；另有 waveshare_st3025</td>
+</tr>
+<tr>
+<td><code>bam/feetech/actuator.py</code></td>
+<td><code>HD1910Actuator</code> / <code>STS3215Actuator</code> 控制律：<code>vin=7.4, kp=32, error_gain=0.163, max_pwm=0.97</code>，内部目标平滑（有状态）</td>
+</tr>
+<tr>
+<td><code>bam/feetech/record.py</code></td>
+<td>基于 <code>scservo_sdk</code> 的轨迹采集：位置换算 0 rad=2048、±π=0/4095；Windows 下把定时器精度提到 1ms 再做毫秒级 sleep</td>
+</tr>
+<tr>
+<td><code>bam/dynamixel/measure_delay.py</code></td>
+<td>command_delay 的专项测量脚本</td>
+</tr>
+<tr>
+<td><code>bam/mjlab.py</code> + <code>BamActuatorCfg</code></td>
+<td>mjlab（MuJoCo Warp GPU）集成：<code>bam_init</code> startup 事件 + 全并行环境向量化的执行器（电压控制律 + DC 电机 + BAM 摩擦预算），兼容 mjlab 1.3</td>
+</tr>
+<tr>
+<td>PyPI</td>
+<td><code>pip install better-actuator-models[mjlab]</code></td>
+</tr>
+</tbody>
+</table>
+<p>两个与本项目互相印证的细节：官方采集脚本里<br />
+<code>ADDR_P_GAIN_MAP = {"sts3215": 21, "hd1910": 50}</code>——HD-1910 的 P 增益在寄存器 50，<br />
+与 kissqy 适配驱动（临时 P/D @50）一致；<code>kp=32</code> 与 community-kit 调试器的默认增益一致。</p>
+<h2 id="3-关键对比官方-m6-vs-陆吾xgoduck-参照">3. 关键对比：官方 m6 vs 陆吾/XGODUCK 参照</h2>
+<p>项目此前唯一现成的 HD-1910 m6 是 kissqy 携带的陆吾参照<br />
+（<code>hd1910_m6.json</code>，与 XGODUCK <code>1910_m6.json</code> 字节级相同，<strong>actuator 字段还错标 sts3215</strong>，<br />
+只配当数值先验）。两份 m6 的实质差异（官方 7.4 V m6 vs 陆吾 m6）：</p>
+<table>
+<thead>
+<tr>
+<th>参数</th>
+<th>官方 HD1910（7.4 V）</th>
+<th>陆吾/XGODUCK m6</th>
+<th>差多少</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>kt（N·m/A，按库口径）</td>
+<td>0.564</td>
+<td>0.624</td>
+<td>−10%</td>
+</tr>
+<tr>
+<td>R（Ω）</td>
+<td><strong>2.97</strong></td>
+<td><strong>4.91</strong></td>
+<td>−40%</td>
+</tr>
+<tr>
+<td>command_delay（s）</td>
+<td><strong>0.00098</strong></td>
+<td><strong>0.0060</strong></td>
+<td><strong>6 倍</strong></td>
+</tr>
+<tr>
+<td>friction_base</td>
+<td>0.0120</td>
+<td>0.0158</td>
+<td>−24%</td>
+</tr>
+<tr>
+<td>load_friction_motor</td>
+<td><strong>0.353</strong></td>
+<td><strong>0.069</strong></td>
+<td><strong>5 倍</strong></td>
+</tr>
+<tr>
+<td>load_friction_external</td>
+<td>0.043</td>
+<td>0.158</td>
+<td>−73%</td>
+</tr>
+<tr>
+<td>摩擦分侧结构</td>
+<td>电机侧主导</td>
+<td>外侧主导</td>
+<td><strong>几乎对调</strong></td>
+</tr>
+<tr>
+<td>actuator 身份</td>
+<td><strong>hd1910</strong></td>
+<td>sts3215（错标）</td>
+<td>—</td>
+</tr>
+<tr>
+<td>error_gain_ratio</td>
+<td>未提供</td>
+<td>1.32</td>
+<td>陆吾自带拟合质量指标</td>
+</tr>
+</tbody>
+</table>
+<p>解读：两份模型不是同一颗舵机的两种拟合，而是<strong>两种不同的物理画像</strong>——延迟差 6 倍会直接<br />
+改变观测-动作对齐，摩擦分侧对调会改变带载下的力矩预算。训练侧此前把陆吾参照当<br />
+"第一版仿真基线"（<code>hd1910_kissqy_reference_m6</code>），官方模型出现后，参照链应更新为：</p>
+<pre><code class="language-text">hd1910_our_measured_m1..m6      # 终点：我们自己台架的实测（红线不变）
+hd1910_ftservo_official_m6      # 新增：制造商 7.4V 官方辨识 ← 当前最强先验
+hd1910_kissqy_reference_m6      # 降级为历史参照（820g 模型配套，身份错标）
+xgoduck_1910_reference_m6       # 同上（与 kissqy 那份字节级相同）
+</code></pre>
+<p>三条使用纪律：<strong>不混文件</strong>（在仿真里与既有配置隔离命名，永不覆盖 our_measured 槽位）；<br />
+<strong>对齐电压口径</strong>（官方 7.4 V 恰是 2S 标称，带载 6.6–8.2 V 内插值可接受，但不要拿它外推 8.4 V 满电）；<br />
+<strong>error_gain_ratio 官方没给</strong>，评估拟合质量要靠自己回放比对。</p>
+<h2 id="4-怎么用两条接线mujoco-cpu-mjlab-gpu">4. 怎么用：两条接线（MuJoCo CPU / mjlab GPU）</h2>
+<h3 id="40-先修一个坑2026-10-11-快照实测">4.0 先修一个坑（2026-10-11 快照实测）</h3>
+<p>PyPI 的 <code>better-actuator-models</code>（1.0.2，2026-07-16）<strong>不含 HD1910</strong>——只有 STS3215。<br />
+要用官方 HD1910，必须本地安装 Gitee 克隆；且该快照直接加载会报错：</p>
+<pre><code class="language-python">import sys; sys.path.insert(0, &quot;ftservo-bam&quot;)          # 或 pip install -e ftservo-bam
+from bam import model as bam_model
+# 坑 1：bundled 名是参数目录名，不是 &quot;HD1910&quot;（报错信息会列出可用名）
+# 坑 2：注册表键是 &quot;HD1910&quot;（大写），JSON 里 actuator=&quot;hd1910&quot;（小写）→ KeyError
+bam_model.actuators.setdefault(&quot;hd1910&quot;, bam_model.actuators[&quot;HD1910&quot;])   # 一行别名修复
+m = bam_model.load_model(motor_name=&quot;feetech_hd1910_7_4V&quot;, model=&quot;m6&quot;)    # OK
+</code></pre>
+<p>加载成功后模型自带官方执行器常量：vin=7.4、kp=32、error_gain=0.163、max_pwm=0.97。<br />
+（这个大小写不一致已报给上游并提交了修复 PR：<br />
+<a href="https://github.com/ftservo/ftservo-bam/issues/1">issue #1</a> ·<br />
+<a href="https://github.com/ftservo/ftservo-bam/pull/2">PR #2</a>。合并前用上面的别名绕过，<br />
+合并后可删。）<br />
+另注意 pyproject 钉死 <code>requires-python = "&gt;=3.12,&lt;3.13"</code>——训练环境要用 Python 3.12。</p>
+<h3 id="41-mujoco-cpu回放验证单机实验">4.1 MuJoCo CPU（回放验证、单机实验）</h3>
+<pre><code class="language-bash">pip install -e /Volumes/dev/dev/microduck/ftservo-bam[mujoco]   # 本地克隆，勿用 PyPI
+</code></pre>
+<p>用法（<code>docs/usage/mujoco_cpu.rst</code>，线上 https://bam.readthedocs.io ）：<code>load_model</code><br />
+得到模型 → MJCF 里执行器必须声明为 <strong><code>motor</code></strong>（BAM 运行时覆写 <code>frictionloss</code>、<br />
+<code>damping</code>、<code>armature</code>，XML 里的值被忽略）→ <code>MujocoController(model=…, actuator=[关节名], …)</code><br />
+→ 每步 <code>set_q_target</code> + <code>update()</code> 后 <code>mj_step</code>。电压跌落与 mjlab GPU 路径逐位一致<br />
+（同一推导），CPU 回放看到的就是训练时的电池行为。</p>
+<h3 id="42-mjlab-gpu插进训练任务本仓落点已找准">4.2 mjlab GPU（插进训练任务——本仓落点已找准）</h3>
+<p>我们自己的训练仓 <code>xgoduck_rl/src/mjlab_microduck/robot/microduck_constants.py</code><br />
+<strong>本来就在用 BAM</strong>（<code>FrictionDRBamActuatorCfg</code>，摩擦随机化走 BAM 原生 <code>friction_scale</code>），<br />
+当前配置是 <code>motor_name="xl330", model="m6", kp_fw=200</code>——XL330 官方参数。<br />
+换成官方 HD-1910 就是改这一处：</p>
+<pre><code class="language-python">import bam.model
+bam.model.actuators.setdefault(&quot;hd1910&quot;, bam.model.actuators[&quot;HD1910&quot;])   # §4.0 别名
+
+_BAM_ACTUATOR_KWARGS = dict(
+    motor_name=&quot;feetech_hd1910_7_4V&quot;,   # ← 原来是 &quot;xl330&quot;（或用 json_path 指向 m6.json）
+    model=&quot;m6&quot;,
+    target_names_expr=(r&quot;^(?!passive_).*&quot;,),
+    kp_fw=32.0,          # ← 官方 HD1910 执行器常量；200 是 XL330 的，别带过来
+    vin_range=(6.5, 8.2),   # 2S 带载区间，保持不变
+    vin_drop_gain_range=(0.0, 0.2),
+    vin_min=6.0,
+    delay_min_lag=3,        # 第一轮 A/B 保持不变——单变量原则，只换执行器模型
+    delay_max_lag=6,
+)
+</code></pre>
+<p><code>actuators</code> 与 <code>backlash_actuators</code>（backlash 模型用）共用这套 kwargs，一处改两边生效。<br />
+<strong>单变量纪律</strong>：第一轮 A/B 只换模型与 kp_fw，电压/延迟随机化保持原值，跑完与 XL330 基线<br />
+对照 reward、fell_over、air_time（对应 <a href="/learn/hd1910-tutorial">HD1910 仿真迁移教程 §9</a><br />
+的评测方法），再逐项放开。</p>
+<h3 id="43-复刻官方辨识可选喂-our-measured">4.3 复刻官方辨识（可选，喂 our_measured）</h3>
+<p><code>bam/feetech/record.py</code> 是官方的采集脚本（scservo_sdk，毫秒级定时），<br />
+<code>bam/dynamixel/measure_delay.py</code> 可借鉴测 command_delay。它与仓库已有的<br />
+PD 阶跃采集（<a href="https://github.com/sxyseo/microduck-replica/blob/master/docs/换舵机重训全流程.md">换舵机重训全流程 §2.3</a>，工作区文件）<br />
+是同一件事的两种实现：官方脚本换了 SDK，我们的管线换了轨迹设计。跑<br />
+our_measured 时把官方 m6 当"已知答案"对照，是免费的校验器。</p>
+<h2 id="5-边界与提醒">5. 边界与提醒</h2>
+<ul>
+<li><strong>官方值 ≠ 我们的实测</strong>：同一型号不同个体、不同温度、不同台架装夹都会有偏差；<br />
+  官方 m1–m6 是参照链上的强先验，<code>hd1910_our_measured</code> 的辨识流程照旧执行。</li>
+<li><strong>7.4 V 口径</strong>：官方目录名自带电压后缀（<code>feetech_hd1910_7_4V</code>），其它电压下这些参数<br />
+  不能直接外推（尤其 R 与 kt 的温升耦合）。</li>
+<li><strong>PyPI 版没有 HD1910</strong>：<code>better-actuator-models</code> 1.0.2（2026-07-16）只有 STS3215 等<br />
+  Rhoban 原版型号；HD1910 只在 Gitee 克隆里，本地安装并用 §4.0 的别名绕过大小写坑。</li>
+<li><strong>主仓 <code>bam/</code> 是旧版</strong>：README 与参数库都没有 HD-1910；要用官方新模型，请直接用<br />
+<code>ftservo-bam/</code> 克隆，不要指望主仓快照自更新。</li>
+<li><strong>许可</strong>：Apache-2.0；学术使用引用 Rhoban 的 ICRA 2025 论文（README 内含 BibTeX）。</li>
+</ul>
+<h2 id="6-文档地图">6. 文档地图</h2>
+<table>
+<thead>
+<tr>
+<th>想深入哪块</th>
+<th>去读</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>官方库全文档</td>
+<td>https://bam.readthedocs.io · 本地 <code>ftservo-bam/docs/</code></td>
+</tr>
+<tr>
+<td>m1–m6 模型族与 JSON 参数含义</td>
+<td><code>ftservo-bam/bam/parameter.py</code> · <code>docs/usage/</code></td>
+</tr>
+<tr>
+<td>HD-1910 仿真侧怎么接</td>
+<td><a href="/learn/hd1910-tutorial">HD-1910 仿真迁移与 PPO 训练教程</a></td>
+</tr>
+<tr>
+<td>参照链命名纪律</td>
+<td><code>microduck-replica/docs/称重与标定模板-HD1910.md</code> §0.5–0.6（工作区文件）</td>
+</tr>
+<tr>
+<td>台架辨识方法论（解读 55–57、60、203）</td>
+<td><a href="/learn/deep">deep-dive 系列</a></td>
+</tr>
+<tr>
+<td>舵机台架与标定工具</td>
+<td><a href="/learn/community-kit">microduck-community-kit 教程</a></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<p><em>口径提醒：官方发布解决的是"HD-1910 长什么样"，解决不了"我们这 15 颗长什么样"——<br />
+后者仍然只有台架实测一条路。</em></p>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

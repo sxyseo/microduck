@@ -22,6 +22,13 @@ docs give the reasoning and point at it.
 | [`Microduck Studio`](../microduck-studio/README.md) | 本地复刻工作台：硬件档案、只读探针、项目证据、训练服务适配和部署前检查。 |
 | [`低成本舵机替换决策表.md`](低成本舵机替换决策表.md) | 完成 HL-2915 基线后，如何评估更便宜舵机的替换风险。 |
 | [`BAM与URDF全流程小白教程.md`](BAM与URDF全流程小白教程.md) | 从关节命名、URDF、采集、BAM 处理到训练的入门路线。 |
+| [`飞特官方BAM发布解读.md`](飞特官方BAM发布解读.md) | 飞特官方 Gitee 发布的 HD-1910 m1–m6 已辨识 BAM 模型（7.4 V）：与陆吾参照的逐参数对比、参照链插入位置、MuJoCo/mjlab 两条接线。 |
+| [`URT2-HD1910接线组装与测试指南.md`](URT2-HD1910接线组装与测试指南.md) | 装机主线 HD-1910-C001 的 7.4 V 台架：与 HL 线序相反的三根黑线、只读探针与摇晃法、官方关节 ID 表、寄存器速查和标定门控。 |
+| [`IMU集成教程-I2C直读与imu_to_dxl.md`](IMU集成教程-I2C直读与imu_to_dxl.md) | 两条 IMU 运输路径：imu_to_dxl 桥板（ID 200，DXL/飞特双分支）与 I²C 直读（i2c_lsm6dsv16x，当前上板方案）；12 字节载荷契约、systemd 放行、方向核验五阶段。 |
+| [`microduck-community-kit使用教程.md`](microduck-community-kit使用教程.md) | 社区套件与 hls_servo_debugger：核心板部署实测、浏览器逐颗标定工作流（cal/offset/mid）、EPROM 偏移与 robotd 标定模板的分工。 |
+| [`HD1910全链路落地手册.md`](HD1910全链路落地手册.md) | HD-1910 整机的 H0–H9 门槛：IMU 双来源对齐、界面可见性、关节 capture、安装方向核对，以及舵机与 IMU 的双向联合标定和仲裁规则。 |
+| [`HD1910整机现场验收表.md`](HD1910整机现场验收表.md) | 打印后逐项填写的 15 关节 capture、IMU 五阶段、联合核对偏差和运动解锁记录表。 |
+| [`1910-HAT接线与标定清单.md`](1910-HAT接线与标定清单.md) | 带日期的现状清单：HAT 线材核对、整机接线与远程验证速查；反映某一时刻的板端状态，不是长期参考。 |
 | [`HD1910仿真迁移与PPO训练教程.md`](HD1910仿真迁移与PPO训练教程.md) · [离线阅读版](HD1910仿真迁移与PPO训练教程.html) | XL330 → HD-1910 的参数迁移、PPO 训练、分项评测、ONNX 导出与后续真机验证。 |
 | [`cheatsheet.md`](robot/cheatsheet.md) | Every `robotctl` command. |
 | [`pair-a-gamepad.md`](robot/pair-a-gamepad.md) | Once per pad: pairing mode, `pad pair`, and what to do when it will not bond. |

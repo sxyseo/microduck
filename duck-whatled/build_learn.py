@@ -103,6 +103,46 @@ DOCS = [
         "tag": "MANUAL 05 · HD-1910 迁移篇",
         "date": "2026-09-19",
     },
+    {
+        "src": "/Volumes/dev/dev/microduck/docs/URT2-HD1910接线组装与测试指南.md",
+        "out": "hd1910-bench.html",
+        "title": "URT2 + HD-1910-C001 接线、组装与测试指南",
+        "desc": "装机主线 HD-1910 的 7.4V 台架：与 HL 线序相反的三根黑线、只读探针与摇晃法、官方关节 ID 表、寄存器速查与标定门控。",
+        "tag": "MANUAL 06 · HD-1910 台架篇",
+        "date": "2026-10-11",
+    },
+    {
+        "src": "/Volumes/dev/dev/microduck/docs/URT2-HL2915接线组装与测试指南.md",
+        "out": "hl2915-bench.html",
+        "title": "URT2 + HL-2915-C001 接线、组装与测试指南",
+        "desc": "12V 开发单元的台架全流程：验证电源、单只只读、小角度运动、改 ID、双机共线、机械中位与现场验收表，每一步都有验收门槛。",
+        "tag": "MANUAL 07 · HL-2915 台架篇",
+        "date": "2026-09-14",
+    },
+    {
+        "src": "/Volumes/dev/dev/microduck/docs/IMU集成教程-I2C直读与imu_to_dxl.md",
+        "out": "imu-integration.html",
+        "title": "IMU 集成教程：I²C 直读与 imu_to_dxl 总线桥",
+        "desc": "姿态数据从哪来：BMI088 与 LSM6DSV16X 的分工、12 字节载荷契约、桥板设计与 DXL/飞特双固件分支、I²C 直读配置与方向核验五阶段。",
+        "tag": "MANUAL 08 · IMU 集成篇",
+        "date": "2026-10-11",
+    },
+    {
+        "src": "/Volumes/dev/dev/microduck/docs/microduck-community-kit使用教程.md",
+        "out": "community-kit.html",
+        "title": "microduck-community-kit 使用教程：hls_servo_debugger 与舵机标定",
+        "desc": "社区套件全览与网页舵机调试器：核心板部署实测步骤、逐颗摆位标定工作流（cal/offset/mid）、EPROM 零位与 robotd 标定模板的分工与红线。",
+        "tag": "MANUAL 09 · 社区套件篇",
+        "date": "2026-10-11",
+    },
+    {
+        "src": "/Volumes/dev/dev/microduck/docs/飞特官方BAM发布解读.md",
+        "out": "bam-official.html",
+        "title": "飞特官方 BAM 发布解读：HD-1910 已辨识执行器模型",
+        "desc": "官方 Gitee 发布的 HD-1910 m1–m6 已辨识模型（7.4V）：m1–m6 模型族、与陆吾/XGODUCK 参照的逐参数对比、参照链插入位置与 MuJoCo/mjlab 两条接线。",
+        "tag": "MANUAL 10 · BAM 官方篇",
+        "date": "2026-10-11",
+    },
 ]
 
 
@@ -196,6 +236,7 @@ TEMPLATE = """<!DOCTYPE html>
     overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
   }}
   .doc-body pre code{{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}}
+  .doc-body img{{max-width:100%;height:auto;border-radius:8px;border:1px solid var(--line);display:block;margin:14px auto}}
   .doc-body table{{
     width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
   }}
@@ -276,6 +317,21 @@ _GH_MICRODUCK = "https://github.com/pollen-robotics/microduck/blob/main/"
 _GH_REPLICA = "https://github.com/sxyseo/microduck-replica/blob/master/"
 _GH_OPENMD = "https://github.com/SaberOnGo/open-microduck/blob/main/"
 _MANUAL_RULES = [
+    # 站内手册互引(先于 GitHub 映射;带锚点的一并保留)
+    (re.compile(r"\]\(URT2-HD1910接线组装与测试指南\.md(#[^)]*)?\)"), r"](/learn/hd1910-bench\1)"),
+    (re.compile(r"\]\(URT2-HL2915接线组装与测试指南\.md(#[^)]*)?\)"), r"](/learn/hl2915-bench\1)"),
+    (re.compile(r"\]\(HD1910仿真迁移与PPO训练教程\.md(#[^)]*)?\)"), r"](/learn/hd1910-tutorial\1)"),
+    (re.compile(r"\]\(macOS舵机调试与图纸查看指南\.md(#[^)]*)?\)"), r"](/learn/servo-debug\1)"),
+    (re.compile(r"\]\(IMU集成教程-I2C直读与imu_to_dxl\.md(#[^)]*)?\)"), r"](/learn/imu-integration\1)"),
+    (re.compile(r"\]\(microduck-community-kit使用教程\.md(#[^)]*)?\)"), r"](/learn/community-kit\1)"),
+    (re.compile(r"\]\(飞特官方BAM发布解读\.md(#[^)]*)?\)"), r"](/learn/bam-official\1)"),
+    (re.compile(r"\]\(deep-dive/README\.md\)"), "](/learn/deep)"),
+    # 未入库(未 push)的工作区文件:去链接留文字,避免线上 404
+    (re.compile(r"\[([^\]]+)\]\(\.\./microduck-replica/docs/(?:称重与标定模板-HD1910\.md|HD1910标定记录模板\.csv)\)"), r"\1（工作区文件）"),
+    (re.compile(r"\[([^\]]+)\]\(\.\./microduck-replica/rl-series/scripts/hd1910_[^)]+\.py\)"), r"\1（工作区文件）"),
+    (re.compile(r"\[([^\]]+)\]\(\.\./Microduck-kissqy/[^)]+\)"), r"\1（工作区文件）"),
+    (re.compile(r"\[([^\]]+)\]\(1910-HAT接线与标定清单\.md\)"), r"\1（工作区文件）"),
+    (re.compile(r"\[([^\]]+)\]\(HL2915标定记录模板\.csv\)"), r"\1（工作区文件）"),
     (re.compile(r"\]\(course/README\.md\)"), "](/learn/course)"),
     (re.compile(r"\]\(course/(\d\d)-[^)]*\.md\)"), r"]( /learn/course-\1)".replace(" ", "")),
     (re.compile(r"\]\(deep-dive/(\d\d?\d?)-[^)]*\.md\)"), lambda m: "](/learn/deep-" + m.group(1) + ")"),
@@ -358,7 +414,8 @@ def deep_stage_tag(n: int) -> str:
         return "第十四辑 · 小白机械课"
     if n <= 180:
         return "第十五辑 · 其他舵机案例库"
-    return "第十六辑 · 小白基础课"
+    if n <= 200:
+        return "第十六辑 · 小白基础课"
     if n <= 202:
         return "第十七辑 · 换舵机实战案例"
     return "第十八辑 · 台架实操"

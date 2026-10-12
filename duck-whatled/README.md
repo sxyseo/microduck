@@ -6,9 +6,9 @@
 
 | 板块 | 规模 | 源目录 |
 |---|---|---|
-| 学习手册 | 4 份 | `content/*.md` |
+| 学习手册 | 7 份 | `content/*.md` |
 | 什么鸭公开课 | 30 课 | `content/course/` |
-| 深读 Microduck | 200 篇 · 16 辑 | `content/deep-dive/` |
+| 深读 Microduck | 203 篇 · 18 辑 | `content/deep-dive/` |
 | 实体 AI 创业调研 | 1 篇 | `content/research/` |
 
 ## 构建与发布

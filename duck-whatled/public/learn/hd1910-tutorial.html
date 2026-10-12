@@ -80,6 +80,7 @@
     overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
   }
   .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body img{max-width:100%;height:auto;border-radius:8px;border:1px solid var(--line);display:block;margin:14px auto}
   .doc-body table{
     width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
   }
@@ -158,7 +159,7 @@
 </tbody>
 </table>
 <p>案例训练目录是 <code>/home/july/microduck_rl</code>，运行时目录是 <code>/home/july/microduck</code>。本文不会假设这两个目录存在于读者电脑上。HD-1910 专用任务和脚本是案例中的新增内容，普通上游仓库不一定包含。</p>
-<p><strong>命名约定：</strong>本文沿用报告的 <code>HD-1910</code>。工作区历史资料中的 <code>HL-1910</code>、已有实现中的 <code>HL-2915</code>，不能未经型号、后缀和厂商规格核对就认定为同一产品。后文的 HD 电压、质量、电流均是案例参数，不是对所有同名舵机的额定规格承诺。</p>
+<p><strong>命名约定：</strong>本文沿用报告的 <code>HD-1910</code>。工作区历史资料中的 <code>HL-1910</code>、已有实现中的 <code>HL-2915</code>，不能未经型号、后缀和厂商规格核对就认定为同一产品。后文的 HD 电压、质量、电流均是案例参数，不是对所有同名舵机的额定规格承诺。实物台架侧（接线、线序、只读探针、标定门控）见<a href="/learn/hd1910-bench">URT2 + HD-1910 接线、组装与测试指南</a>。</p>
 <h3 id="02-读完后应当能够做到">0.2 读完后应当能够做到</h3>
 <ol>
 <li>说清楚更换舵机影响哪些层，哪些接口可以保留。</li>
@@ -583,6 +584,12 @@ hd_actuator_cfg = replace(
 </code></pre>
 <p><code>json_path</code> 与内置 <code>motor_name/model</code> 选择方式在本地 BAM 配置中互斥。加载后输出实际 actuator 类型、JSON 路径和关键数值，并检查加载器是否重新初始化、覆盖了拟合参数。</p>
 <p>报告中的 sag 字段是 <code>vin_drop_gain_range</code>；不同 BAM 版本还可能使用电阻形式的 <code>vin_drop_resistance_range</code>，两者不能仅改名字就当成等价。先读当前类的定义，再迁移数值。</p>
+<blockquote>
+<p><strong>现成 JSON 更新（2026-10-11）</strong>：飞特官方 Gitee 已发布 HD-1910 的 m1–m6 全套已辨识<br />
+BAM 参数（7.4 V，<code>actuator: "hd1910"</code> 身份正确），比陆吾/XGODUCK 参照更适合作为<br />
+<code>json_path</code> 的先验来源——逐参数对比与参照链插入位置见<br />
+<a href="/learn/bam-official">飞特官方 BAM 发布解读</a>。<code>hd1910_our_measured</code> 仍是终点。</p>
+</blockquote>
 <h2 id="6-时间尺度与状态重置两个容易漏掉的问题">6. 时间尺度与状态重置：两个容易漏掉的问题</h2>
 <h3 id="61-同一个step可能有三种意思">6.1 同一个“step”可能有三种意思</h3>
 <p>案例给出物理步长 0.005 s、decimation 为 4，因此：</p>

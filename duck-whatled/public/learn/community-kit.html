@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>microduck-community-kit 使用教程：hls_servo_debugger 与舵机标定 · 什么鸭 WhatDuck</title>
+<meta name="description" content="社区套件全览与网页舵机调试器：核心板部署实测步骤、逐颗摆位标定工作流（cal/offset/mid）、EPROM 零位与 robotd 标定模板的分工与红线。">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="microduck-community-kit 使用教程：hls_servo_debugger 与舵机标定">
+<meta property="og:description" content="社区套件全览与网页舵机调试器：核心板部署实测步骤、逐颗摆位标定工作流（cal/offset/mid）、EPROM 零位与 robotd 标定模板的分工与红线。">
+<meta property="og:url" content="https://duck.whatled.com/learn/community-kit">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/community-kit">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body img{max-width:100%;height:auto;border-radius:8px;border:1px solid var(--line);display:block;margin:14px auto}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">MANUAL 09 · 社区套件篇 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-10-11 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="microduck-community-kit-使用教程hls-servo-debugger-与舵机标定">microduck-community-kit 使用教程：hls_servo_debugger 与舵机标定</h1>
+<p><a href="https://github.com/jyg9/microduck-community-kit">microduck-community-kit</a><br />
+（作者 jyg9，Apache-2.0，非官方仓）是 Microduck 复刻社区最实用的补充套件：<br />
+三块可打样的 PCB、一套 imu_to_dxl 固件、官方 robotd 的飞特适配补丁、一份飞特协议中文整理，<br />
+以及本教程的主角——<strong>hls_servo_debugger 网页版舵机调试器</strong>。</p>
+<p>它的标定功能正对口 HD-1910 装机流程：把调试器放到鸭子核心板上跑起来，<br />
+电脑浏览器打开，<strong>一次接一颗，摆好姿态，逐颗校准</strong>。本仓已于 2026-10-11 部署实测。</p>
+<h2 id="1-套件里有什么">1. 套件里有什么</h2>
+<table>
+<thead>
+<tr>
+<th>内容</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>software/hls_servo_debugger</code></td>
+<td>网页版飞特舵机调试器（Flask + pyserial），9 个功能页，见 §2</td>
+</tr>
+<tr>
+<td><code>hardware/imu_to_dxl</code></td>
+<td>身体传感器桥板 KiCad 源文件 + Gerber + BOM（对应 <a href="/learn/imu-integration">IMU 集成教程</a> 路径 A）</td>
+</tr>
+<tr>
+<td><code>hardware/banana_pcb</code></td>
+<td>电池上方转接板</td>
+</tr>
+<tr>
+<td><code>hardware/dxl_hub</code></td>
+<td>身体集线器板</td>
+</tr>
+<tr>
+<td><code>firmware/v1</code></td>
+<td>imu_to_dxl 的 GD32F303 固件（双 slot 在线升级 bootloader）+ 主机升级工具 <code>upgrade.py/package.py</code></td>
+</tr>
+<tr>
+<td><code>firmware/v1/patches/</code></td>
+<td>官方 robotd 0.16.0 的飞特适配补丁（171KB）+ <code>feetech.rs</code>；配套外部仓 <a href="https://github.com/jyg9/microduck_ft1910">microduck_ft1910</a> 可直接编译</td>
+</tr>
+<tr>
+<td><code>docs/飞特通讯协议说明.md</code></td>
+<td>飞特 SCS·HLS 串行协议逐条中文整理，自己写驱动的最好中文资料</td>
+</tr>
+<tr>
+<td><code>firmware/v1/host/tools/</code></td>
+<td><code>servo_probe.py</code> 等独立探测脚本，不依赖调试器</td>
+</tr>
+</tbody>
+</table>
+<h2 id="2-hls-servo-debugger-是什么">2. hls_servo_debugger 是什么</h2>
+<p>Flask 网页应用，电脑/手机浏览器操作，<code>HLSBus</code> 直接收发飞特 SCS v1 帧。<br />
+九个标签页：01 连接与扫描 / <strong>02 舵机初始化（标定）</strong> / 03 实时反馈 / 04 位置控制 /<br />
+05 速度·电流·PWM / 06 参数配置 / 07 同步读写 / 08 寄存器·原始指令 / 09 内存表参考。</p>
+<p>关键事实（逐项对照过源码）：</p>
+<table>
+<thead>
+<tr>
+<th>项</th>
+<th>值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Web 端口</td>
+<td>8765（<code>--port</code> 可改）</td>
+</tr>
+<tr>
+<td>串口</td>
+<td>核心板 <code>/dev/ttyS2</code>（run.sh 自动检测）；台面 USB 调试板 <code>/dev/ttyACM1</code> 是内置默认</td>
+</tr>
+<tr>
+<td>波特率</td>
+<td>默认 1 Mbps（码值 0）；<code>/api/auto_detect</code> 按 1M→115200→500k→…→38400 依次试</td>
+</tr>
+<tr>
+<td>增益默认</td>
+<td><strong>Kp=32 / Kd=0</strong>——不要把 robotd 里 XL330 的 gain=200 搬过来，1910 上会自激振荡（README 实测 5A / 74°C）</td>
+</tr>
+<tr>
+<td>标定持久化</td>
+<td><strong>不写任何文件</strong>：结果写进舵机自身 EPROM 的 31 号"位置偏移"寄存器（带符号 16 位，BIT15 是方向位），每次写完立即上锁（55 号）</td>
+</tr>
+<tr>
+<td>坐标约定</td>
+<td>4096 计数/圈，2048 = 关节零点，方向 −1，0.0879°/计数</td>
+</tr>
+<tr>
+<td>15 关节 ID</td>
+<td>右腿 10–14、左腿 20–24、头颈 30–34（与 <a href="/learn/hd1910-bench">HD-1910 指南 §7</a> 官方表一致）；IMU 桥板占一个总线 ID，precheck 会 ping 它但不碰它</td>
+</tr>
+<tr>
+<td>保护</td>
+<td>电压/过流保护默认<strong>关闭</strong>（保护触发即卸力，站立的鸭子会摔）；多圈默认关（行程写 0/4095 单圈）</td>
+</tr>
+</tbody>
+</table>
+<h2 id="3-部署到鸭子核心板本仓实测步骤">3. 部署到鸭子核心板（本仓实测步骤）</h2>
+<p>前提：核心板（Radxa Zero 3W / Armbian，aarch64）SSH 可达；robotd 占着 <code>/dev/ttyS2</code>。</p>
+<pre><code class="language-bash"># 1) 取代码（板子没 git 就在开发机 clone 后 rsync）
+git clone https://github.com/jyg9/microduck-community-kit.git
+rsync -a --exclude .venv --exclude __pycache__ --exclude .git \
+  microduck-community-kit/software/hls_servo_debugger/  root@&lt;板子IP&gt;:/opt/hls_servo_debugger/
+
+# 2) 依赖：建 venv，严格守 pyproject 的 Flask&lt;3.0 pin（Armbian 需先 apt install python3-venv）
+ssh root@&lt;板子IP&gt;
+python3 -m venv /opt/hls_servo_debugger/.venv
+/opt/hls_servo_debugger/.venv/bin/pip install &quot;Flask&gt;=2.2,&lt;3.0&quot; &quot;pyserial&gt;=3.5&quot;
+#   本仓实测：Python 3.13.5 + Flask 2.3.3 + pyserial 3.5
+
+# 3) 无硬件自检（不碰串口）
+cd /opt/hls_servo_debugger &amp;&amp; .venv/bin/python -m hls_debugger.selftest
+
+# 4) 停掉占用串口的 robotd，只读探测一遍总线（只发 PING/READ，舵机不会动）
+systemctl stop robotd
+.venv/bin/python hw_test.py --port /dev/ttyS2 --baud 1000000
+
+# 5) 启动（--host 0.0.0.0 才能从电脑访问；headless 加 --no-browser）
+nohup ./run.sh --host 0.0.0.0 --no-browser --serial /dev/ttyS2 &gt;/var/log/hls-debugger.log 2&gt;&amp;1 &amp;
+</code></pre>
+<p>电脑浏览器打开 <strong><code>http://&lt;板子IP&gt;:8765/</code></strong>。用完恢复：</p>
+<pre><code class="language-bash">pkill -f hls_debugger &amp;&amp; systemctl start robotd
+</code></pre>
+<p>三条安全纪律：</p>
+<ol>
+<li><strong>只在可信局域网开</strong>——页面能给任何在线舵机写寄存器，服务本身没有鉴权；</li>
+<li><strong>不要做成开机自启</strong>，它和 robotd 抢同一条串口，谁在跑谁拥有总线；</li>
+<li>工具虽有绕开 robotd 串口排他锁的逻辑，但流程上<strong>先 <code>systemctl stop robotd</code></strong>，别并行。</li>
+</ol>
+<h2 id="4-逐颗标定的工作流一次一颗摆好就校">4. 逐颗标定的工作流（一次一颗，摆好就校）</h2>
+<p>总线上同一时刻只允许一个主站；两颗出厂 ID=1 的舵机一起上线会同时应答。<br />
+所以装机阶段一颗一颗来：</p>
+<ol>
+<li><strong>接一颗</strong>：该颗舵机从整机拔下（或装机时逐颗接），上电；</li>
+<li><strong>01 连接与扫描</strong>：串口 <code>/dev/ttyS2</code>、波特率 1M（新舵机扫不到就点自动探测）；</li>
+<li><strong>03 实时反馈</strong>：确认 PING 通、读数在刷——先建立"这颗是健康的"的事实；</li>
+<li><strong>02 舵机初始化</strong>，四种模式按场景选：</li>
+</ol>
+<table>
+<thead>
+<tr>
+<th>模式</th>
+<th>做什么</th>
+<th>什么时候用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>cal</code></td>
+<td>发厂商 CAL 指令，<strong>把当前物理位置写成 2048</strong>，同时改写 31 号偏移</td>
+<td>关节已摆到结构零位，直接"此处为零"</td>
+</tr>
+<tr>
+<td><code>offset</code></td>
+<td>按 home 姿态反解目标偏移有界搜索（容差 8 计数），失败自动回写原值</td>
+<td>已有 home 角度表，想按姿态角标</td>
+</tr>
+<tr>
+<td><code>mid</code></td>
+<td>转到 2048 并保持（开扭矩），<strong>不写 EPROM</strong></td>
+<td>装/对舵盘时找中位</td>
+</tr>
+<tr>
+<td><code>none</code></td>
+<td>不校准，只改 ID</td>
+<td>新舵机入场第一件事</td>
+</tr>
+</tbody>
+</table>
+<ol start="5">
+<li><strong>校验</strong>：回 03 实时反馈看位置是否 = 2048（或目标计数）、方向对不对；<br />
+   04 位置控制页给 ±5° 小指令复核方向；</li>
+<li><strong>改 ID + 贴标</strong>：按官方关节表写入目标 ID（10–14/20–24/30–34），舵机标签的 ID 手写框<br />
+   写上编号；断电重上电后按新 ID 再 PING 一次；</li>
+<li>下一颗。</li>
+</ol>
+<p><strong>标定写进舵机 EPROM 后就跟着舵机走</strong>——调试器不产生任何文件。robotd 侧的<br />
+<code>/etc/robot/feetech-ft5/hd1910-calibration.toml</code>（zero_raw/direction/min_rad/max_rad、<br />
+<code>motion_enabled</code> 门控）仍按 <a href="/learn/hd1910-bench">HD-1910 指南 §8</a> 与<br />
+kissqy 中控的关节标定面板维护：调试器管"舵机自己的零位"，标定模板管"关节在整机里的零位、<br />
+方向与行程"，两份记录不要互相替代。</p>
+<h2 id="5-红线源码和-readme-共同强调的">5. 红线（源码和 README 共同强调的）</h2>
+<ul>
+<li>Kp 从 32 起步，别抄 XL330 的 200；</li>
+<li>电压/过流保护默认关闭是<strong>故意的</strong>（保护=卸力=摔倒），代价是你必须靠电源限流和小步动作保护硬件；</li>
+<li><code>/api/move</code> 只有数值钳位，<strong>没有机械行程限制</strong>——移动前确认结构不会撞；</li>
+<li>一次只接一颗出厂舵机；RESET/CAL 在页面上都有确认弹窗，弹窗不是装饰；</li>
+<li>写完 EPROM 的舵机已被上锁，改参数先解锁（55 号写 0），改完重新上锁。</li>
+</ul>
+<h2 id="6-故障速查">6. 故障速查</h2>
+<table>
+<thead>
+<tr>
+<th>现象</th>
+<th>先查</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>扫描不到</td>
+<td>robotd 是否已停、串口号、波特率（自动探测）、线序（HD-1910 与 HL 相反，见 <a href="/learn/hd1910-bench">HD-1910 指南 §4</a>）</td>
+</tr>
+<tr>
+<td>能连上一颗但写 ID 失败</td>
+<td>写锁（55 号）：先解锁再写，写完把锁发给<strong>新 ID</strong>（旧 ID 已失聪）</td>
+</tr>
+<tr>
+<td>页面打不开</td>
+<td>服务是否还在跑（<code>ss -tlnp | grep 8765</code>）、是否用了 <code>--host 0.0.0.0</code>、防火墙</td>
+</tr>
+<tr>
+<td>robotd 起不来</td>
+<td>调试器是否还占着串口（<code>pkill -f hls_debugger</code> 再 <code>systemctl start robotd</code>）</td>
+</tr>
+</tbody>
+</table>
+<h2 id="7-文档地图">7. 文档地图</h2>
+<table>
+<thead>
+<tr>
+<th>想深入哪块</th>
+<th>去读</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>调试器 README（15 关节表、四种校准、真机实测记录）</td>
+<td><code>software/hls_servo_debugger/README.md</code>（38KB）</td>
+</tr>
+<tr>
+<td>飞特协议中文逐条整理</td>
+<td><code>docs/飞特通讯协议说明.md</code></td>
+</tr>
+<tr>
+<td>官方 robotd 打飞特补丁</td>
+<td><code>firmware/v1/patches/</code> + <a href="https://github.com/jyg9/microduck_ft1910">microduck_ft1910</a></td>
+</tr>
+<tr>
+<td>imu_to_dxl 桥板两条路径</td>
+<td><a href="/learn/imu-integration">IMU 集成教程</a></td>
+</tr>
+<tr>
+<td>HD-1910 台架验收与标定门控</td>
+<td><a href="/learn/hd1910-bench">URT2 + HD-1910 指南</a></td>
+</tr>
+<tr>
+<td>本仓自有的只读探针/REBOOT 清锁脚本</td>
+<td><code>microduck-replica/rl-series/scripts/hd1910_*.py</code>（工作区文件）</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<p><em>致谢：hls_servo_debugger 与套件内固件/硬件由 jyg9 开源（Apache-2.0）。本教程的部署步骤<br />
+在 Radxa Zero 3W + HD-1910 总线上实测于 2026-10-11。</em></p>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

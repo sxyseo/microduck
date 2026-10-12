@@ -80,6 +80,7 @@
     overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
   }
   .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body img{max-width:100%;height:auto;border-radius:8px;border:1px solid var(--line);display:block;margin:14px auto}
   .doc-body table{
     width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
   }
@@ -767,6 +768,13 @@ cargo test -p kinematics
 <hr />
 <h2 id="12-已确定使用-hl-2915-c001-时的复刻路线">12. 已确定使用 HL-2915-C001 时的复刻路线</h2>
 <p>这一节专门针对飞特 <code>HL-2915-C001</code>。它不是 XL330 的直接替换件，而是一套新的执行器适配。</p>
+<blockquote>
+<p><strong>装机主线更新</strong>：当前 15 只装机舵机是 4–8.4 V 的 <code>HD-1910-C001</code>（2S 母线友好），不是<br />
+本节的 12 V HL-2915。接线、只读探针、官方关节 ID 表与标定门控见<br />
+<a href="/learn/hd1910-bench">URT2 + HD-1910 接线、组装与测试指南</a>；<br />
+仿真侧的参数迁移与训练见<a href="/learn/hd1910-tutorial">HD1910 仿真迁移与 PPO 训练教程</a>。<br />
+本节的"协议适配层 + 逐任务验收"方法两者通用，但电压、线序、模式和寄存器不能互套。</p>
+</blockquote>
 <h3 id="121-先把型号资料钉死">12.1 先把型号资料钉死</h3>
 <p>下面是根据飞特 <code>HL-2915-C001</code> 官方产品页、2026-01-18 规格书和磁编码内存表整理的工作表。<br />
 <strong>实物标签和随货最新版手册仍然优先</strong>；同系列其他型号不能直接替代 C001 的电压、电流或寄存器单位。</p>
@@ -974,7 +982,7 @@ Ping/只读命令，不要运行 <code>--move-center</code> 或摆锤记录器�
 <code>SYNC_WRITE=0x83</code>。协议示例用从地址 56 读取 8 字节，一次拿到位置、速度、负载、电压、<br />
 温度。这正好可以替代当前项目 XL330 的连续寄存器读取，但地址和数据单位不能照搬。</p>
 <h3 id="123-复刻任务清单">12.3 复刻任务清单</h3>
-<p>第一次实际通电前，先完整阅读<a href="URT2-HL2915接线组装与测试指南.md">URT2 + HL-2915 接线、组装与测试指南</a>，<br />
+<p>第一次实际通电前，先完整阅读<a href="/learn/hl2915-bench">URT2 + HL-2915 接线、组装与测试指南</a>，<br />
 实际操作时使用两只舵机现场验收表（工作区文件），边操作边记录电源、ID、<br />
 温升、通信错误和 CSV 路径；不要只保存终端里最后一行输出。</p>
 <h4 id="task-hl2915-001单舵机资料确认">Task HL2915-001：单舵机资料确认</h4>
