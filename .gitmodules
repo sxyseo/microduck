@@ -30,7 +30,8 @@
 	url = https://github.com/CarolinePascal/FT_SCServo_Debug_Qt.git
 [submodule "Microduck-kissqy"]
 	path = Microduck-kissqy
-	url = https://github.com/kissqy/Microduck-kissqy
+	url = https://github.com/sxyseo/Microduck-kissqy.git
+	branch = main
 [submodule "microduck-community-kit"]
 	path = microduck-community-kit
 	url = https://github.com/jyg9/microduck-community-kit.git
