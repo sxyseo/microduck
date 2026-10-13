@@ -316,15 +316,23 @@ m = bam_model.load_model(motor_name=&quot;feetech_hd1910_7_4V&quot;, model=&quot
 <a href="https://github.com/ftservo/ftservo-bam/pull/2">PR #2</a>。合并前用上面的别名绕过，<br />
 合并后可删。）<br />
 另注意 pyproject 钉死 <code>requires-python = "&gt;=3.12,&lt;3.13"</code>——训练环境要用 Python 3.12。</p>
-<h3 id="41-mujoco-cpu回放验证单机实验">4.1 MuJoCo CPU（回放验证、单机实验）</h3>
-<pre><code class="language-bash">pip install -e /Volumes/dev/dev/microduck/ftservo-bam[mujoco]   # 本地克隆，勿用 PyPI
+<h3 id="41-环境搭建本机已验证的配方">4.1 环境搭建（本机已验证的配方）</h3>
+<p>官方 pyproject 钉死 <code>requires-python = "&gt;=3.12,&lt;3.13"</code>，用 Python 3.12 建 venv、<br />
+从本地克隆 editable 安装（<strong>PyPI 1.0.2 没有 HD1910，不要 <code>pip install better-actuator-models</code></strong>）：</p>
+<pre><code class="language-bash">python3.12 -m venv ~/venvs/bam312
+~/venvs/bam312/bin/pip install -e '/Volumes/dev/dev/microduck/ftservo-bam[mujoco]'
+# 实测: bam(editable) + mujoco 3.15.0 + numpy + colorama
+# 注册表大小写修复见 §4.0（PR #2 合并 pull 后可删）
 </code></pre>
+<p>训练机（Linux/GPU）同理：<code>uv add --editable ../ftservo-bam --extra mjlab</code>，<br />
+或把 <code>bam/</code> 目录放进训练仓的依赖路径。</p>
+<h3 id="42-mujoco-cpu回放验证单机实验">4.2 MuJoCo CPU（回放验证、单机实验）</h3>
 <p>用法（<code>docs/usage/mujoco_cpu.rst</code>，线上 https://bam.readthedocs.io ）：<code>load_model</code><br />
 得到模型 → MJCF 里执行器必须声明为 <strong><code>motor</code></strong>（BAM 运行时覆写 <code>frictionloss</code>、<br />
 <code>damping</code>、<code>armature</code>，XML 里的值被忽略）→ <code>MujocoController(model=…, actuator=[关节名], …)</code><br />
 → 每步 <code>set_q_target</code> + <code>update()</code> 后 <code>mj_step</code>。电压跌落与 mjlab GPU 路径逐位一致<br />
 （同一推导），CPU 回放看到的就是训练时的电池行为。</p>
-<h3 id="42-mjlab-gpu插进训练任务本仓落点已找准">4.2 mjlab GPU（插进训练任务——本仓落点已找准）</h3>
+<h3 id="43-mjlab-gpu插进训练任务本仓落点已找准">4.3 mjlab GPU（插进训练任务——本仓落点已找准）</h3>
 <p>我们自己的训练仓 <code>xgoduck_rl/src/mjlab_microduck/robot/microduck_constants.py</code><br />
 <strong>本来就在用 BAM</strong>（<code>FrictionDRBamActuatorCfg</code>，摩擦随机化走 BAM 原生 <code>friction_scale</code>），<br />
 当前配置是 <code>motor_name="xl330", model="m6", kp_fw=200</code>——XL330 官方参数。<br />
@@ -348,11 +356,125 @@ _BAM_ACTUATOR_KWARGS = dict(
 <strong>单变量纪律</strong>：第一轮 A/B 只换模型与 kp_fw，电压/延迟随机化保持原值，跑完与 XL330 基线<br />
 对照 reward、fell_over、air_time（对应 <a href="/learn/hd1910-tutorial">HD1910 仿真迁移教程 §9</a><br />
 的评测方法），再逐项放开。</p>
-<h3 id="43-复刻官方辨识可选喂-our-measured">4.3 复刻官方辨识（可选，喂 our_measured）</h3>
+<h3 id="44-验证效果拿规格书当已知答案已实测通过">4.4 验证效果：拿规格书当已知答案（已实测通过）</h3>
+<p>写了 tools/verify_bam_hd1910.py（工作区文件）：用官方解析仿真器<br />
+（<code>bam.simulate.Simulator</code>，拟合时用的同一个模型本体）对照《HD-1910-C001 规格书》A/0<br />
+@7.4V 档。<strong>m6 实测结果（2026-10-12）</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>验证项</th>
+<th>模型预测</th>
+<th>规格 (±10%)</th>
+<th>判定</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>空载最高转速</td>
+<td><strong>112.2 RPM</strong></td>
+<td>113 RPM</td>
+<td>PASS（偏差 0.7%）</td>
+</tr>
+<tr>
+<td>堵转扭矩</td>
+<td><strong>13.93 kg·cm</strong></td>
+<td>15 kg·cm</td>
+<td>PASS（−7.1%，负载摩擦吃掉的正是 m6 建模的物理）</td>
+</tr>
+<tr>
+<td>保持仿真 0.5×/1.15×τ_stall</td>
+<td>推动 / 堵转</td>
+<td>推得动/推不动</td>
+<td>符合</td>
+</tr>
+<tr>
+<td>MuJoCo CPU 管线一致性</td>
+<td>112.2 vs 112.2 RPM</td>
+<td>—</td>
+<td><strong>差 0.0%</strong></td>
+</tr>
+<tr>
+<td>0.2 rad 阶跃（代表性负载）</td>
+<td>超调 10.3%、整定 44 ms</td>
+<td>无规格值</td>
+<td>模型预测，供训练侧参考</td>
+</tr>
+</tbody>
+</table>
+<pre><code class="language-bash">~/venvs/bam312/bin/python tools/verify_bam_hd1910.py            # m6 全套验证
+~/venvs/bam312/bin/python tools/verify_bam_hd1910.py --all      # m1–m6 档位对照表
+</code></pre>
+<p><strong>档位对照表（<code>--all</code> 实测）——选档不是玄学</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>档位</th>
+<th>kt (N·m/V)</th>
+<th>R (Ω)</th>
+<th>空载 RPM</th>
+<th>堵转 kg·cm</th>
+<th>规格相符</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>m1</td>
+<td>0.582</td>
+<td>4.33</td>
+<td>108.1 ✓</td>
+<td>9.83 ✗</td>
+<td>转速✓ 扭矩✗</td>
+</tr>
+<tr>
+<td>m2</td>
+<td>0.581</td>
+<td>4.31</td>
+<td>107.4 ✓</td>
+<td>9.86 ✗</td>
+<td>转速✓ 扭矩✗</td>
+</tr>
+<tr>
+<td>m3</td>
+<td>0.571</td>
+<td>3.70</td>
+<td>115.3 ✓</td>
+<td>11.30 ✗</td>
+<td>转速✓ 扭矩✗</td>
+</tr>
+<tr>
+<td>m4</td>
+<td>0.619</td>
+<td>3.94</td>
+<td>104.6 ✓</td>
+<td>11.52 ✗</td>
+<td>转速✓ 扭矩✗</td>
+</tr>
+<tr>
+<td><strong>m5</strong></td>
+<td>0.559</td>
+<td>2.93</td>
+<td>112.1 ✓</td>
+<td><strong>13.99 ✓</strong></td>
+<td>全✓</td>
+</tr>
+<tr>
+<td><strong>m6</strong></td>
+<td>0.564</td>
+<td>2.97</td>
+<td>112.2 ✓</td>
+<td><strong>13.93 ✓</strong></td>
+<td>全✓</td>
+</tr>
+</tbody>
+</table>
+<p>简化档（m1–m4）的 kt/R 拟合取舍牺牲了堵转外推——只有分侧建模的 m5/m6 与规格书全维<br />
+相符。<strong>训练用 m6（或 m5）</strong>，CPU 快速实验可以降档但要知道代价。真正的最终校验仍然是<br />
+拿我们自己的 PD 阶跃数据回放比对（<a href="https://github.com/sxyseo/microduck-replica/blob/master/docs/换舵机重训全流程.md">换舵机重训全流程 §2.3</a>，工作区文件）——官方参数是"已知答案"，我们的实测是"卷子"。</p>
+<h3 id="45-复刻官方辨识可选喂-our-measured">4.5 复刻官方辨识（可选，喂 our_measured）</h3>
 <p><code>bam/feetech/record.py</code> 是官方的采集脚本（scservo_sdk，毫秒级定时），<br />
 <code>bam/dynamixel/measure_delay.py</code> 可借鉴测 command_delay。它与仓库已有的<br />
-PD 阶跃采集（<a href="https://github.com/sxyseo/microduck-replica/blob/master/docs/换舵机重训全流程.md">换舵机重训全流程 §2.3</a>，工作区文件）<br />
-是同一件事的两种实现：官方脚本换了 SDK，我们的管线换了轨迹设计。跑<br />
+PD 阶跃采集是同一件事的两种实现：官方脚本换了 SDK，我们的管线换了轨迹设计。跑<br />
 our_measured 时把官方 m6 当"已知答案"对照，是免费的校验器。</p>
 <h2 id="5-边界与提醒">5. 边界与提醒</h2>
 <ul>

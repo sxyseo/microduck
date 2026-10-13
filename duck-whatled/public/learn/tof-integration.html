@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ToF 集成教程：I²C 识别与 tofd 验收 · 什么鸭 WhatDuck</title>
+<meta name="description" content="深度数据从哪来：总线 3 全家福判读（0x18/0x19/0x29/0x68）、0x52 与 0x29 的关系、VL53L5CX/L8CX 数据手册关键参数、tofd 出帧验收与故障速查。">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="什么鸭 WhatDuck">
+<meta property="og:title" content="ToF 集成教程：I²C 识别与 tofd 验收">
+<meta property="og:description" content="深度数据从哪来：总线 3 全家福判读（0x18/0x19/0x29/0x68）、0x52 与 0x29 的关系、VL53L5CX/L8CX 数据手册关键参数、tofd 出帧验收与故障速查。">
+<meta property="og:url" content="https://duck.whatled.com/learn/tof-integration">
+<meta name="theme-color" content="#f6f1e7">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://duck.whatled.com/learn/tof-integration">
+<style>
+  :root{
+    --paper:#f6f1e7; --paper2:#efe7d6; --ink:#211a11; --ink-soft:#6b6151;
+    --line:rgba(33,26,17,.16); --grid:rgba(33,26,17,.05);
+    --orange:#e8590c; --orange-deep:#c64908; --yellow:#f0b429;
+    --dark:#191309; --paper-on-dark:#f2ead9;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans); color:var(--ink); background-color:var(--paper);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px; line-height:1.85; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--orange);color:var(--paper)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px}
+  .mono{font-family:var(--mono)}
+  .topbar{padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand svg{width:30px;height:30px;color:var(--orange)}
+  .brand b{font-size:18px;letter-spacing:.02em}
+  .brand span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.14em;display:block;line-height:1.3}
+  .back-link{font-family:var(--mono);font-size:12.5px;text-decoration:none;border:1.5px solid var(--ink);padding:7px 14px;border-radius:999px;background:var(--paper);transition:.18s;white-space:nowrap}
+  .back-link:hover{background:var(--ink);color:var(--paper)}
+  .doc-head{padding:34px 0 8px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--orange-deep);text-transform:uppercase;display:flex;align-items:center;gap:12px}
+  .kicker::before{content:"";width:34px;height:2px;background:var(--orange)}
+  .doc-head .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .doc-card{
+    background:rgba(255,255,255,.82); border:1.5px solid var(--line); border-radius:14px;
+    padding:36px clamp(20px,5vw,52px) 44px; margin:22px 0 40px; box-shadow:8px 8px 0 rgba(33,26,17,.08);
+  }
+  /* ---- markdown body ---- */
+  .doc-body{font-size:15.5px}
+  .doc-body h1{font-size:clamp(26px,4.6vw,38px);line-height:1.3;font-weight:800;margin:6px 0 8px;letter-spacing:.01em}
+  .doc-body h2{
+    font-size:22px;font-weight:800;margin:44px 0 14px;padding-top:18px;border-top:1.5px solid var(--line);
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .doc-body h2::before{content:"§";font-family:var(--mono);font-size:15px;color:var(--orange-deep)}
+  .doc-body h3{font-size:17.5px;font-weight:700;margin:28px 0 10px}
+  .doc-body h3::before{content:"▸ ";color:var(--orange-deep)}
+  .doc-body h4{font-size:15.5px;font-weight:700;margin:20px 0 8px}
+  .doc-body p{margin:10px 0}
+  .doc-body strong{font-weight:700}
+  .doc-body ul,.doc-body ol{margin:10px 0 10px 1.4em}
+  .doc-body li{margin:4px 0}
+  .doc-body li::marker{color:var(--orange-deep)}
+  .doc-body a{color:var(--orange-deep);text-decoration:none;border-bottom:1px dashed rgba(198,73,8,.5)}
+  .doc-body a:hover{border-bottom-style:solid}
+  .doc-body hr{border:none;border-top:1.5px dashed var(--line);margin:34px 0}
+  .doc-body blockquote{
+    margin:16px 0;padding:12px 18px;border-left:3px solid var(--orange);background:var(--paper2);
+    border-radius:0 10px 10px 0;color:var(--ink-soft);font-size:14.5px;
+  }
+  .doc-body blockquote p{margin:6px 0}
+  .doc-body code{
+    font-family:var(--mono);font-size:.86em;background:var(--paper2);border:1px solid var(--line);
+    border-radius:5px;padding:1px 6px;word-break:break-word;
+  }
+  .doc-body pre{
+    background:var(--dark);color:var(--paper-on-dark);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;margin:14px 0;line-height:1.7;font-size:13px;
+  }
+  .doc-body pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;word-break:normal}
+  .doc-body img{max-width:100%;height:auto;border-radius:8px;border:1px solid var(--line);display:block;margin:14px auto}
+  .doc-body table{
+    width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto;
+  }
+  .doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+  .doc-body th{background:var(--paper2);font-weight:700;white-space:nowrap}
+  .doc-body tr:nth-child(even) td{background:rgba(255,255,255,.5)}
+  .doc-foot{
+    margin-top:44px;padding-top:18px;border-top:1.5px dashed var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-soft);
+  }
+  .doc-foot a{color:var(--orange-deep);text-decoration:none}
+  footer{border-top:1.5px solid var(--line);background:var(--paper2)}
+  .foot-inner{padding:20px 0 26px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .foot-inner a{color:var(--orange-deep);text-decoration:none}
+  @media (max-width:600px){ .doc-card{padding:26px 18px 32px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="foot">
+      <ellipse cx="12" cy="18.2" rx="3.4" ry="3.6"/>
+      <ellipse cx="5.6" cy="9.4" rx="2.7" ry="5" transform="rotate(-30 5.6 9.4)"/>
+      <ellipse cx="12" cy="7.2" rx="2.7" ry="5.4"/>
+      <ellipse cx="18.4" cy="9.4" rx="2.7" ry="5" transform="rotate(30 18.4 9.4)"/>
+    </g>
+  </defs>
+</svg>
+<div class="wrap">
+  <nav class="topbar">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 24 28" fill="currentColor"><use href="#foot"/></svg>
+      <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
+    </a>
+    <a class="back-link" href="/#learn">← 返回进度主页</a>
+  </nav>
+  <header class="doc-head">
+    <p class="kicker">MANUAL 11 · ToF 集成篇 · LEARN NOTES</p>
+    <p class="meta">收进学习手册 · 2026-10-13 · duck.whatled.com</p>
+  </header>
+  <main class="doc-card doc-body">
+<h1 id="tof-集成教程i²c-识别与-tofd-验收">ToF 集成教程：I²C 识别与 tofd 验收</h1>
+<p>这份文档回答一个问题：<strong>鸭子的深度数据从哪来，怎么接、怎么在总线上认出它、怎么验收。</strong></p>
+<p>官方 Robot HAT 上没有 ToF——它经 HAT 的 Qwiic/Stemma 座外接，挂在核心板的 I2C3（总线 3）上。<br />
+这条总线是全家福式共享的，一次 <code>i2cdetect</code> 看到的就是全部：</p>
+<p><img alt="I2C3 总线地图：核心板 → HAT（codec / BMI088 / Qwiic 座）→ ToF" src="images/tof-bus-map.png" /></p>
+<p><em>图 1：总线 3 挂载全景（本仓绘制；依据：<br />
+<a href="https://github.com/sxyseo/microduck-replica/blob/master/docs/硬件规格速查.md">硬件规格速查</a>、<a href="https://github.com/pollen-robotics/microduck/blob/main/docs/robot/cheatsheet.md">cheatsheet §ToF</a>、<br />
+<code>scripts/setup-board.sh</code> 的 <code>configure_tof()</code>）。</em></p>
+<h2 id="1-传感器是谁vl53l5cx-vl53l8cx-两代同口">1. 传感器是谁：VL53L5CX / VL53L8CX 两代同口</h2>
+<p><img alt="VL53L5CX 模块（ST 数据手册封面图）" src="images/tof-ds-cover-module.png" /></p>
+<p><em>图 2：VL53L5CX 模块本体（来源：ST《VL53L5CX datasheet》封面，工作区 <code>VL53L5CX资料/vl53l5cx.pdf</code>）。</em></p>
+<p><code>tofd</code> 对两代传感器都支持，靠读芯片 ID 自动选驱动，互换不改软件（<a href="https://github.com/pollen-robotics/microduck/blob/main/docs/robot/cheatsheet.md">cheatsheet §ToF</a>）。<br />
+关键参数全部引自数据手册 <code>VL53L5CX资料/vl53l5cx.pdf</code>（ST 官方，38 页，下称 DS）：</p>
+<table>
+<thead>
+<tr>
+<th>项</th>
+<th>值</th>
+<th>出处</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>分区</td>
+<td>4×4 或 8×8；8×8 共 64 zone，编号 0 起始逐行递增</td>
+<td>DS p1；p18</td>
+</tr>
+<tr>
+<td>量程</td>
+<td>最远 400 cm，每个 zone 独立多目标测距</td>
+<td>DS p1 Features</td>
+</tr>
+<tr>
+<td>帧率</td>
+<td>最高 60 Hz</td>
+<td>DS p1 Features</td>
+</tr>
+<tr>
+<td>FoV</td>
+<td>探测体积 45°×45°（对角 63°）；集光排除区对角 82°</td>
+<td>DS p1；p3 Table 2 / Figure 1</td>
+</tr>
+<tr>
+<td>光源</td>
+<td>940 nm 人眼不可见 VCSEL + SPAD 接收阵列</td>
+<td>DS p1</td>
+</tr>
+<tr>
+<td>模块尺寸</td>
+<td>6.4 × 3.0 × 1.5 mm</td>
+<td>DS p1</td>
+</tr>
+<tr>
+<td>I²C</td>
+<td>400 kHz – 1 MHz；默认地址写作 <strong>0x52</strong>（8 位写地址）</td>
+<td>DS p3 Table 1</td>
+</tr>
+<tr>
+<td>激光安全</td>
+<td>Class 1 激光标签（IEC 60825-1:2007/2014）</td>
+<td>DS p27 Figure 25–27</td>
+</tr>
+</tbody>
+</table>
+<p><img alt="Figure 1：System FoV 与排除区（DS p3）" src="images/tof-ds-fig1-fov.png" /></p>
+<p><em>图 3：System FoV（黄区，45°×45°，对角 63°）与集光排除区（蓝区）（来源：DS Figure 1, p3；<br />
+角度数值与 p3 Table 2 一致）。</em></p>
+<p><img alt="8×8 模式 64 zone 编号（DS p18）" src="images/tof-ds-8x8-zones.png" /></p>
+<p><em>图 4：8×8 模式的 64 个 zone 编号（0 起始，逐行递增），红框为角区（来源：DS p18）。</em></p>
+<p><img alt="VL53L5 模块内部框图（DS p5）" src="images/tof-ds-block-diagram.png" /></p>
+<p><em>图 5：模块内部框图：SPAD 阵列、测距核、固件 MCU 与 940 nm VCSEL（来源：DS Figure 3, p5）。</em></p>
+<h2 id="2-0x52-与-0x29-是同一个地址">2. 0x52 与 0x29 是同一个地址</h2>
+<p>DS 的 Table 1（p3）和 ULD 驱动头文件写的都是 <strong>0x52</strong>：</p>
+<blockquote>
+<p><code>#define VL53L5CX_DEFAULT_I2C_ADDRESS ((uint16_t)0x52)</code><br />
+—— X-CUBE-TOF1 v2.0.0，<code>Drivers/BSP/Components/vl53l5cx/modules/vl53l5cx_api.h</code> L79</p>
+</blockquote>
+<p>0x52 是<strong>含读/写位的 8 位地址</strong>；Linux I²C 工具链（<code>i2cdetect</code> 等）显示 <strong>7 位地址</strong>，<br />
+0x52 右移一位 = <strong>0x29</strong>。DS 写 0x52、<code>i2cdetect</code> 见 0x29，说的是同一颗器件。<br />
+注意 VL53L8CX 默认地址同为 0x29——<strong>扫描分不出代际</strong>，代际由 <code>tofd</code> 的 ID 读回答。</p>
+<h2 id="3-实录tof-上-j5-后的一次总线扫描2026-10-13">3. 实录：ToF 上 J5 后的一次总线扫描（2026-10-13）</h2>
+<p>操作：断电拔下 HAT 上 J5、J6 的原有连接，把 ToF 模块接到 <strong>J5</strong>，上电后扫描（与<br />
+<a href="https://github.com/pollen-robotics/microduck/blob/main/docs/robot/cheatsheet.md">cheatsheet</a> 给的标准命令一致）：</p>
+<pre><code class="language-text">$ i2cdetect -y -r 3
+     0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f
+00:                         -- -- -- -- -- -- -- --
+10: -- -- -- -- -- -- -- -- UU 19 -- -- -- -- -- --
+20: -- -- -- -- -- -- -- -- -- 29 -- -- -- -- -- --
+30: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
+40: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
+50: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
+60: -- -- -- -- -- -- -- -- 68 -- -- -- -- -- -- --
+70: -- -- -- -- -- -- -- --
+</code></pre>
+<p><strong>0x29 在列——ToF 的电气连接一次到位。</strong> 四个地址逐一判读：</p>
+<table>
+<thead>
+<tr>
+<th>扫描值</th>
+<th>器件</th>
+<th>判读</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>0x18 UU</code></td>
+<td>TLV320AIC3104 音频 codec</td>
+<td><code>UU</code> = 已被内核驱动认领（HAT overlay 绑定），i2cdetect 跳过探测。HAT 自带，永远在，正常</td>
+</tr>
+<tr>
+<td><code>0x19</code></td>
+<td>BMI088 加速度计</td>
+<td>HAT 板载，步态不用的休眠器件（"dormant"）。HAT 自带，正常</td>
+</tr>
+<tr>
+<td><strong><code>0x29</code></strong></td>
+<td><strong>ToF（VL53L5CX / VL53L8CX）</strong></td>
+<td>本次接 J5 的模块在应答——<strong>接对了</strong></td>
+</tr>
+<tr>
+<td><code>0x68</code></td>
+<td>BMI088 陀螺仪</td>
+<td>同 0x19，HAT 自带</td>
+</tr>
+<tr>
+<td>（未见 0x6a/0x6b）</td>
+<td>LSM6DSV16X（IMU 路径 B）</td>
+<td>扫描时<strong>不在总线上</strong>。缺它不影响 ToF；整机要开运动前按 <a href="/learn/imu-integration">IMU 集成教程</a>接回</td>
+</tr>
+</tbody>
+</table>
+<p>判读用到的两条背景知识：</p>
+<ul>
+<li><strong>J5–J8 四个 Qwiic 座并联在同一总线</strong>（<a href="/learn/deep-42">官方 HAT 解读</a>）：<br />
+  插哪个口电气等价，拔掉 J6 的原有连接不影响 J5 上的新器件。</li>
+<li><strong><code>UU</code> 不是故障</strong>：内核认领的地址 i2cdetect 不再探测，直接标 <code>UU</code>。0x18 由音频<br />
+  overlay（<code>aic3104-i2c3</code>）绑定，属于"看到 UU 才说明音频驱动正常挂上了"。</li>
+</ul>
+<h2 id="4-软件验收从-0x29-到-88-出帧">4. 软件验收：从 0x29 到 8×8 出帧</h2>
+<p>地址在线只证明电气通了，ToF 的验收以 <code>tofd</code> 出帧为准。<code>tofd</code> 独占这颗传感器<br />
+（别的进程不读它；同一条总线上 robotd 只读 IMU）：</p>
+<pre><code class="language-bash">sudo i2cdetect -y -r 3   # 总线 3 即 /dev/i2c-pihat（udev 规则由 setup-board.sh 配置）
+robotctl monitor         # 然后按 t：8×8 深度网格
+journalctl -u tofd -b
+</code></pre>
+<p><code>monitor</code> 的 ToF 块长这样（示例输出，引自 cheatsheet）：</p>
+<pre><code class="language-text">┌ tof VL53L8CX · 15 Hz · 8×8 · 48/64 ranged · 0.12–3.54 m ─────────────┐
+│ 0.12 0.15    x 1.44 1.86    · 2.70 3.12                              │
+└ · nothing in range · x could not measure · near→far ── seq 412 · 6 ms ┘
+</code></pre>
+<p>块头会直接报出芯片代际（上例 VL53L8CX）——这就是上面说的 ID 读。块的三种状态对应三种修法：</p>
+<table>
+<thead>
+<tr>
+<th>monitor 显示</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>connecting to tofd…</code> / <code>no depth stream</code></td>
+<td>tofd 没在跑：<code>systemctl status tofd</code></td>
+</tr>
+<tr>
+<td><code>no sensor: …</code></td>
+<td>tofd 活着，总线上无应答：回 §3 扫 0x29</td>
+</tr>
+<tr>
+<td><code>waiting for the first frame…</code></td>
+<td>已在测距，首帧约 66 ms 后到（15 Hz 一帧）</td>
+</tr>
+</tbody>
+</table>
+<p>网格里的 <code>x</code> 是"这个 zone 没测出来"，<code>·</code> 是"测了、范围内没东西"——大片 <code>x</code> 不等于传感器坏。<br />
+<code>sudo systemctl stop tofd</code> 随时可停，没有别的守护进程依赖它。要把深度变成可玩的东西<br />
+（对着它"吹"出音符的 theremin），机制见 <a href="https://github.com/pollen-robotics/microduck/blob/main/docs/robot/cheatsheet.md">cheatsheet §theremin</a>。</p>
+<h2 id="5-误区与红线">5. 误区与红线</h2>
+<ol>
+<li><strong>看见 0x29 ≠ 装的是 VL53L5CX</strong>：L8CX 同址，代际看 monitor 块头或 tofd 日志的 ID 读。</li>
+<li><strong>看见 BMI088（0x19/0x68）≠ 步态 IMU 通过</strong>：控制闭环的姿态来自 LSM6DSV16X<br />
+   （<code>imu_to_dxl</code> 板，ID 200 / I²C 0x6A·0x6B），与这颗板载 IMU 互不能替代。</li>
+<li><strong>严禁增大激光功率或外加聚光光学</strong>：DS p27 明文约束（Class 1 标签的前提就是不动它）。</li>
+<li><strong>加盖片/开窗口先读资料</strong>：DS 的直方图串扰补偿覆盖不了任意开窗；工作区<br />
+<code>VL53L5CX盖片资料.pdf</code> 是配套 940 nm 盖片的实测规格（穿透率 &gt;92%、串扰抑制），自开窗口按它选材。</li>
+</ol>
+<h2 id="6-故障速查">6. 故障速查</h2>
+<table>
+<thead>
+<tr>
+<th>现象</th>
+<th>先查</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>扫描里没有 0x29</td>
+<td>Qwiic 线序与供电（3.3V/GND）；四个口并联，把模块换到 J6–J8 任一口再扫，可排除单个座子问题</td>
+</tr>
+<tr>
+<td>连 0x18 的 <code>UU</code> 都没有</td>
+<td>整条总线没起来：HAT 是否插好、i2c3 overlay 是否加载（<code>ls -l /dev/i2c-*</code>；总线本身由 <code>setup-board.sh</code> 音频段开通）</td>
+</tr>
+<tr>
+<td>monitor 显示 <code>no depth stream</code></td>
+<td>tofd 没跑：<code>systemctl status tofd</code>、<code>journalctl -u tofd -b</code></td>
+</tr>
+<tr>
+<td>monitor 显示 <code>no sensor</code></td>
+<td>tofd 活着但无应答：重扫 0x29，查供电</td>
+</tr>
+<tr>
+<td>网格大片 <code>x</code></td>
+<td>不是坏：见 §4 的 <code>x</code> / <code>·</code> 之别</td>
+</tr>
+<tr>
+<td>想确认代际</td>
+<td>i2cdetect 无能为力（同为 0x29）：看 monitor 块头或 tofd 日志</td>
+</tr>
+<tr>
+<td>拔了 J6 后少了别的器件</td>
+<td>正常：J5–J8 并联，拔哪个口只影响插在那个口上的东西；0x18/0x19/0x68 在 HAT 板上，不受影响</td>
+</tr>
+</tbody>
+</table>
+<h2 id="7-本地资料清单">7. 本地资料清单</h2>
+<p>以下文件在工作区 <code>VL53L5CX资料/</code>（本地资料，未入库）：</p>
+<table>
+<thead>
+<tr>
+<th>文件</th>
+<th>是什么</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>vl53l5cx.pdf</code></td>
+<td>ST 官方数据手册（38 页）——本文全部参数与页码出处</td>
+</tr>
+<tr>
+<td><code>VL53L5CX盖片资料.pdf</code></td>
+<td>第三方配套盖片规格（IR-DF031）：940 nm 穿透率 &gt;92%、防尘防串扰</td>
+</tr>
+<tr>
+<td><code>VL53L5CX测试例程STM32F4 en.X-CUBE-TOF1_v2.0.0.zip</code></td>
+<td>ST 官方例程包 + ULD 驱动源码（默认地址定义在 <code>vl53l5cx_api.h</code>，即 §2 引文）</td>
+</tr>
+</tbody>
+</table>
+<p><img alt="X-NUCLEO-53L5A1 评估板（ST 例程包官方图片）" src="images/tof-st-xnucleo-53l5a1.jpg" /></p>
+<p><em>图 6：ST 官方评估板 X-NUCLEO-53L5A1（例程包对应硬件）。装机走的是裸模块 + Qwiic 转 Stemma<br />
+接 J5，不是这块板，图仅作器件识别参照（来源：X-CUBE-TOF1 v2.0.0 <code>_htmresc/</code>）。</em></p>
+<h2 id="8-文档地图">8. 文档地图</h2>
+<table>
+<thead>
+<tr>
+<th>想深入哪块</th>
+<th>去读</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>tofd 的运行时操作与 monitor 网格</td>
+<td><a href="https://github.com/pollen-robotics/microduck/blob/main/docs/robot/cheatsheet.md">cheatsheet §ToF</a>（该机制归属页）</td>
+</tr>
+<tr>
+<td>tofd 的功耗账、头部 IMU 开关</td>
+<td><code>docs/project/tof-on-demand.md</code></td>
+</tr>
+<tr>
+<td>HAT 的 Qwiic 座、codec、BMI088</td>
+<td><a href="/learn/deep-42">官方 HAT 解读</a></td>
+</tr>
+<tr>
+<td>同一条总线上的另一颗传感器（IMU）</td>
+<td><a href="/learn/imu-integration">IMU 集成教程</a></td>
+</tr>
+<tr>
+<td>硬件地址总表（codec/BMI088/ToF）</td>
+<td><a href="https://github.com/sxyseo/microduck-replica/blob/master/docs/硬件规格速查.md">硬件规格速查</a></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<p><em>本教程的口径：0x29 在线只证明电气与地址对上了，ToF 验收以 tofd 出帧为准；0x18/0x19/0x68<br />
+是 HAT 自带器件，与拔插 J5/J6 无关；i2cdetect 分不出 VL53L5CX/VL53L8CX，代际以 tofd 的 ID 读为准。</em></p>
+    <div class="doc-foot">
+      <span>什么鸭 WHATDUCK · 复刻学习笔记</span>
+      <span><a href="/#learn">← 全部手册</a> · <a href="/">首页</a></span>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap foot-inner">
+    <span>© 2026 WHATDUCK · 非官方个人学习与研究项目</span>
+    <span><a href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">github.com/fanhao375/microduck-replica</a></span>
+  </div>
+</footer>
+</body>
+</html>

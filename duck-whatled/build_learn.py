@@ -143,6 +143,14 @@ DOCS = [
         "tag": "MANUAL 10 · BAM 官方篇",
         "date": "2026-10-11",
     },
+    {
+        "src": "/Volumes/dev/dev/microduck/docs/ToF集成教程-I2C识别与tofd验收.md",
+        "out": "tof-integration.html",
+        "title": "ToF 集成教程：I²C 识别与 tofd 验收",
+        "desc": "深度数据从哪来：总线 3 全家福判读（0x18/0x19/0x29/0x68）、0x52 与 0x29 的关系、VL53L5CX/L8CX 数据手册关键参数、tofd 出帧验收与故障速查。",
+        "tag": "MANUAL 11 · ToF 集成篇",
+        "date": "2026-10-13",
+    },
 ]
 
 
@@ -325,6 +333,7 @@ _MANUAL_RULES = [
     (re.compile(r"\]\(IMU集成教程-I2C直读与imu_to_dxl\.md(#[^)]*)?\)"), r"](/learn/imu-integration\1)"),
     (re.compile(r"\]\(microduck-community-kit使用教程\.md(#[^)]*)?\)"), r"](/learn/community-kit\1)"),
     (re.compile(r"\]\(飞特官方BAM发布解读\.md(#[^)]*)?\)"), r"](/learn/bam-official\1)"),
+    (re.compile(r"\]\(ToF集成教程-I2C识别与tofd验收\.md(#[^)]*)?\)"), r"](/learn/tof-integration\1)"),
     (re.compile(r"\]\(deep-dive/README\.md\)"), "](/learn/deep)"),
     # 未入库(未 push)的工作区文件:去链接留文字,避免线上 404
     (re.compile(r"\[([^\]]+)\]\(\.\./microduck-replica/docs/(?:称重与标定模板-HD1910\.md|HD1910标定记录模板\.csv)\)"), r"\1（工作区文件）"),

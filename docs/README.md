@@ -23,6 +23,7 @@ docs give the reasoning and point at it.
 | [`低成本舵机替换决策表.md`](低成本舵机替换决策表.md) | 完成 HL-2915 基线后，如何评估更便宜舵机的替换风险。 |
 | [`BAM与URDF全流程小白教程.md`](BAM与URDF全流程小白教程.md) | 从关节命名、URDF、采集、BAM 处理到训练的入门路线。 |
 | [`飞特官方BAM发布解读.md`](飞特官方BAM发布解读.md) | 飞特官方 Gitee 发布的 HD-1910 m1–m6 已辨识 BAM 模型（7.4 V）：与陆吾参照的逐参数对比、参照链插入位置、MuJoCo/mjlab 两条接线。 |
+| [`ToF集成教程-I2C识别与tofd验收.md`](ToF集成教程-I2C识别与tofd验收.md) | 深度数据从哪来：总线 3 全家福判读（0x18/0x19/0x29/0x68）、0x52 与 0x29 的关系、VL53L5CX/L8CX 数据手册参数、tofd 出帧验收与故障速查。 |
 | [`URT2-HD1910接线组装与测试指南.md`](URT2-HD1910接线组装与测试指南.md) | 装机主线 HD-1910-C001 的 7.4 V 台架：与 HL 线序相反的三根黑线、只读探针与摇晃法、官方关节 ID 表、寄存器速查和标定门控。 |
 | [`IMU集成教程-I2C直读与imu_to_dxl.md`](IMU集成教程-I2C直读与imu_to_dxl.md) | 两条 IMU 运输路径：imu_to_dxl 桥板（ID 200，DXL/飞特双分支）与 I²C 直读（i2c_lsm6dsv16x，当前上板方案）；12 字节载荷契约、systemd 放行、方向核验五阶段。 |
 | [`microduck-community-kit使用教程.md`](microduck-community-kit使用教程.md) | 社区套件与 hls_servo_debugger：核心板部署实测、浏览器逐颗标定工作流（cal/offset/mid）、EPROM 偏移与 robotd 标定模板的分工。 |
