@@ -33,6 +33,7 @@ docs give the reasoning and point at it.
 | [`HD1910仿真迁移与PPO训练教程.md`](HD1910仿真迁移与PPO训练教程.md) · [离线阅读版](HD1910仿真迁移与PPO训练教程.html) | XL330 → HD-1910 的参数迁移、PPO 训练、分项评测、ONNX 导出与后续真机验证。 |
 | [`cheatsheet.md`](robot/cheatsheet.md) | Every `robotctl` command. |
 | [`pair-a-gamepad.md`](robot/pair-a-gamepad.md) | Once per pad: pairing mode, `pad pair`, and what to do when it will not bond. |
+| [`udp-pad.md`](robot/udp-pad.md) | A pad on the LAN over UDP: turning it on, `duckctl udp-pad`, and the wire format for writing your own sender. |
 | [`cheatsheet-dev.md`](robot/cheatsheet-dev.md) | The commands that need a dev board: branch builds, candidates, dev pushes. |
 | [`dev-push.md`](robot/dev-push.md) | Build on your machine and install on the board over ssh, with no CI run. |
 | [`simulation.md`](robot/simulation.md) | The simulated duck: `scripts/duck-sim`, the real daemons against a MuJoCo body, one duck or several in containers. |

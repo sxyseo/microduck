@@ -144,7 +144,7 @@ Three properties worth trusting:
 Saving offers what the change actually needs, from the daemon that actually reads it: a restart
 for most keys (`[media]` and `[duck_detector]` are `mediad`'s, `[head_imu]` is `tofd`'s on a zero3 and `robotd`'s on a beta), a `robotd`
 *reload* for `[policy]` — the motors stay powered — and nothing at all for `[pad]`,
-`[pad_imu_head_control]` and `[pad_drive]`, which `padd` picks up within a second. `sudo`, because the file
+`[pad_imu_head_control]` and the other `pad_` sections, which the pad daemon picks up within a second. `sudo`, because the file
 is root-owned — without it the editor opens read-only and says so on the first write.
 `--file` points it elsewhere for a bench copy. The shipped `deploy/robotd.toml` stays the
 reference for *why* each knob exists; this is for flipping them.
@@ -318,8 +318,8 @@ a           sit_toggle
 b           ground_pick
 x             (nothing)
 y             (nothing)
-lb          kick_left
-rb          kick_right
+lb            (nothing)
+rb            (nothing)
 
 `robotctl pad bind <button> <skill>` changes one; padd picks it up within a second.
 ```
@@ -332,8 +332,8 @@ a           sit_toggle
 b           ground_pick
 x           polite-bow
 y             (nothing)
-lb          kick_left
-rb          kick_right
+lb            (nothing)
+rb            (nothing)
 ```
 
 That writes one line, and only the button you named:
@@ -498,6 +498,35 @@ pause while the robot is walking normally (the walk freezes for a moment, then r
 that stays paused after being put down. `pause_threshold` and `resume_threshold` in the
 same section move the two edges; the design is [`robotd-design.md` §2.4.2](../design/robotd-design.md).
 
+### Changing joystick mappings
+
+Run `sudo robotctl configure`, then search for `pad_axes` to select axes, directions and gains.
+Head, body and roller limits are under `pad_head`, `pad_body` and `pad_roller`; walking speed
+limits remain under `pad_drive`. These share `/etc/robot/robotd.toml` with the `[pad]` button
+bindings, and apply within a second without restarting — to the Bluetooth pad and the pad over
+UDP alike.
+
+For example, forward/back on the right stick and steering on the left, with gentler steering:
+
+```toml
+[pad_axes.drive.vx]
+source = "right_y"
+
+[pad_axes.drive.vyaw]
+source = "left_x"
+gain = 0.7
+
+[pad_drive]
+vx_min = -0.2
+vx_max = 0.3
+```
+
+The steering binding keeps its default inversion; set `invert = false` to reverse it. Use
+`source = "none"` to disable a command. Remove an override to restore that mode's default.
+An invalid edit is logged and the previous mapping stays active.
+The full evaluation order and IMU behavior are in
+[controller configuration](../design/robotd-design.md#42-params).
+
 ### Gamepad (`configd`)
 
 What each button *does* — and how to change it — is under **Policies and skills** above
@@ -533,8 +562,7 @@ the thumb:
 | --- | --- |
 | **A** / cross | sit ↔ stand |
 | **B** / circle | ground pick |
-| **X**, **Y** | nothing — free for a skill of your own (`robotctl pad bind`) |
-| **LB / RB** | left / right kick |
+| **X**, **Y**, **LB / RB** | nothing — free for a skill of your own (`robotctl pad bind`, e.g. `lb kick_left`) |
 | **RT / LT** | mouth (either trigger) — RT also quacks; LT rides the "wheee" while held |
 | **D-pad left** | move mode: left stick forward/back and strafe, right stick turns. The mode a pad starts in |
 | **D-pad up** | head mode: left stick head yaw and pitch, right stick neck pitch and head roll. The body holds still |
@@ -569,8 +597,9 @@ the switch off, the right stick poses the head in that mode. `padd` picks the ch
 second; no restart.
 
 There is no stop button: release the sticks and the robot stands, and `robotd`'s deadman stops it
-if `padd` dies. **If the pad drops out while driving**, the robot asks where it went (a rising
-quack), and after a second sits down if it was standing — kicks and picks are let finish first.
+if `padd` dies. **If the pad drops out while driving**, after a second the robot asks where it
+went (a rising quack) and sits down if it was standing — kicks and picks are let finish first. A
+shorter drop-out is silent.
 When the pad comes back it greets you with a quack; A stands the robot up.
 
 **Left alone, the robot looks around.** After 2 s with the policy running, no motion asked for
