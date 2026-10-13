@@ -335,9 +335,13 @@ _MANUAL_RULES = [
     (re.compile(r"\]\(飞特官方BAM发布解读\.md(#[^)]*)?\)"), r"](/learn/bam-official\1)"),
     (re.compile(r"\]\(ToF集成教程-I2C识别与tofd验收\.md(#[^)]*)?\)"), r"](/learn/tof-integration\1)"),
     (re.compile(r"\]\(deep-dive/README\.md\)"), "](/learn/deep)"),
-    # 未入库(未 push)的工作区文件:去链接留文字,避免线上 404
-    (re.compile(r"\[([^\]]+)\]\(\.\./microduck-replica/docs/(?:称重与标定模板-HD1910\.md|HD1910标定记录模板\.csv)\)"), r"\1（工作区文件）"),
-    (re.compile(r"\[([^\]]+)\]\(\.\./microduck-replica/rl-series/scripts/hd1910_[^)]+\.py\)"), r"\1（工作区文件）"),
+    # 已入库 GitHub(microduck-replica master)的文件:映射为 blob 链接
+    (re.compile(r"\]\(\.\./microduck-replica/docs/(HD1910标定记录模板\.csv)\)"),
+     lambda m: "](https://github.com/sxyseo/microduck-replica/blob/master/docs/" + m.group(1) + ")"),
+    (re.compile(r"\]\(\.\./microduck-replica/(rl-series/scripts/hd1910_[^)]+\.py)\)"),
+     lambda m: "](https://github.com/sxyseo/microduck-replica/blob/master/" + m.group(1) + ")"),
+    (re.compile(r"\]\((1910-HAT接线与标定清单\.md)\)"),
+     lambda m: "](https://github.com/sxyseo/microduck/blob/main/docs/" + m.group(1) + ")"),
     (re.compile(r"\[([^\]]+)\]\(\.\./Microduck-kissqy/[^)]+\)"), r"\1（工作区文件）"),
     (re.compile(r"\[([^\]]+)\]\(1910-HAT接线与标定清单\.md\)"), r"\1（工作区文件）"),
     (re.compile(r"\[([^\]]+)\]\(HL2915标定记录模板\.csv\)"), r"\1（工作区文件）"),
