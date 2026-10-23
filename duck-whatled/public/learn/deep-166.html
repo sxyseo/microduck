@@ -129,7 +129,7 @@
 <strong>需要的前置</strong>:<a href="/learn/deep-33">解读 33</a>;见过任意一张三维图即可,零基础可读。</p>
 </blockquote>
 <h2 id="stl-是结果cad-源文件是过程">STL 是结果,CAD 源文件是过程</h2>
-<p>上游公开的 47 个 STL 只是"形状的结果":能看、能打印,改不了尺寸,也没有装配关系。<code>microduck-replica-cad</code> 仓库补的正是缺的另一半——图纸作者<strong>「机械行者Robo」</strong>(小红书号 270594280 / 抖音号 1852366168,"人人可做机器人")依据上游公开 STL 重建出<strong>可编辑的 SolidWorks 参数模型</strong>:56 个源文件(16 个装配体 <code>.SLDASM</code> + 40 个零件 <code>.SLDPRT</code>,解压 340MB)、一份 21 页装配安装说明书 PDF、23 张组件图/爆炸图,按 CC BY-NC-SA 4.0(署名-非商业-相同方式共享)发布,转载须保留署名。</p>
+<p>上游公开的 47 个 STL 只是"形状的结果":能看、能打印,改不了尺寸,也没有装配关系。<code>microduck-replica-cad</code> 仓库补的正是缺的另一半——图纸作者**「机械行者Robo」<strong>(小红书号 270594280 / 抖音号 1852366168,"人人可做机器人")依据上游公开 STL 重建出</strong>可编辑的 SolidWorks 参数模型**:56 个源文件(16 个装配体 <code>.SLDASM</code> + 40 个零件 <code>.SLDPRT</code>,解压 340MB)、一份 21 页装配安装说明书 PDF、23 张组件图/爆炸图,按 CC BY-NC-SA 4.0(署名-非商业-相同方式共享)发布,转载须保留署名。</p>
 <p>读这套图的基本功只有三个词:<strong>零件</strong>(单个件,如 <code>leg_腿部</code>)、<strong>装配体</strong>(零件按配合关系装在一起,如 <code>00-microduck装配体</code>)、<strong>特征树</strong>(组件图侧边"这个总成由哪些件组成"的清单——解读 36/38 全靠它读图)。</p>
 <h2 id="文件大小也是信息">文件大小也是信息</h2>
 <p>16 个装配体的体积很能说明复杂度:<code>00-microduck装配体</code> 70.3MB(全机总装)、<code>10_头部总成</code> 22.2MB、<code>01_躯干主体</code> 20.5MB,而 <code>07_颈根</code> 只有 0.1MB。装配体越大,引用的零件与配合关系越多——头部总成是全系列特征树最长的一份,与它 189g、装着主控/HAT/摄像头的身份相符(解读 38)。</p>

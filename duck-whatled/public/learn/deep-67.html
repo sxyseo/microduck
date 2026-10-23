@@ -130,7 +130,7 @@
 </blockquote>
 <p>换舵机最先撞死的往往不是协议,是电压。HL-2915-C001 的工作窗是 <strong>9–14V</strong>(§5.1),而现有电力系统从电池到代码——<code>duck-control/src/model.rs</code> 的 <code>BATTERY_FULL_V = 8.2</code> / <code>BATTERY_EMPTY_V = 6.6</code>(NP-F550 2S)——整个围绕 8.4V 母线建。教程原话:官方的 2S(6.6–8.2V)带不动 HL,<strong>这是换舵机路线最刚性的约束</strong>。</p>
 <h2 id="1-官方-hat-干的四件事逐项替代">1. 官方 HAT 干的四件事,逐项替代</h2>
-<p>教程 §5 把官方 HAT(见<a href="/learn/deep-42">解读 42</a>)的职能拆成四项,飞特路线逐项给替代:半双工 TTL 舵机总线缓冲 → <strong>¥22 飞特转接板</strong>(ST/SC 系列通用,Radxa UART → 转接板 → 舵机总线);12V→5V 配电 → <strong>UBEC(≥3A)</strong>经 40-pin 5V 给 Radxa;音频(codec+功放)→ <strong>先放弃</strong>,整机走通后再补独立小功放板;Qwiic 传感器座 → 直接用 40-pin I²C。对照<a href="/learn/deep-45">解读 45</a>那张原理图:AP63205 buck 与 PAM8406D 功放两条支路,被一个外置 UBEC 和一个"不做"接管——失去的只有板载音频。</p>
+<p>教程 §5 把官方 HAT(见<a href="/learn/deep-42">解读 42</a>)的职能拆成四项,飞特路线逐项给替代:半双工 TTL 舵机总线缓冲 → <strong>¥22 飞特转接板</strong>(ST/SC 系列通用,Radxa UART → 转接板 → 舵机总线);12V→5V 配电 → **UBEC(≥3A)**经 40-pin 5V 给 Radxa;音频(codec+功放)→ <strong>先放弃</strong>,整机走通后再补独立小功放板;Qwiic 传感器座 → 直接用 40-pin I²C。对照<a href="/learn/deep-45">解读 45</a>那张原理图:AP63205 buck 与 PAM8406D 功放两条支路,被一个外置 UBEC 和一个"不做"接管——失去的只有板载音频。</p>
 <h2 id="2-为什么是-3s一条电压窗卡死所有选型">2. 为什么是 3S:一条电压窗卡死所有选型</h2>
 <p>3S 锂电满电 12.6V、放空约 9.9V,全程落在 HL-2915 的 9–14V 窗内——不加任何稳压,舵机直接吃电池原压,和官方"XL330 吃 +BATT"是同一个思路。电压换窗,代码跟着换:教程 §6.1 要求把 <code>model.rs</code> 的电压窗改成 9–14V,来源是 62 号遥测寄存器(0.1V 一格,直接除 10——<code>hl2915_bench.py</code> 的 <code>telemetry()</code> 就是 <code>rx[6] / 10.0</code>)。</p>
 <p>保护定值同步换算:保险丝<strong>台架 5A;总装后按实测走路峰值电流的 1.5 倍换</strong>(§5.2);台架电源先<strong>限流 0.5A</strong>——既保护舵机,也顺便回答"0.5A 够不够撑住动作"(§2)。</p>

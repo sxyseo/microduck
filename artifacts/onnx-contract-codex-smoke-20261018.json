@@ -1,0 +1,21 @@
+{
+  "path": "logs/rsl_rl/velocity/2026-10-18_00-42-36_codex-smoke-20261018/2026-10-18_00-42-36_codex-smoke-20261018.onnx",
+  "input": {
+    "name": "obs",
+    "shape": [
+      1,
+      61
+    ]
+  },
+  "output": {
+    "name": "actions",
+    "shape": [
+      1,
+      14
+    ]
+  },
+  "runtime": "onnxruntime/CPUExecutionProvider",
+  "finite_zero_observation": true,
+  "sha256": "784ad1b218bc7d1b6d4cc8172926e7b7531dbcbddd08f08e4c20ccedeb3de40b",
+  "size_bytes": 793706
+}

@@ -1,0 +1,21 @@
+{
+  "path": "logs/rsl_rl/velocity/2026-10-18_09-06-39_codex-expE-cpu512x10-20261018/2026-10-18_09-06-39_codex-expE-cpu512x10-20261018.onnx",
+  "input": {
+    "name": "obs",
+    "shape": [
+      1,
+      61
+    ]
+  },
+  "output": {
+    "name": "actions",
+    "shape": [
+      1,
+      14
+    ]
+  },
+  "runtime": "onnxruntime/CPUExecutionProvider",
+  "finite_zero_observation": true,
+  "sha256": "98549e107ab2644cdcc8fa48e7f93496bb45b3c6c1bca8fdb94f8076fb9ecddb",
+  "size_bytes": 793706
+}

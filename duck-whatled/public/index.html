@@ -82,8 +82,13 @@
   .chip b{color:var(--orange-deep);font-weight:700}
 
   .hero-grid{margin-top:34px}
+  .media-grid{display:grid;grid-template-columns:1fr 1fr;gap:26px;margin-top:28px}
   .photo-card{position:relative;background:#fff;border:1.5px solid var(--ink);border-radius:6px;padding:14px 14px 12px;box-shadow:8px 8px 0 rgba(33,26,17,.14);transform:rotate(-1.4deg)}
   .photo-card img{width:100%;height:auto;display:block;border-radius:3px}
+  .photo-card video{width:100%;height:auto;display:block;border-radius:3px;background:#000}
+  .media-grid .photo-card{display:flex;flex-direction:column}
+  .media-grid .photo-card img,.media-grid .photo-card video{aspect-ratio:720/1280;object-fit:cover}
+  .media-grid .photo-card figcaption{margin-top:auto}
   .photo-card figcaption{font-family:var(--mono);font-size:12px;color:var(--ink-soft);padding-top:10px;display:flex;justify-content:space-between;gap:8px}
   .photo-card figcaption span:last-child{white-space:nowrap;flex-shrink:0}
   .tape{position:absolute;width:92px;height:26px;background:rgba(240,180,41,.42);border-left:1px dashed rgba(33,26,17,.2);border-right:1px dashed rgba(33,26,17,.2);backdrop-filter:blur(1px)}
@@ -266,6 +271,7 @@
     .stages,.sprint-weeks{grid-template-columns:repeat(2,1fr)}
     .bom-grid{grid-template-columns:1fr 1fr}
     .principles-grid{grid-template-columns:1fr}
+    .media-grid{grid-template-columns:1fr}
     .learn-grid{grid-template-columns:1fr 1fr}
     .overall{grid-template-columns:1fr}
     .overall .big-pct{text-align:left}
@@ -301,7 +307,7 @@
       <span>什么鸭<br><b style="font-size:15px;color:var(--ink)">WHATDUCK</b></span>
     </a>
     <div class="topbar-right">
-      <span class="stamp">更新 · 2026-10-02 · D28/30</span>
+      <span class="stamp">整机行走 ✓ · 2026-10-17 · 前进/后退/横移</span>
       <a class="gh-link" href="/learn/course">公开课 · 30 课</a>
       <a class="gh-link" href="/learn/deep" style="border-color:var(--orange-deep);color:var(--orange-deep)">深度解读 · 203 篇</a>
       <a class="gh-link" href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">GitHub ↗</a>
@@ -317,15 +323,16 @@
     <div class="btn-row">
       <a class="btn btn-solid" href="#progress">查看当前进度 ↓</a>
       <a class="btn btn-ghost" href="/learn/deep">深度解读 · 203 篇</a>
-      <a class="btn btn-ghost" href="#learn">学习手册 · 4 份</a>
+      <a class="btn btn-ghost" href="#learn">学习手册 · 12 份</a>
       <a class="btn btn-ghost" href="https://github.com/fanhao375/microduck-replica" target="_blank" rel="noopener">复刻仓库 ↗</a>
     </div>
     <div class="chips mono">
-      <span class="chip">30 天冲刺 · <b>第 9 天</b> / 30</span>
+      <span class="chip">整机行走 <b>✓ 前进/后退/横移 · 10-17</b></span>
+      <span class="chip">30 天冲刺 · <b>收官(超期 9 天)</b></span>
       <span class="chip">首版外壳 <b>已到货 · 组装 ✓</b></span>
       <span class="chip">expE 步态重训 · <b>50k</b> 迭代目标</span>
       <span class="chip">执行器 · <b>国产飞特</b> HL-1910-C001 ×17</span>
-      <span class="chip">已投入 <b>¥2,674</b> · 核心硬件全部到位</span>
+      <span class="chip">已投入 <b>≈¥3,396</b> · 清单全部购齐 ✓</span>
     </div>
 
     <div class="hero-grid">
@@ -354,16 +361,16 @@
   <!-- ================= PROGRESS ================= -->
   <section class="block" id="progress">
     <div class="sec-head reveal"><span class="sec-index mono">[01]</span><h2>当前位置</h2><span class="rule"></span></div>
-    <p class="sec-desc reveal">30 天冲刺已于 <span class="mono">10-04</span> 收官。执行器主线切换 <b>HD-1910 ×15</b>（官方骨架 + Radxa Zero 3W），板上 robotd 与 I²C IMU 已就绪、等 HAT 连接线；HD-1910 的仿真迁移与台架接线教程已配齐，经验收拢成<a href="#learn">七份学习手册</a>与 <a href="/learn/deep">203 篇深读</a>。</p>
+    <p class="sec-desc reveal">执行器主线 <b>HD-1910 ×15</b>（官方骨架 + Radxa Zero 3W）已完成接线、ID 核对与 15 关节 + IMU 标定；<b>2026-10-17 整机基础运动打通：前进、后退、左右横移</b>（kissqy Public Image R1 · control.40 随包模型 + 手柄，自训 expE 策略继续重训中）。经验收拢成<a href="#learn">十二份学习手册</a>与 <a href="/learn/deep">203 篇深读</a>。</p>
 
     <div class="overall reveal">
       <div>
-        <h3>综合进度 · 约 <b>45%</b>（站长自估）</h3>
-        <div class="bar"><i data-w="45%"></i></div>
-        <p class="bar-label mono">逆向反推 100% ─ 打印与定标 ◐ ─ 电控设计 ◐ ─ RL 训练 ◐ ─ 采购已下单 ─ 联调装配 ─ 整机行走</p>
+        <h3>综合进度 · 约 <b>80%</b>（站长自估）</h3>
+        <div class="bar"><i data-w="80%"></i></div>
+        <p class="bar-label mono">逆向反推 100% ─ 打印定标 ✓ ─ 电控设计 ✓ ─ 采购 ✓ ─ 联调装配 ✓ ─ RL 训练 ◐ ─ 整机行走 ◐</p>
       </div>
       <div class="big-pct">
-        <div class="pct">45<small style="font-size:22px">%</small></div>
+        <div class="pct">80<small style="font-size:22px">%</small></div>
         <small>REPLICATION PROGRESS</small>
       </div>
     </div>
@@ -374,10 +381,10 @@
         <p>47 个 STL → 装配图 7 张、CAD 装配体、14 关节参数、M2 紧固件系统、轴承规格，14 批推进全部收口。</p>
         <span class="pill ok mono">✓ 已完成 · 09-02</span>
       </div>
-      <div class="stage doing reveal">
+      <div class="stage done reveal">
         <span class="s-no mono">STAGE 02</span><h4>电控设计</h4>
-        <p>robotd（kissqy HD1910 适配）已部署上板：<b>I²C LSM6DSV16X 实时 46Hz、舵机容错启动、中控适配</b>；imu_to_dxl 飞特协议固件就绪。</p>
-        <span class="pill doing mono">软件上板 ✓ · 待接线</span>
+        <p>robotd（kissqy HD1910 适配）已部署上板：<b>I²C LSM6DSV16X 实时 46Hz、舵机容错启动、中控适配</b>；总线随整机联通实测，imu_to_dxl 飞特协议固件就绪。</p>
+        <span class="pill ok mono">✓ 已完成 · 总线实测</span>
       </div>
       <div class="stage doing reveal">
         <span class="s-no mono">STAGE 03</span><h4>打印与定标</h4>
@@ -394,20 +401,34 @@
         <p>09-13 起大批到货：<b>HL-2915 ×2、HAT 板、轴承 ×14、URT2、读卡器、外壳 v2、CNC 加强件、imu_to_dxl 板、工具套件</b>——核心硬件全部到位。HD-1910 ×15 到货并定为装机主线。</p>
         <span class="pill doing mono">核心件齐 ✓ · 主线已切</span>
       </div>
-      <div class="stage doing reveal">
+      <div class="stage done reveal">
         <span class="s-no mono">STAGE 06</span><h4>联调装配</h4>
-        <p>整机骨架装配完成；HL-2915 台架复测通过（REBOOT 清锁判定法）；Radxa 已刷机跑 robotd。下一步：HAT 连接线到货 → 15 颗 HD-1910 接线、ID 核对与关节标定。</p>
-        <span class="pill doing mono">骨架 ✓ · 待接线标定</span>
+        <p>15 颗 HD-1910 接线、ID 核对完成；15 关节 + IMU 标定收口——途中脚踝打印件因标定误驱损坏、重打更换（hls_servo_debugger 台架 CAL 定零 → 中控 capture 复核的闭环已写进手册）。</p>
+        <span class="pill ok mono">✓ 已完成 · 10-17</span>
       </div>
-      <div class="stage reveal">
+      <div class="stage doing reveal">
         <span class="s-no mono">STAGE 07</span><h4>整机行走</h4>
-        <p>15 关节标定 + 门控放行后：低增益站立、吊装跑策略、软垫、平地——以及复盘。</p>
-        <span class="pill wait mono">目标 · 10 月内</span>
+        <p><b>2026-10-17 基础步态跑通：前进、后退、左右横移</b>（kissqy 随包模型 + 手柄，软垫上首走）。下一步：更多动作、滑轮模式、自训 expE 模型上车对比与复盘。</p>
+        <span class="pill doing mono">基础步态 ✓ · 10-17</span>
       </div>
       <div class="stage reveal" style="border-style:dashed;justify-content:center;align-items:center;text-align:center">
         <span class="s-no mono">GOAL</span>
-        <h4 style="font-size:15px">D26–27<br>鸭子走出第一步</h4>
+        <h4 style="font-size:15px">✓ 已达成<br>10-17 走出第一步</h4>
       </div>
+    </div>
+
+    <!-- first walk media -->
+    <div class="media-grid reveal">
+      <figure class="photo-card">
+        <span class="tape tl"></span><span class="tape tr"></span>
+        <video src="/photos/first-walk.mp4" poster="/photos/first-walk-poster.jpg" controls preload="metadata" playsinline></video>
+        <figcaption><span>首走实拍 · 前进/后退/横移 · 2026-10-17</span><span>WALK-001</span></figcaption>
+      </figure>
+      <figure class="photo-card" style="transform:rotate(1.2deg)">
+        <span class="tape tl"></span><span class="tape tr"></span>
+        <img src="/photos/asm-002-duck.jpg" alt="整机完成的 Microduck：白色外壳、橙色脚与 HD-1910 舵机" width="1200" height="1600" loading="lazy">
+        <figcaption><span>整机完成 · HD-1910 ×15 上身 · 2026-10-17</span><span>ASM-002</span></figcaption>
+      </figure>
     </div>
 
     <!-- sprint footprints -->
@@ -461,7 +482,7 @@
   <!-- ================= BOM ================= -->
   <section class="block">
     <div class="sec-head reveal"><span class="sec-index mono">[03]</span><h2>物料与方案清单</h2><span class="rule"></span></div>
-    <p class="sec-desc reveal">BOM 于 <span class="mono">2026-10-02</span> 全面更新。这里标的是<b>实时到货与执行状态</b>——每项变化随构建日志同步。累计实付 ¥2,739,总预估 ≈¥3,030。<b><a href="/tools/shopping-list" style="color:var(--yellow)">完整购买清单(已购打钩 + 待购带链接) ↗</a></b>。</p>
+    <p class="sec-desc reveal">BOM 于 <span class="mono">2026-10-17</span> 全面更新。这里标的是<b>实时到货与执行状态</b>——每项变化随构建日志同步。累计实付 ≈¥3,396,待购清零,总花费 ≈¥3,396。<b><a href="/tools/shopping-list" style="color:var(--yellow)">完整购买清单(已购打钩 + 待购带链接) ↗</a></b>。</p>
     <div class="bom-grid">
       <div class="bom-card reveal">
         <span class="g-no mono">GRP-A</span><h4>执行器（国产替代）</h4>
@@ -484,12 +505,12 @@
         <div class="bom-item"><span class="n">CNC 加强件<small>¥45 · 到手</small></span><span class="st hot mono">✓ 到手</span></div>
         <div class="bom-item"><span class="n">轴承 ×14<small>Ø22×16×4 ×11 + Ø15×10×3 ×3 · ¥41 到货</small></span><span class="st hot mono">✓ 已到货</span></div>
         <div class="bom-item"><span class="n">M2 螺丝 12.9 级 + 热熔螺母<small>螺丝 ¥12.4 到手 · 热熔套件 M2–M8 ¥12.86 + M2 铜螺母×50 ¥1.8 已购</small></span><span class="st hot mono">✓ 已购</span></div>
-        <div class="bom-item"><span class="n">TPU 软件补打(下巴/嘴)<small>≈¥30–50 · 不影响行走</small></span><span class="st mono">待购</span></div>
+        <div class="bom-item"><span class="n">TPU 软件补打(下巴/嘴/脚底)<small>自有打印机补打完成,材料未单独记账</small></span><span class="st mono">✓ 已补打 · 10-17</span></div>
       </div>
       <div class="bom-card reveal">
         <span class="g-no mono">GRP-D</span><h4>感知</h4>
         <div class="bom-item"><span class="n">IMX219 相机<small>树莓派 MIPI CSI · ¥43.8 到手</small></span><span class="st hot mono">✓ 已到货</span></div>
-        <div class="bom-item"><span class="n">VL53L8CX ToF<small>8×8 阵列 · 首只 ¥71.8 已退货(模组尺寸大于头部安装位)</small></span><span class="st mono">已退 · 待重购</span></div>
+        <div class="bom-item"><span class="n">VL53L5CX V2 ToF<small>多区测距 · 替换退货的 VL53L8CX(¥71.8 尺寸超头部安装位);V2 紧凑载板装得进</small></span><span class="st mono">已购 · 10-17</span></div>
         <div class="bom-item"><span class="n">BMI088 IMU<small>随 HAT PCBA</small></span><span class="st hot mono">✓ 随 HAT 到货</span></div>
       </div>
       <div class="bom-card reveal">
@@ -512,7 +533,7 @@
   <!-- ================= BUDGET ================= -->
   <section class="block">
     <div class="sec-head reveal"><span class="sec-index mono">[04]</span><h2>这只鸭子要花多少钱</h2><span class="rule"></span></div>
-    <p class="sec-desc reveal">自 <span class="mono">2026-09-06</span> 起逐笔实付记账，<b>累计已投入 ¥2,984</b>（含工具 ¥120 与首版报废 ¥99；10-03 ToF 退货 −¥71.8，新购 +¥50.6）。不含已有 3D 打印机。详细清单见下方逐项。</p>
+    <p class="sec-desc reveal">自 <span class="mono">2026-09-06</span> 起逐笔实付记账，<b>累计已投入 ≈¥3,396</b>（含工具与操控装备 ≈¥264 与首版报废 ¥99；10-03 ToF 退货 −¥71.8，10-17 组装收尾 + 行走装备批次 +¥412.2，清单全部购齐）。不含已有 3D 打印机。详细清单见下方逐项。</p>
     <div class="budget">
       <div class="cost-rows">
         <div class="cost major reveal">
@@ -528,7 +549,7 @@
         <div class="cost reveal">
           <div class="c-head"><b>外壳 v1 + v2（修正版）</b><span class="mono">¥219 · <span class="pay paid">已付 ✓</span></span></div>
           <div class="c-bar"><i data-w="8%"></i></div>
-          <p class="cost-sub mono">v1 ¥99（结构不对报废）+ v2 ¥120 · TPU 补打另计 ¥30–50</p>
+          <p class="cost-sub mono">v1 ¥99（结构不对报废）+ v2 ¥120 · TPU 软件补打(下巴/嘴/脚底)已自打完成,不另计</p>
         </div>
         <div class="cost pending reveal">
           <div class="c-head"><b>Robot HAT C1 板</b><span class="mono">¥130 · <span class="pay paid">已付 ✓</span></span></div>
@@ -573,7 +594,12 @@
         <div class="cost pending reveal">
           <div class="c-head"><b>ToF VL53L8CX(8×8)</b><span class="mono">¥71.8 · <span class="pay todo">已退货 ↩</span></span></div>
           <div class="c-bar"><i data-w="10%"></i></div>
-          <p class="cost-sub mono">模组尺寸大于头部安装位,装不进 → 整单退回 · 重购前先定紧凑安装方案(≈¥70–80)</p>
+          <p class="cost-sub mono">模组尺寸大于头部安装位,装不进 → 整单退回 · 已定替换:VL53L5CX V2 紧凑载板 ¥49.5(10-17 购入)</p>
+        </div>
+        <div class="cost reveal">
+          <div class="c-head"><b>10-17 批次（收尾 + 行走装备）</b><span class="mono">¥412.2 · <span class="pay paid">已付 ✓</span></span></div>
+          <div class="c-bar"><i data-w="100%"></i></div>
+          <p class="cost-sub mono">ToF V2 49.5 + 手柄 63.84 + 电动螺丝刀 115 + 舵机线 23.14 + 音箱 16.8 + 热熔压头 13 + 螺母套件二套 14.7 + 连接器/线材/开关/风扇/杂项 · 含弯路:IMU 调试配件 46.56(最终用 imu_to_dxl 板)</p>
         </div>
         <div class="cost reveal">
           <div class="c-head"><b>URT2 调试板 + 读卡器</b><span class="mono">¥65 · <span class="pay paid">已付 ✓</span></span></div>
@@ -590,10 +616,10 @@
           <div class="c-bar"><i data-w="100%"></i></div>
           <p class="cost-sub mono">热熔螺母套件 M2–M8 ¥12.86 + M2×2.5×3.5 滚花铜螺母×50 ¥1.8 + 乐泰 243 10ml ¥18.02</p>
         </div>
-        <div class="cost pending reveal">
-          <div class="c-head"><b>余电子（ToF 重购）</b><span class="mono">≈¥70–80 · <span class="pay todo">待购</span></span></div>
-          <div class="c-bar"><i data-w="15%"></i></div>
-          <p class="cost-sub mono">首只 ¥71.8 已退货(尺寸偏大装不进),重购前定紧凑安装方案;扣板 ✓ ¥17.9 · 热熔螺母 ✓ 已购;UBEC/CSI/TPU 均不需要(HAT 内置/相机自带/v2 已含)</p>
+        <div class="cost reveal">
+          <div class="c-head"><b>待购收尾（热熔压头）</b><span class="mono">≈¥13 · <span class="pay paid">已购齐 ✓</span></span></div>
+          <div class="c-bar"><i data-w="100%"></i></div>
+          <p class="cost-sub mono">清单最后一项已购入——待购清零;UBEC/CSI 不需要(HAT 内置/相机自带);TPU 软件补打(下巴/嘴/脚底)已自打完成 ✓</p>
         </div>
         <div class="cost pending reveal">
           <div class="c-head"><b>机械（轴承 ✓ / M2 ✓ / 耗材）</b><span class="mono">≈¥160–280 · <span class="pay todo">余耗材</span></span></div>
@@ -603,8 +629,8 @@
       </div>
       <aside class="budget-side reveal">
         <span class="t mono">SPENT SO FAR · 已实付</span>
-        <div class="sum mono">¥2,984</div>
-        <p class="alt">总预估 <b>≈¥3,080–3,100</b>(含工具 ¥120 + 首版报废 ¥99;余 ToF 重购/压头/连接线 ≈¥100)。<br>对照官方整机 <b>$399 ≈ ¥2,900</b>——略超;纯硬件(去工具/报废)约 <b>¥2,765</b>。</p>
+        <div class="sum mono">≈¥3,396</div>
+        <p class="alt">整机实际总成本 <b>≈¥3,396</b>(含工具与操控装备 ≈¥264 + 首版报废 ¥99;待购清零,清单全部购齐)。<br>对照官方整机 <b>$399 ≈ ¥2,900</b>——超约 ¥500(17%);纯硬件(去工具/装备/报废)约 <b>¥3,033</b>。</p>
         <blockquote>"没打印机就代打，别为一只鸭子专门买 ¥2,500 的打印机。"</blockquote>
       </aside>
     </div>
@@ -639,7 +665,7 @@
   <!-- ================= LEARN ================= -->
   <section class="block" id="learn">
     <div class="sec-head reveal"><span class="sec-index mono">[06]</span><h2>学习手册 · 把踩过的坑写成路标</h2><span class="rule"></span></div>
-    <p class="sec-desc reveal">十份<b>学习手册</b>、一门<b>从零开始的 30 课公开课</b>、<b>203 篇源码与硬件深度解读</b>、一篇<b>实体 AI 创业调研</b>，全部免费在线读。另附社区三维图纸库与平价复刻路线。</p>
+    <p class="sec-desc reveal">十二份<b>学习手册</b>、一门<b>从零开始的 30 课公开课</b>、<b>203 篇源码与硬件深度解读</b>、一篇<b>实体 AI 创业调研</b>，全部免费在线读。另附社区三维图纸库与平价复刻路线。</p>
     <div class="learn-grid">
       <a class="learn-card featured reveal" href="/learn/course">
         <span class="l-no">COURSE · 系列公开课<span class="d">30 课</span></span>
@@ -713,6 +739,12 @@
         <p>深度数据从哪来：总线 3 全家福判读（0x18/0x19/0x29/0x68）、0x52 与 0x29 的关系、VL53L5CX/L8CX 数据手册关键参数、tofd 出帧验收与故障速查。</p>
         <span class="l-go">在线阅读 →</span>
       </a>
+      <a class="learn-card reveal" href="/learn/kissqy-stack">
+        <span class="l-no">MANUAL 12 · kissqy 栈篇<span class="d">10-17</span></span>
+        <h4>kissqy 栈全解<br>从镜像到行走的完整链路</h4>
+        <p>把会走路的鸭拆开看：四个版本号、服务矩阵、四步启动、关节角数学与标定逐字段、robotd IPC 方法表、策略槽与模型包、手柄意图链，附踩坑实录与复现清单。</p>
+        <span class="l-go">在线阅读 →</span>
+      </a>
       <a class="learn-card reveal" href="/learn/servo-debug">
         <span class="l-no">MANUAL 04 · 调试篇<span class="d">09-11</span></span>
         <h4>macOS 舵机调试、ID 设置<br>与图纸查看手册</h4>
@@ -751,7 +783,7 @@
         </div>
         <div>
           <h5 class="mono">DATA SOURCE · 数据来源</h5>
-          <p class="src mono">PROGRESS.md · BOM.md · 构建日志.md · 实验总表 experiment-log.csv · 实付记账 2026-09-07<br>首版外壳到货 + 整机装配 09-13（实拍 ASM-001） · HL-2915-C001 ×2 到货 09-13<br>飞特 HL 系列尺寸图 (HD-1910M-C001) · BAM 辨识实操指南 · 学习手册 ×4 (2026-09-10/11)<br>SolidWorks 图纸：机械行者Robo (2026-09-09)<br>更新于 2026-10-02 · duck.whatled.com</p>
+          <p class="src mono">PROGRESS.md · BOM.md · 构建日志.md · 实验总表 experiment-log.csv · 实付记账 2026-09-07<br>首版外壳到货 + 整机装配 09-13（实拍 ASM-001） · HL-2915-C001 ×2 到货 09-13<br>飞特 HL 系列尺寸图 (HD-1910M-C001) · BAM 辨识实操指南 · 学习手册 ×4 (2026-09-10/11)<br>SolidWorks 图纸：机械行者Robo (2026-09-09)<br>更新于 2026-10-17 · duck.whatled.com</p>
         </div>
       </div>
       <div class="copy">

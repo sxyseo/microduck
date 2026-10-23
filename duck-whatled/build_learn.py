@@ -151,6 +151,14 @@ DOCS = [
         "tag": "MANUAL 11 · ToF 集成篇",
         "date": "2026-10-13",
     },
+    {
+        "src": "/Volumes/dev/dev/microduck/duck-whatled/content/kissqy栈全解-从镜像到行走的完整链路.md",
+        "out": "kissqy-stack.html",
+        "title": "kissqy 栈全解：从镜像到行走的完整链路",
+        "desc": "把会走路的鸭拆开看：四个版本号、服务矩阵、四步启动、关节角数学与标定文件逐字段、robotd IPC 方法表、策略槽配置与模型包结构、手柄意图链，附踩坑实录与从零复现清单。",
+        "tag": "MANUAL 12 · kissqy 栈篇",
+        "date": "2026-10-17",
+    },
 ]
 
 
