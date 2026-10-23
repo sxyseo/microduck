@@ -85,7 +85,8 @@ Without an address it finds the robot over Bluetooth the way `duckctl ip` does, 
 duckctl udp-pad 192.168.1.42
 ```
 
-It reads the first gamepad plugged into the laptop and sends its state. A port on the end of the
+Press any button on the pad you want to drive with: that pad is the one it sends, until it is
+unplugged. The press itself is not sent as a press. A port on the end of the
 address (`duck.local:4210`) overrides the default, and `--hz` (10 to 100, default 30) is the most it
 will send a second. It sends the moment anything changes and otherwise a keepalive every `1/hz`, so
 the robot can tell a still pad from a gone one. With no pad on the laptop it sends nothing, and the
@@ -94,6 +95,54 @@ after `stale_ms`, and sits down a second after `timeout_ms`.
 
 If pushing the stick forward walks the robot backwards, add `--invert-y`: it flips both sticks' Y
 before sending.
+
+### The laptop quacks, the duck opens its mouth
+
+RT's quack and LT's wheee play from the laptop's speakers, through whatever output the laptop has
+selected, and the duck only opens its mouth for them. `--robot-sound-on` has the duck quack and
+wheee as well. It is bit 0 of the datagram's `flags` ([below](#writing-your-own-sender)); a
+`netpadd` from before that bit ignores it, and the duck quacks either way until it is updated. The
+duck's other sounds — asking where the pad went, and the greeting when it is back — are its own
+and always play. The laptop's follow the duck's rules: a quack cuts the one still
+playing, a quack during a ride is dropped, and the wheee loops while LT is held and stops when it
+is let go. The laptop plays them for the pad it sends, whether or not the duck is taking it.
+
+The laptop has a voice of its own, not the duck's: a duck's voice comes from its chip's serial,
+which the laptop cannot read. The first run picks a random voice and keeps its number in
+`duckctl/voice-seed` under your configuration directory (`~/.config` on Linux and macOS,
+`%APPDATA%` on Windows), so it is the same voice every time. The log says which:
+
+```
+quacking here too, in voice 813162435 — --voice N for another, --mute for none
+```
+
+`--voice 42` quacks in voice 42 for this run, and `--mute` keeps the laptop quiet — with
+`--robot-sound-on` for the duck's sounds, or no sound at all. Delete the file for a new voice. With no audio output, or on Linux without `libasound.so.2`, the log says
+`no sound on this machine` and the pad drives as before.
+
+### Several ducks from one laptop
+
+Plug in one pad per duck. Open one terminal per duck, and start one `udp-pad` in each, one at a time.
+
+In the first terminal:
+
+```bash
+duckctl udp-pad 192.168.1.42
+```
+
+Press a button on the pad for that duck. Its block now shows the pad's name. In the second terminal:
+
+```bash
+duckctl udp-pad 192.168.1.43
+```
+
+Press a button on the second pad. And so on for each duck.
+
+A pad that already drives a duck is skipped: pressing it again says which duck it drives. If two
+`udp-pad`s wait at once, the second one waits until the first has its pad.
+
+`--pad 2` sends the second pad on the laptop without waiting for a press, for a script. The number
+is the order the laptop found the pads in, which can change when a pad is unplugged and plugged back.
 
 On a terminal it takes the screen, as `robotctl monitor` does, and `q` quits:
 
@@ -154,7 +203,7 @@ One datagram carries the whole state. Every field is little-endian, and the pack
 |---|---|---|---|
 | 0 | 4 | magic | `b"DKPD"` |
 | 4 | 1 | version | `1` |
-| 5 | 1 | flags | reserved: send 0, the receiver ignores it |
+| 5 | 1 | flags | bit 0: the sender plays the triggers' sounds itself — the robot opens its mouth for RT and LT but plays no quack and no wheee. Bits 1 to 7 reserved: send 0, the receiver ignores them |
 | 6 | 4 | seq | u32, +1 per datagram, wraps |
 | 10 | 4 | t_ms | u32, the sender's own clock in ms, starting anywhere; how late a datagram arrived is read from it. `0` means none, and nothing is checked |
 | 14 | 12 | axes | i16 ×6: lx ly rx ry (±32767 maps to ±1, up is positive), lt rt (0..32767 maps to 0..1) |

@@ -451,7 +451,26 @@ pub const JSONRPC_VERSION: &str = "2.0";
 /// for servo power being off — about a robot whose fifteen servos had just answered their pings.
 /// Additive: absent from an older `robotd`, and `false` reads as "not told", which is what the old
 /// wording assumed anyway.
-pub const API_VERSION: u32 = 41;
+///
+/// # v42 — the vet book
+///
+/// [`method::ROBOT_VETBOOK`] and [`method::ROBOT_VETBOOK_NOTE`]: the robot's lifetime record —
+/// hours on, distance walked, falls and pickups, every servo `robotd` has adopted and how long
+/// the one before it lasted, and dated notes ([`vetbook`]). New routes: a `robotd` predating them answers METHOD_NOT_FOUND, by name.
+///
+/// # v43 — sharing the vet book
+///
+/// [`method::VETBOOK_SHARE`]: `updaterd` publishes the vet book to a public dataset on the signed-in
+/// Hugging Face account, `<user>/<robot name>-vetbook`, and answers with the link to its card
+/// ([`VetbookShareResult`]). A new route: an `updaterd` predating it answers METHOD_NOT_FOUND.
+///
+/// # v44 — records from every sensor
+///
+/// [`method::ROBOT_VETBOOK_TALLY`]: another daemon's counts and personal records — photos taken,
+/// laser sweep, nearest object — merged into the vet book by `robotd`, which owns it. The book
+/// gains three maps for them ([`vetbook::Life::tallies`], `highs`, `lows`), additive: an older
+/// book loads with them empty. A new route: a `robotd` predating it answers METHOD_NOT_FOUND.
+pub const API_VERSION: u32 = 44;
 
 /// The observation width every policy this robot family runs is built against.
 ///
@@ -487,6 +506,7 @@ pub const UPDATE_MAX_SILENCE_SECONDS: u64 = 600;
 pub const DEFAULT_SOCKET: &str = "/run/updaterd.sock";
 
 pub mod led;
+pub mod vetbook;
 
 /// Where each service listens by default.
 ///
@@ -776,6 +796,14 @@ pub mod method {
     /// [`ModelResult`]. A read; asked once per session.
     pub const ROBOT_MODEL: &str = "robot.model";
 
+    /// The vet book: the robot's lifetime record — see [`crate::vetbook`]. A read.
+    pub const ROBOT_VETBOOK: &str = "robot.vetbook";
+    /// A dated line of free text in the vet book. Kept for the life of the robot.
+    pub const ROBOT_VETBOOK_NOTE: &str = "robot.vetbookNote";
+    /// Another daemon's counts and records since its last report, for the vet book — see
+    /// [`crate::vetbook::VetbookTallyParams`]. Local daemons only.
+    pub const ROBOT_VETBOOK_TALLY: &str = "robot.vetbookTally";
+
     /// Put a different `.onnx` in one slot, or drop an override and go back to the default.
     ///
     /// Answered like [`ROBOT_SET_MODE`] and for the same reason: the swap happens at the home
@@ -836,6 +864,11 @@ pub mod method {
     pub const ACCOUNT_STATUS: &str = "account.status";
     /// Forget the account. The robot stops being reachable from outside the LAN.
     pub const ACCOUNT_LOGOUT: &str = "account.logout";
+
+    /// Publish the vet book to the signed-in account, as a public dataset, and answer with the
+    /// link to its card — see [`crate::VetbookShareResult`]. Served by `updaterd`, which holds the
+    /// account and the network stack; the book itself comes from `robotd`.
+    pub const VETBOOK_SHARE: &str = "vetbook.share";
 
     /// Turn the connection into a stream of [`ROBOT_STATE`] notifications.
     pub const ROBOT_SUBSCRIBE: &str = "robot.subscribe";
@@ -1095,6 +1128,12 @@ pub enum Call {
     RobotPolicies,
     /// Static robot geometry for a mapper; see [`method::ROBOT_MODEL`].
     RobotModel,
+    /// The lifetime record; see [`method::ROBOT_VETBOOK`].
+    RobotVetbook,
+    /// Write a note in it; see [`method::ROBOT_VETBOOK_NOTE`].
+    RobotVetbookNote(vetbook::VetbookNoteParams),
+    /// Add another daemon's counts to it; see [`method::ROBOT_VETBOOK_TALLY`].
+    RobotVetbookTally(vetbook::VetbookTallyParams),
     /// Load one slot, or reset it; see [`method::ROBOT_LOAD_POLICY`].
     RobotLoadPolicy(LoadPolicyParams),
     /// Re-read every slot from disk; see [`method::ROBOT_RELOAD_POLICIES`].
@@ -1123,6 +1162,8 @@ pub enum Call {
     AccountStatus,
     /// Forget the account; see [`method::ACCOUNT_LOGOUT`].
     AccountLogout,
+    /// Publish the vet book; see [`method::VETBOOK_SHARE`].
+    VetbookShare,
     RobotSubscribe(SubscribeParams),
     // ── net.* ────────────────────────────────────────────────────────────────
     NetStatus,
@@ -1264,6 +1305,9 @@ impl Call {
             Call::RobotSetMode(_) => method::ROBOT_SET_MODE,
             Call::RobotPolicies => method::ROBOT_POLICIES,
             Call::RobotModel => method::ROBOT_MODEL,
+            Call::RobotVetbook => method::ROBOT_VETBOOK,
+            Call::RobotVetbookNote(_) => method::ROBOT_VETBOOK_NOTE,
+            Call::RobotVetbookTally(_) => method::ROBOT_VETBOOK_TALLY,
             Call::RobotLoadPolicy(_) => method::ROBOT_LOAD_POLICY,
             Call::RobotReloadPolicies => method::ROBOT_RELOAD_POLICIES,
             Call::PolicyCheck => method::POLICY_CHECK,
@@ -1275,6 +1319,7 @@ impl Call {
             Call::AccountLogin(_) => method::ACCOUNT_LOGIN,
             Call::AccountStatus => method::ACCOUNT_STATUS,
             Call::AccountLogout => method::ACCOUNT_LOGOUT,
+            Call::VetbookShare => method::VETBOOK_SHARE,
             Call::RobotSubscribe(_) => method::ROBOT_SUBSCRIBE,
             Call::NetStatus => method::NET_STATUS,
             Call::NetScan => method::NET_SCAN,
@@ -1346,7 +1391,10 @@ impl Call {
                 // `account.status` is a read and stays ungated — a support engineer should be
                 // able to ask which account a robot thinks it belongs to.
                 | Call::AccountLogin(_)
-                | Call::AccountLogout
+                | Call::AccountLogout // Not `vetbook.share`. It changes nothing on the robot, and it publishes under an
+                                      // account root already signed in — with a token the `robot` group can read, so
+                                      // this gate would protect nothing and only put `sudo` in front of a share button.
+                                      // Which transports may carry it is the route tables' decision, not this one.
         )
     }
 
@@ -1412,6 +1460,9 @@ impl Call {
             // Both read or write local state only. `status` is asked on a poll while a login is
             // in flight, so it must not queue behind anything.
             Call::AccountStatus | Call::AccountLogout => (Updater, Prompt),
+            // Three or four round trips to Hugging Face: a repo create and a commit, plus a read
+            // of the book from `robotd` and of the name from `configd`.
+            Call::VetbookShare => (Updater, Slow),
             // Owns its connection until the peer goes away and never reads another request.
             Call::Subscribe => (Updater, Stream),
 
@@ -1422,7 +1473,12 @@ impl Call {
             | Call::RobotRemoteSessionActive
             | Call::RobotPolicies
             | Call::RobotModel
+            | Call::RobotVetbook
             | Call::RobotMode => (Robot, Prompt),
+            // A small write to a file `robotd` already owns, done on the IPC side.
+            Call::RobotVetbookNote(_) => (Robot, Prompt),
+            // A merge into the book under its lock, and nothing else.
+            Call::RobotVetbookTally(_) => (Robot, Prompt),
             // Intents and one-shot skills. All fast: they store a value the control loop reads on
             // its next tick, and none of them waits for the robot to finish anything.
             Call::RobotMove(_)
@@ -1556,6 +1612,8 @@ impl Call {
             Call::AccountLogin(p) => encode(p),
             Call::RobotSound(p) => encode(p),
             Call::RobotFlashlight(p) => encode(p),
+            Call::RobotVetbookNote(p) => encode(p),
+            Call::RobotVetbookTally(p) => encode(p),
             Call::RobotTheremin(p) => encode(p),
             Call::RobotChorale(p) => encode(p),
             Call::ChoraleBeaconSet(p) => encode(p),
@@ -1585,11 +1643,13 @@ impl Call {
             | Call::RobotShutdown
             | Call::RobotPolicies
             | Call::RobotModel
+            | Call::RobotVetbook
             | Call::RobotReloadPolicies
             | Call::PolicyCheck
             | Call::DetectorCheck
             | Call::AccountStatus
             | Call::AccountLogout
+            | Call::VetbookShare
             | Call::RobotMode => Value::Object(serde_json::Map::new()),
             Call::NetStatus
             | Call::NetScan
@@ -1659,6 +1719,9 @@ impl Call {
             method::ROBOT_SET_MODE => Call::RobotSetMode(decode(params)?),
             method::ROBOT_POLICIES => Call::RobotPolicies,
             method::ROBOT_MODEL => Call::RobotModel,
+            method::ROBOT_VETBOOK => Call::RobotVetbook,
+            method::ROBOT_VETBOOK_NOTE => Call::RobotVetbookNote(decode(params)?),
+            method::ROBOT_VETBOOK_TALLY => Call::RobotVetbookTally(decode(params)?),
             method::ROBOT_LOAD_POLICY => Call::RobotLoadPolicy(decode(params)?),
             method::ROBOT_RELOAD_POLICIES => Call::RobotReloadPolicies,
             method::POLICY_CHECK => Call::PolicyCheck,
@@ -1670,6 +1733,7 @@ impl Call {
             method::ACCOUNT_LOGIN => Call::AccountLogin(decode(params)?),
             method::ACCOUNT_STATUS => Call::AccountStatus,
             method::ACCOUNT_LOGOUT => Call::AccountLogout,
+            method::VETBOOK_SHARE => Call::VetbookShare,
             method::ROBOT_SUBSCRIBE => Call::RobotSubscribe(decode(params)?),
             method::NET_STATUS => Call::NetStatus,
             method::NET_SCAN => Call::NetScan,
@@ -1822,6 +1886,14 @@ pub mod test_support {
             Call::RobotMode,
             Call::RobotPolicies,
             Call::RobotModel,
+            Call::RobotVetbook,
+            Call::RobotVetbookNote(vetbook::VetbookNoteParams {
+                text: "reglued the beak".into(),
+            }),
+            Call::RobotVetbookTally(vetbook::VetbookTallyParams {
+                tallies: [(vetbook::key::PHOTOS.to_owned(), 1.0)].into(),
+                ..Default::default()
+            }),
             Call::RobotReloadPolicies,
             Call::PolicyCheck,
             Call::PolicyInstall(PolicyInstallParams {
@@ -1842,6 +1914,7 @@ pub mod test_support {
             Call::AccountLogin(AccountLoginParams { force: false }),
             Call::AccountStatus,
             Call::AccountLogout,
+            Call::VetbookShare,
             Call::RobotLoadPolicy(LoadPolicyParams {
                 slot: Some("walk".into()),
                 path: Some("/var/lib/robot/policies/bouncy.onnx".into()),
@@ -2786,6 +2859,22 @@ pub struct Account {
     /// Whether a refresh token is stored, so an expiring access token can be renewed without
     /// anybody signing in again.
     pub refreshable: bool,
+}
+
+/// Answer to [`Call::VetbookShare`]: where the book went, and the link to show people.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct VetbookShareResult {
+    /// The page to share: the card, with buttons to post it. Its preview image is the card, so the
+    /// link unfurls as the card wherever it is pasted.
+    pub url: String,
+    /// The card alone, as a PNG.
+    pub image: String,
+    /// The dataset the book was published to, `<user>/<robot name>-vetbook`.
+    pub dataset: String,
+    /// Which of the cards this share drew, as the Space names it: `notebook`, `purikura`,
+    /// `profile`, `receipt`, `passport`, `gameboy`, `polaroid` or `fifa`.
+    pub card: String,
 }
 
 /// Answer to [`Call::AccountLogout`].
@@ -5738,7 +5827,7 @@ mod tests {
     fn every_call_covers_every_variant() {
         assert_eq!(
             every_call().len(),
-            69,
+            73,
             "a Call variant was added or removed — update every_call() and this count"
         );
     }

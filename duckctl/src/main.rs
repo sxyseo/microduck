@@ -496,7 +496,22 @@ fn deliver(command: &Command, address: &str) -> Result<(), Box<dyn std::error::E
                 .into()
             })
         }
-        Command::UdpPad { hz, invert_y, .. } => udp_pad::run(address, *hz, *invert_y),
+        Command::UdpPad {
+            hz,
+            invert_y,
+            pad,
+            mute,
+            voice,
+            robot_sound_on,
+            ..
+        } => udp_pad::run(
+            address,
+            *hz,
+            *invert_y,
+            udp_pad::pick(*pad),
+            udp_pad::sound(*mute, *voice),
+            *robot_sound_on,
+        ),
         // `run` only calls this for the five above; every other command's answer is its JSON.
         _ => Err("this command does not resolve an address".into()),
     }
@@ -1149,6 +1164,22 @@ enum Command {
         /// flip macOS always gets, which makes it send what `padd` reads on the robot.
         #[arg(long)]
         invert_y: bool,
+        /// Send the Nth pad on this machine, from 1. Without it, the pad sent is the first one a
+        /// button is pressed on — one `udp-pad` per duck, each claiming its own pad.
+        #[arg(long, value_parser = clap::value_parser!(u64).range(1..))]
+        pad: Option<u64>,
+        /// Keep this machine quiet. Without it, RT's quack and LT's wheee play from its default
+        /// audio output as well as from the duck.
+        #[arg(long)]
+        mute: bool,
+        /// Which voice this machine quacks in. Without it, a voice of its own, drawn on the first
+        /// run and kept in `duckctl/voice-seed` under the user's configuration directory.
+        #[arg(long, value_name = "SEED", conflicts_with = "mute")]
+        voice: Option<u32>,
+        /// Have the duck quack and wheee too. Without it the duck only opens its mouth, and the
+        /// sound is this machine's.
+        #[arg(long)]
+        robot_sound_on: bool,
     },
     /// Reboot it.
     Reboot,
@@ -1451,6 +1482,10 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
         host: Some(host),
         hz,
         invert_y,
+        pad,
+        mute,
+        voice,
+        robot_sound_on,
     } = &cli.command
     {
         // By hand, because clap's `conflicts_with` does not reach a global flag from a subcommand.
@@ -1460,7 +1495,14 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
             )
             .into());
         }
-        return udp_pad::run(host, *hz, *invert_y);
+        return udp_pad::run(
+            host,
+            *hz,
+            *invert_y,
+            udp_pad::pick(*pad),
+            udp_pad::sound(*mute, *voice),
+            *robot_sound_on,
+        );
     }
     // Read once, here, so everything below asks `target` rather than the environment: which robot
     // was chosen and who chose it is one decision, and a second reader of `DUCK_ROBOT` could

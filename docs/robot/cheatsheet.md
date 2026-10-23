@@ -498,6 +498,54 @@ pause while the robot is walking normally (the walk freezes for a moment, then r
 that stays paused after being put down. `pause_threshold` and `resume_threshold` in the
 same section move the two edges; the design is [`robotd-design.md` §2.4.2](../design/robotd-design.md).
 
+### The vet book
+
+The duck's whole life, in numbers — kept by `robotd` from its first start, through every update,
+until the board is reflashed:
+
+```
+robotctl vetbook           # the live page: life, motors, diary — q quits, ←/→ tabs
+robotctl vetbook | less    # the same as plain text
+robotctl vetbook --json    # the book as robot.vetbook answers it
+```
+
+**★ Records** holds a personal best from every sensor: fastest spin and steepest tilt survived
+(body IMU), top speed and longest walk without a fall (odometry), peak current and fastest joint
+(servos), sounds, beak flaps and flashlight time, photos and video streamed (`mediad`), the laser's
+new surface seen and the nearest and farthest things (`tofd`), and the longest stretch on one
+charge. `mediad` and `tofd` report theirs to `robotd` once a minute (`robot.vetbookTally`).
+
+`n` on the page writes a dated line in the diary — "reglued the beak", "new feet" — and Enter
+saves it on the robot.
+
+**`s` shares it.** On a robot signed in to Hugging Face (`robotctl account login`), `updaterd`
+publishes the book to a **public** dataset on that account, `<user>/<robot name>-vetbook`, and the
+page shows a link to its card on the `microduck-vetbook` Space, with a QR code to open it on a
+phone. The card is one of eight designs, drawn at random each share, in a palette the duck's name
+picks, with a seasonal skin around Halloween, in December and for Valentine's; it carries the
+duck's mood (from "Feeling great!" to "Vet time!"), its rarest badges and its most remarkable fun
+facts. A 1080 × 1920 story for Instagram and TikTok sits beside it; the Space's page has the buttons to
+post it, and a pasted link unfurls as the card. Diary notes stay on the robot. Renaming the duck
+shares to a new dataset; the old one stays. The Space's source is `spaces/vetbook/`.
+
+**Life**: hours awake, with torque, walking, standing, sitting, held in hands and on the floor —
+walking is the gait being asked to move, so velstand standing still counts as standing; metres
+walked (contact odometry, only while walking); falls, soft landings, pickups,
+pets, ground picks, sit-downs, stand-ups, songs and every skill by name; boots, updates and
+guessed charges; the hottest servo and board and the battery's range. **Motors**: per joint, the
+torque hours, shaft travel, current carried and heat of the servo in it now; every
+overload/overheat/shock/encoder trip it has latched (not input voltage — every servo latches that
+on a charged pack, which is above its own rating); and how long the servos before it lasted. **Diary**: updates, servo swaps, charges and notes, dated.
+
+**A servo swap writes itself down.** When `robotd` adopts a factory-fresh servo (id 1, 57600 baud)
+into a missing joint, it retires the old servo's record with what it did and starts the new one
+at zero. A servo that went in already set to the joint's id is invisible — Dynamixels carry no
+serial number — and carries on the old one's record.
+
+The book is `/var/lib/robot/vetbook.json`, saved once a minute and when `robotd` stops, so
+switching off at the battery loses at most a minute. `--fake` and `--sim` keep it in memory
+unless `robotd --vetbook <file>` names one.
+
 ### Changing joystick mappings
 
 Run `sudo robotctl configure`, then search for `pad_axes` to select axes, directions and gains.
@@ -602,12 +650,17 @@ went (a rising quack) and sits down if it was standing — kicks and picks are l
 shorter drop-out is silent.
 When the pad comes back it greets you with a quack; A stands the robot up.
 
-**Left alone, the robot looks around.** After 2 s with the policy running, no motion asked for
-and nobody steering the head, it glances about every few seconds — mostly left and right, a
-little up and down, now and then with a curious tilt — holds each look, drifts very slightly
-while it does, and breathes (a millimetre of height, standing only). The longer nothing happens
-the calmer it gets. It fades in and out, and any stick or head command takes the head back. In
-the D-pad's head modes the pad keeps the head, so this only happens in move mode. On a roller robot (`mode = "roller"` in `robotd.toml`) the sticks take the roller
+**Left alone, the robot looks around.** After 2 s with the policy running, no motion asked for and
+nobody steering the head, it glances about every second or few — mostly left and right, a little up
+and down, the neck leaning and the beak opening a touch with each look, now and then with a curious tilt — and while it
+holds a look its gaze keeps shifting a little around it. It drifts slightly and breathes (a
+millimetre of height, standing only). The longer nothing happens the calmer it gets, and after a
+while it yawns now and then — beak open, head back, silently. It fades in and out, and any stick or
+head command takes the head back. In the D-pad's head modes the pad keeps the head, so this only
+happens in move mode. `journalctl -fu robotd` logs each spell starting and stopping. Every number is
+in `[idle]` — `sudo robotctl configure`, then restart `robotd`.
+
+On a roller robot (`mode = "roller"` in `robotd.toml`) the sticks take the roller
 shaping automatically — asymmetric push/brake, no strafe — and B triggers the crouch. The
 other skills ride along: sit and the kicks work on wheels too, as the prototype has it.
 
